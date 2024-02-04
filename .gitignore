@@ -136,3 +136,6 @@ gcloud.json
 # sitemaps
 # apps/www/public/*.xml
 # apps/docs/public/*.xml
+
+# project functions
+docker/volumes/functions/*

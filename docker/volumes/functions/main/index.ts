@@ -73,6 +73,22 @@ serve(async (req: Request) => {
   const importMapPath = null
   const envVarsObj = Deno.env.toObject()
   const envVars = Object.keys(envVarsObj).map((k) => [k, envVarsObj[k]])
+  
+  // PATCH: (gburgett) read env vars from the .env file if it exists
+  try {
+    const env = await Deno.readTextFile('/home/deno/functions/.env')
+    const envLines = env.split('\n')
+    for (const line of envLines) {
+      if (!line.includes('=') || line.startsWith('#')) { continue }
+      const [key, value] = line.split('=')
+      if (key && value) {
+        envVars.push([key, value])
+      }
+    }
+  } catch (e) {
+    console.error('no .env file found')
+  }
+  // END PATCH
 
   try {
     const worker = await EdgeRuntime.userWorkers.create({
