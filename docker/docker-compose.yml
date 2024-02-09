@@ -28,6 +28,12 @@ services:
         condition: service_healthy
     ports:
       - ${STUDIO_HTTP_PORT:-3000}:3000/tcp
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: supabase
+        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
     environment:
       STUDIO_PG_META_URL: http://meta:8080
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -60,6 +66,12 @@ services:
     depends_on:
       analytics:
         condition: service_healthy
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: supabase
+        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
@@ -99,6 +111,12 @@ services:
       interval: 5s
       retries: 3
     restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: supabase
+        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
     environment:
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
@@ -158,6 +176,12 @@ services:
       analytics:
         condition: service_healthy
     restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: supabase
+        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
     environment:
       PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
       PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS}
@@ -190,6 +214,12 @@ services:
       interval: 5s
       retries: 3
     restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: supabase
+        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
     environment:
       PORT: 4000
       DB_HOST: ${POSTGRES_HOST}
@@ -235,6 +265,12 @@ services:
       interval: 5s
       retries: 3
     restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: supabase
+        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
     environment:
       ANON_KEY: ${ANON_KEY}
       SERVICE_KEY: ${SERVICE_ROLE_KEY}
@@ -261,6 +297,12 @@ services:
       timeout: 5s
       interval: 5s
       retries: 3
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: supabase
+        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
     environment:
       IMGPROXY_BIND: ":5001"
       IMGPROXY_LOCAL_FILESYSTEM_ROOT: /
@@ -279,6 +321,12 @@ services:
       analytics:
         condition: service_healthy
     restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: supabase
+        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
     environment:
       PG_META_PORT: 8080
       PG_META_DB_HOST: ${POSTGRES_HOST}
@@ -294,6 +342,12 @@ services:
     depends_on:
       analytics:
         condition: service_healthy
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: supabase
+        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
     environment:
       JWT_SECRET: ${JWT_SECRET}
       SUPABASE_URL: http://kong:8000
@@ -328,6 +382,12 @@ services:
     #     source: ${PWD}/gcloud.json
     #     target: /opt/app/rel/logflare/bin/gcloud.json
     #     read_only: true
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: supabase
+        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
     environment:
       LOGFLARE_NODE_HOST:  127.0.0.1
       DB_USERNAME: supabase_admin
@@ -381,6 +441,12 @@ services:
     ports:
       # Pass down internal port because it's set dynamically by other services
       - ${POSTGRES_PORT}:${POSTGRES_PORT}
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: supabase
+        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
     environment:
       POSTGRES_HOST: /var/run/postgresql
       PGPORT: ${POSTGRES_PORT}
@@ -421,6 +487,12 @@ services:
       timeout: 5s
       interval: 5s
       retries: 3
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: supabase
+        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
     volumes:
       - ./volumes/logs/vector.yml:/etc/vector/vector.yml:ro
       - ${DOCKER_SOCKET_LOCATION}:/var/run/docker.sock:ro
