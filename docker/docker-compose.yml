@@ -33,7 +33,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: supabase
-        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
+        tag: "{{.Name}}/{{.ID}}"
     environment:
       STUDIO_PG_META_URL: http://meta:8080
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -71,7 +71,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: supabase
-        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
+        tag: "{{.Name}}/{{.ID}}"
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
@@ -116,7 +116,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: supabase
-        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
+        tag: "{{.Name}}/{{.ID}}"
     environment:
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
@@ -181,7 +181,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: supabase
-        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
+        tag: "{{.Name}}/{{.ID}}"
     environment:
       PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
       PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS}
@@ -219,7 +219,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: supabase
-        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
+        tag: "{{.Name}}/{{.ID}}"
     environment:
       PORT: 4000
       DB_HOST: ${POSTGRES_HOST}
@@ -270,7 +270,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: supabase
-        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
+        tag: "{{.Name}}/{{.ID}}"
     environment:
       ANON_KEY: ${ANON_KEY}
       SERVICE_KEY: ${SERVICE_ROLE_KEY}
@@ -302,7 +302,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: supabase
-        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
+        tag: "{{.Name}}/{{.ID}}"
     environment:
       IMGPROXY_BIND: ":5001"
       IMGPROXY_LOCAL_FILESYSTEM_ROOT: /
@@ -326,7 +326,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: supabase
-        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
+        tag: "{{.Name}}/{{.ID}}"
     environment:
       PG_META_PORT: 8080
       PG_META_DB_HOST: ${POSTGRES_HOST}
@@ -347,7 +347,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: supabase
-        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
+        tag: "{{.Name}}/{{.ID}}"
     environment:
       JWT_SECRET: ${JWT_SECRET}
       SUPABASE_URL: http://kong:8000
@@ -387,7 +387,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: supabase
-        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
+        tag: "{{.Name}}/{{.ID}}"
     environment:
       LOGFLARE_NODE_HOST:  127.0.0.1
       DB_USERNAME: supabase_admin
@@ -446,7 +446,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: supabase
-        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
+        tag: "{{.Name}}/{{.ID}}"
     environment:
       POSTGRES_HOST: /var/run/postgresql
       PGPORT: ${POSTGRES_PORT}
@@ -492,7 +492,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: supabase
-        tag: "{{.ImageName}}/{{.Name}}/{{.ID}}"
+        tag: "{{.Name}}/{{.ID}}"
     volumes:
       - ./volumes/logs/vector.yml:/etc/vector/vector.yml:ro
       - ${DOCKER_SOCKET_LOCATION}:/var/run/docker.sock:ro
