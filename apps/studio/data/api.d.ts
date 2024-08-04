@@ -9,8 +9,8 @@ type XOR<T, U> = T | U extends object ? (Without<T, U> & U) | (Without<U, T> & T
 type OneOf<T extends any[]> = T extends [infer Only]
   ? Only
   : T extends [infer A, infer B, ...infer Rest]
-  ? OneOf<[XOR<A, B>, ...Rest]>
-  : never
+    ? OneOf<[XOR<A, B>, ...Rest]>
+    : never
 
 export interface paths {
   '/platform/notifications': {
@@ -20,6 +20,14 @@ export interface paths {
     delete: operations['NotificationsController_deleteNotifications']
     /** Update notifications */
     patch: operations['NotificationsController_updateNotificationsV2']
+  }
+  '/platform/notifications/summary': {
+    /** Get an aggregated data of interest across all notifications for the user */
+    get: operations['NotificationsController_getNotificationsSummary']
+  }
+  '/platform/notifications/archive-all': {
+    /** Archives all notifications */
+    patch: operations['NotificationsController_archiveAllNotifications']
   }
   '/platform/reset-password': {
     /** Reset password for email */
@@ -232,7 +240,7 @@ export interface paths {
   }
   '/platform/organizations/{slug}/payments/setup-intent': {
     /** Sets up a payment method */
-    post: operations['SetupIntentController_setUpPaymentMethod']
+    post: operations['SetupIntentOrgController_setUpPaymentMethod']
   }
   '/platform/organizations/{slug}/billing/subscription': {
     /** Gets the current subscription */
@@ -242,7 +250,7 @@ export interface paths {
   }
   '/platform/organizations/{slug}/billing/subscription/preview': {
     /** Preview subscription changes */
-    post: operations['SubscriptionController_previewSubscriptionChangeV2']
+    post: operations['SubscriptionController_previewSubscriptionChange']
   }
   '/platform/organizations/{slug}/billing/subscription/schedule': {
     /** Deletes any upcoming subscription schedule */
@@ -254,7 +262,7 @@ export interface paths {
   }
   '/platform/organizations/{slug}/billing/invoices/upcoming': {
     /** Gets the upcoming invoice */
-    get: operations['OrgInvoicesController_getUpcomingInvoiceV2']
+    get: operations['OrgInvoicesController_getUpcomingInvoice']
   }
   '/platform/pg-meta/{ref}/column-privileges': {
     /** Retrieve column privileges */
@@ -467,6 +475,14 @@ export interface paths {
     /** Gets daily project stats */
     get: operations['DailyStatsController_getDailyStats']
   }
+  '/platform/projects/{ref}/databases': {
+    /** Gets non-removed databases of a specified project */
+    get: operations['DatabasesController_getDatabases']
+  }
+  '/platform/projects/{ref}/databases-statuses': {
+    /** Gets statuses of databases within a project */
+    get: operations['DatabasesStatusesController_getStatus']
+  }
   '/platform/projects/{ref}/db-password': {
     /** Updates the database password */
     patch: operations['DbPasswordController_updatePassword']
@@ -474,6 +490,10 @@ export interface paths {
   '/platform/projects/{ref}/live': {
     /** Gets project health check */
     get: operations['HealthCheckController_projectHealthCheck']
+  }
+  '/platform/projects/{ref}/load-balancers': {
+    /** Gets non-removed databases of a specified project */
+    get: operations['LoadBalancersController_getLoadBalancers']
   }
   '/platform/projects/{ref}/api/rest': {
     /** Gets project OpenApi */
@@ -486,12 +506,6 @@ export interface paths {
   '/platform/projects/{ref}/infra-monitoring': {
     /** Gets project's usage metrics */
     get: operations['InfraMonitoringController_getUsageMetrics']
-  }
-  '/platform/projects/{ref}/invoices': {
-    /** Gets project's invoices */
-    get: operations['InvoicesController_getInvoices']
-    /** Gets project's invoice count */
-    head: operations['InvoicesController_getInvoiceCount']
   }
   '/platform/projects/{ref}/pause': {
     /** Pauses the project */
@@ -575,6 +589,10 @@ export interface paths {
     /** Updates project's pgbouncer config */
     patch: operations['PgbouncerConfigController_updatePgbouncerConfig']
   }
+  '/platform/projects/{ref}/config/pgbouncer/status': {
+    /** Gets project's pgbouncer status */
+    get: operations['PgbouncerConfigController_getPgbouncerStatus']
+  }
   '/platform/projects/{ref}/config/postgrest': {
     /** Gets project's postgrest config */
     get: operations['PostgrestConfigController_getPostgRESTConfig']
@@ -596,6 +614,10 @@ export interface paths {
     get: operations['StorageConfigController_getConfig']
     /** Updates project's storage config */
     patch: operations['StorageConfigController_updateConfig']
+  }
+  '/platform/projects/{ref}/config/supavisor': {
+    /** Gets project's supavisor config */
+    get: operations['SupavisorConfigController_getSupavisorConfig']
   }
   '/platform/projects/{ref}/billing/addons': {
     /** Gets project addons */
@@ -718,8 +740,12 @@ export interface paths {
     get: operations['VercelAccessTokenController_getAccessToken']
   }
   '/platform/vercel/projects': {
-    /** Gets the project with the given ID if provided, otherwise gets the list of projects */
+    /** Gets the list of Vercel projects */
     get: operations['VercelProjectsController_getVercelProjects']
+  }
+  '/platform/vercel/projects/{id}': {
+    /** Gets the Vercel project with the given ID */
+    get: operations['VercelProjectsController_getVercelProject']
   }
   '/platform/vercel/projects/envs': {
     /** Gets the environment variables for the given project ID on behalf of the given team ID */
@@ -760,7 +786,7 @@ export interface paths {
   }
   '/platform/integrations/vercel/connections/{connection_id}/sync-envs': {
     /** Syncs supabase project envs with given connection id */
-    post: operations['VercelConnectionsController_syncVercelConnectionEnvs']
+    post: operations['VercelConnectionsController_syncVercelConnectionEnvironments']
   }
   '/platform/integrations/vercel/connections/{connection_id}': {
     /** Deletes vercel project connection */
@@ -923,6 +949,14 @@ export interface paths {
     delete: operations['NotificationsController_deleteNotifications']
     /** Update notifications */
     patch: operations['NotificationsController_updateNotificationsV2']
+  }
+  '/v0/notifications/summary': {
+    /** Get an aggregated data of interest across all notifications for the user */
+    get: operations['NotificationsController_getNotificationsSummary']
+  }
+  '/v0/notifications/archive-all': {
+    /** Archives all notifications */
+    patch: operations['NotificationsController_archiveAllNotifications']
   }
   '/v0/status': {
     /** Get infrastructure status */
@@ -1209,9 +1243,13 @@ export interface paths {
     /** Updates project's content */
     patch: operations['ContentController_updateContent']
   }
-  '/v0/projects/{ref}/daily-stats': {
-    /** Gets daily project stats */
-    get: operations['DailyStatsController_getDailyStats']
+  '/v0/projects/{ref}/databases': {
+    /** Gets non-removed databases of a specified project */
+    get: operations['DatabasesController_getDatabases']
+  }
+  '/v0/projects/{ref}/databases-statuses': {
+    /** Gets statuses of databases within a project */
+    get: operations['DatabasesStatusesController_getStatus']
   }
   '/v0/projects/{ref}/db-password': {
     /** Updates the database password */
@@ -1220,6 +1258,10 @@ export interface paths {
   '/v0/projects/{ref}/live': {
     /** Gets project health check */
     get: operations['HealthCheckController_projectHealthCheck']
+  }
+  '/v0/projects/{ref}/load-balancers': {
+    /** Gets non-removed databases of a specified project */
+    get: operations['LoadBalancersController_getLoadBalancers']
   }
   '/v0/projects/{ref}/api/rest': {
     /** Gets project OpenApi */
@@ -1232,12 +1274,6 @@ export interface paths {
   '/v0/projects/{ref}/infra-monitoring': {
     /** Gets project's usage metrics */
     get: operations['InfraMonitoringController_getUsageMetrics']
-  }
-  '/v0/projects/{ref}/invoices': {
-    /** Gets project's invoices */
-    get: operations['InvoicesController_getInvoices']
-    /** Gets project's invoice count */
-    head: operations['InvoicesController_getInvoiceCount']
   }
   '/v0/projects/{ref}/pause': {
     /** Pauses the project */
@@ -1305,6 +1341,10 @@ export interface paths {
     /** Updates project's pgbouncer config */
     patch: operations['PgbouncerConfigController_updatePgbouncerConfig']
   }
+  '/v0/projects/{ref}/config/pgbouncer/status': {
+    /** Gets project's pgbouncer status */
+    get: operations['PgbouncerConfigController_getPgbouncerStatus']
+  }
   '/v0/projects/{ref}/config/postgrest': {
     /** Gets project's postgrest config */
     get: operations['PostgrestConfigController_getPostgRESTConfig']
@@ -1326,6 +1366,10 @@ export interface paths {
     get: operations['StorageConfigController_getConfig']
     /** Updates project's storage config */
     patch: operations['StorageConfigController_updateConfig']
+  }
+  '/v0/projects/{ref}/config/supavisor': {
+    /** Gets project's supavisor config */
+    get: operations['SupavisorConfigController_getSupavisorConfig']
   }
   '/v0/projects/{ref}/billing/addons': {
     /** Gets project addons */
@@ -1414,6 +1458,7 @@ export interface paths {
     post: operations['ProjectsController_createProject']
   }
   '/v1/projects/{ref}/api-keys': {
+    /** Get project api keys */
     get: operations['ApiKeysController_getProjectApiKeys']
   }
   '/v1/projects/{ref}/branches': {
@@ -1597,6 +1642,10 @@ export interface paths {
     /** Enables Database Webhooks on the project */
     post: operations['V1DatabaseWebhooksController_v1EnableDatabaseWebhooks']
   }
+  '/v1/projects/{ref}/database/backups': {
+    /** Lists all backups */
+    get: operations['V1BackupsController_getBackups']
+  }
   '/v1/projects/{ref}/database/backups/restore-pitr': {
     /** Restores a PITR backup for a database */
     post: operations['V1RestorePitrController_v1RestorePitr']
@@ -1637,6 +1686,10 @@ export interface paths {
      */
     get: operations['FunctionSlugController_getFunctionBody']
   }
+  '/v1/projects/{ref}/storage/buckets': {
+    /** Lists all buckets */
+    get: operations['V1StorageBucketsController_getBuckets']
+  }
   '/v1/organizations': {
     /**
      * List all organizations
@@ -1649,6 +1702,10 @@ export interface paths {
   '/v1/organizations/{slug}/members': {
     /** List members of an organization */
     get: operations['V1OrganizationMembersController_v1ListOrganizationMembers']
+  }
+  '/v1/organizations/{slug}': {
+    /** Gets information about the organization */
+    get: operations['V1OrganizationSlugController_getOrganization']
   }
   '/v1/oauth/authorize': {
     /** Authorize user through oauth */
@@ -1718,23 +1775,35 @@ export interface components {
     UpdateNotificationsBodyV1: {
       ids: string[]
     }
+    NotificationAction: {
+      label: string
+      url?: string
+      action_type?: string
+    }
+    NotificationData: {
+      org_slug?: string
+      project_ref?: string
+      title: string
+      message?: string
+      actions?: components['schemas']['NotificationAction'][]
+    }
     NotificationResponseV2: {
-      /** @enum {string} */
-      type:
-        | 'project.tier-limit-exceeded'
-        | 'postgresql.upgrade-available'
-        | 'postgresql.upgrade-completed'
-        | 'project.update-completed'
-        | 'project.informational'
+      /** @deprecated */
+      type: string | null
       /** @enum {string} */
       status: 'new' | 'seen' | 'archived'
       /** @enum {string} */
       priority: 'Critical' | 'Warning' | 'Info'
+      data: components['schemas']['NotificationData']
       id: string
       inserted_at: string
       name: string
-      data: Record<string, never>
       meta: Record<string, never>
+    }
+    NotificationsSummary: {
+      unread_count: number
+      has_warning: boolean
+      has_critical: boolean
     }
     UpdateNotificationBodyV2: {
       id: string
@@ -2352,8 +2421,8 @@ export interface components {
       id: number
       slug: string
       name: string
-      billing_email: string
-      stripe_customer_id: string
+      billing_email?: string
+      stripe_customer_id?: string
       opt_in_tags: string[]
     }
     CustomerResponse: {
@@ -2687,6 +2756,9 @@ export interface components {
         stripeAccount?: string
       }
     }
+    HCaptchaBody: {
+      hcaptchaToken: string
+    }
     SetupIntentResponse: {
       id: string
       object: string
@@ -2720,8 +2792,10 @@ export interface components {
         stripeAccount?: string
       }
     }
+    /** @enum {string} */
+    BillingPlanId: 'free' | 'pro' | 'team' | 'enterprise'
     BillingSubscriptionPlan: {
-      id: Record<string, never>
+      id: components['schemas']['BillingPlanId']
       name: string
       price: number
     }
@@ -2730,18 +2804,39 @@ export interface components {
       supabase_prod_id: string
       price: number
     }
+    /** @enum {string} */
+    ProjectAddonType: 'custom_domain' | 'compute_instance' | 'pitr' | 'ipv4'
+    /** @enum {string} */
+    AddonVariantId:
+      | 'ci_small'
+      | 'ci_medium'
+      | 'ci_large'
+      | 'ci_xlarge'
+      | 'ci_2xlarge'
+      | 'ci_4xlarge'
+      | 'ci_8xlarge'
+      | 'ci_12xlarge'
+      | 'ci_16xlarge'
+      | 'cd_default'
+      | 'pitr_7'
+      | 'pitr_14'
+      | 'pitr_28'
+      | 'ipv4_default'
+    /** @enum {string} */
+    ProjectAddonVariantPricingType: 'fixed' | 'usage'
+    /** @enum {string} */
+    ProjectAddonPricingInterval: 'monthly' | 'hourly'
     ProjectAddonVariantResponse: {
-      identifier: string
+      identifier: components['schemas']['AddonVariantId']
+      price_type: components['schemas']['ProjectAddonVariantPricingType']
+      price_interval: components['schemas']['ProjectAddonPricingInterval']
       name: string
       price_description: string
-      price_type: Record<string, never>
-      price_interval: Record<string, never>
       price: number
       meta?: Record<string, never>
     }
     SelectedAddonResponse: {
-      /** @enum {string} */
-      type: 'custom_domain' | 'compute_instance' | 'pitr'
+      type: components['schemas']['ProjectAddonType']
       variant: components['schemas']['ProjectAddonVariantResponse']
     }
     BillingProjectAddonResponse: {
@@ -2801,9 +2896,9 @@ export interface components {
       expiry_year: number
     }
     ScheduledPlanChange: {
+      target_plan: components['schemas']['BillingPlanId']
       /** Format: date-time */
       at: string
-      target_plan: Record<string, never>
       usage_billing_enabled: boolean
     }
     GetSubscriptionResponse: {
@@ -2829,6 +2924,21 @@ export interface components {
       payment_method?: string
       /** @enum {string} */
       tier: 'tier_payg' | 'tier_pro' | 'tier_free' | 'tier_team' | 'tier_enterprise'
+    }
+    /** @enum {string} */
+    BillingPlanChangeType: 'upgrade' | 'downgrade' | 'none'
+    /** @enum {string} */
+    BillingPlanEffectiveAt: 'now' | 'end_of_billing_period' | 'none'
+    PlanResponse: {
+      id: components['schemas']['BillingPlanId']
+      change_type: components['schemas']['BillingPlanChangeType']
+      effective_at: components['schemas']['BillingPlanEffectiveAt']
+      name: string
+      price: number
+      is_current: boolean
+    }
+    PlansResponse: {
+      plans: components['schemas']['PlanResponse'][]
     }
     UpcomingInvoice: Record<string, never>
     ColumnPrivilege: {
@@ -2943,7 +3053,7 @@ export interface components {
       /** @enum {string} */
       behavior: 'VOLATILE' | 'STABLE' | 'IMMUTABLE'
       security_definer: boolean
-      config_params: Record<string, unknown> | null
+      config_params: unknown
     }
     CreateFunctionBody: {
       slug: string
@@ -3366,7 +3476,7 @@ export interface components {
         | 'tenant:Sql:Write:Update'
         | 'write:Update'
       )[]
-      condition: Record<string, unknown> | null
+      condition: unknown
       organization_id: number
       resources: string[]
     }
@@ -3403,7 +3513,21 @@ export interface components {
       first_name: string
       last_name: string
     }
+    /** @enum {string} */
+    DbInstanceSize:
+      | 'nano'
+      | 'micro'
+      | 'small'
+      | 'medium'
+      | 'large'
+      | 'xlarge'
+      | '2xlarge'
+      | '4xlarge'
+      | '8xlarge'
+      | '12xlarge'
+      | '16xlarge'
     ProjectInfo: {
+      infra_compute_size?: components['schemas']['DbInstanceSize']
       cloud_provider: string
       id: number
       inserted_at: string
@@ -3414,6 +3538,7 @@ export interface components {
       status: string
       subscription_id: string
       is_branch_enabled: boolean
+      is_read_replicas_enabled: boolean
       preview_branch_refs: string[]
       disk_volume_size_gb?: number
     }
@@ -3449,6 +3574,7 @@ export interface components {
         | 'us-east-1'
         | 'us-west-1'
         | 'us-west-2'
+        | 'ap-east-1'
         | 'ap-southeast-1'
         | 'ap-northeast-1'
         | 'ap-northeast-2'
@@ -3464,6 +3590,7 @@ export interface components {
       kps_enabled?: boolean
     }
     CreateProjectResponse: {
+      infra_compute_size?: components['schemas']['DbInstanceSize']
       cloud_provider: string
       id: number
       inserted_at: string
@@ -3474,6 +3601,7 @@ export interface components {
       status: string
       subscription_id: string
       is_branch_enabled: boolean
+      is_read_replicas_enabled: boolean
       preview_branch_refs: string[]
       disk_volume_size_gb?: number
       endpoint: string
@@ -3549,8 +3677,57 @@ export interface components {
       content?: Record<string, never>
       owner_id?: number
     }
+    DatabaseDetailResponse: {
+      /** @enum {string} */
+      status:
+        | 'ACTIVE_HEALTHY'
+        | 'ACTIVE_UNHEALTHY'
+        | 'COMING_UP'
+        | 'GOING_DOWN'
+        | 'INIT_FAILED'
+        | 'REMOVED'
+        | 'RESTORING'
+        | 'UNKNOWN'
+        | 'UPGRADING'
+      /** @enum {string} */
+      cloud_provider: 'AWS' | 'FLY'
+      db_port: number
+      db_name: string
+      db_user: string
+      restUrl: string
+      db_host: string
+      connectionString: string
+      identifier: string
+      inserted_at: string
+      size: string
+      region: string
+    }
+    DatabaseStatusResponse: {
+      /** @enum {string} */
+      status:
+        | 'ACTIVE_HEALTHY'
+        | 'ACTIVE_UNHEALTHY'
+        | 'COMING_UP'
+        | 'GOING_DOWN'
+        | 'INIT_FAILED'
+        | 'REMOVED'
+        | 'RESTORING'
+        | 'UNKNOWN'
+        | 'UPGRADING'
+      identifier: string
+    }
     UpdatePasswordBody: {
       password: string
+    }
+    Database: {
+      identifier: string
+      /** @enum {string} */
+      type: 'PRIMARY' | 'READ_REPLICA'
+      status: string
+    }
+    LoadBalancerDetailResponse: {
+      endpoint: string
+      databases: components['schemas']['Database'][]
     }
     Buffer: Record<string, never>
     ResizeBody: {
@@ -3562,6 +3739,7 @@ export interface components {
       'supabase-postgres': string
     }
     ProjectDetailResponse: {
+      infra_compute_size?: components['schemas']['DbInstanceSize']
       cloud_provider: string
       db_host: string
       id: number
@@ -3593,6 +3771,7 @@ export interface components {
       lastDatabaseResizeAt?: string
       is_branch_enabled: boolean
       parent_project_ref?: string
+      is_read_replicas_enabled: boolean
     }
     ProjectRefResponse: {
       id: number
@@ -3662,6 +3841,8 @@ export interface components {
       app_config?: components['schemas']['ProjectAppConfigResponse']
       jwt_secret?: string
       service_api_keys?: components['schemas']['ProjectServiceApiKeyResponse'][]
+      /** @enum {string|null} */
+      db_ip_addr_config: 'legacy' | 'static-ipv4' | 'concurrent-ipv6' | 'ipv6' | null
     }
     TransferProjectBody: {
       target_organization_slug: string
@@ -3680,6 +3861,8 @@ export interface components {
       amount: number
     }
     PreviewProjectTransferResponse: {
+      source_subscription_plan: components['schemas']['BillingPlanId']
+      target_subscription_plan: components['schemas']['BillingPlanId']
       valid: boolean
       warnings: components['schemas']['PreviewTransferInfo'][]
       errors: components['schemas']['PreviewTransferInfo'][]
@@ -3692,8 +3875,6 @@ export interface components {
       credits_on_source_organization: number
       costs_on_target_organization: number
       charge_on_target_organization: number
-      source_subscription_plan: Record<string, never>
-      target_subscription_plan: Record<string, unknown> | null
       source_invoice_items: components['schemas']['PreviewTransferInvoiceItem'][]
       target_invoice_items: components['schemas']['PreviewTransferInvoiceItem'][]
     }
@@ -3712,7 +3893,7 @@ export interface components {
             message?: string
             status?: string
           },
-          string
+          string,
         ]
       >
       result?: Record<string, never>[]
@@ -3735,6 +3916,9 @@ export interface components {
       /** @enum {string} */
       pgbouncer_status: 'COMING_DOWN' | 'COMING_UP' | 'DISABLED' | 'ENABLED' | 'RELOADING'
       connectionString: string
+    }
+    PgbouncerStatusResponse: {
+      active: boolean
     }
     UpdatePgbouncerConfigBody: {
       default_pool_size?: number
@@ -3769,6 +3953,7 @@ export interface components {
       effective_cache_size?: string
       maintenance_work_mem?: string
       max_connections?: number
+      max_locks_per_transaction?: number
       max_parallel_maintenance_workers?: number
       max_parallel_workers?: number
       max_parallel_workers_per_gather?: number
@@ -3783,6 +3968,7 @@ export interface components {
       effective_cache_size?: string
       maintenance_work_mem?: string
       max_connections?: number
+      max_locks_per_transaction?: number
       max_parallel_maintenance_workers?: number
       max_parallel_workers?: number
       max_parallel_workers_per_gather?: number
@@ -3809,9 +3995,23 @@ export interface components {
     UpdateStorageConfigResponse: {
       fileSizeLimit: number
     }
-    AvailableAddonResponse: {
+    SupavisorConfigResponse: {
+      identifier: string
       /** @enum {string} */
-      type: 'custom_domain' | 'compute_instance' | 'pitr'
+      database_type: 'PRIMARY' | 'READ_REPLICA'
+      is_using_scram_auth: boolean
+      db_user: string
+      db_host: string
+      db_port: number
+      db_name: string
+      connectionString: string
+      default_pool_size: number | null
+      max_client_conn: number | null
+      /** @enum {string|null} */
+      pool_mode: 'transaction' | 'session' | 'statement' | null
+    }
+    AvailableAddonResponse: {
+      type: components['schemas']['ProjectAddonType']
       name: string
       variants: components['schemas']['ProjectAddonVariantResponse'][]
     }
@@ -3821,9 +4021,8 @@ export interface components {
       available_addons: components['schemas']['AvailableAddonResponse'][]
     }
     UpdateAddonBody: {
-      addon_variant: string
-      /** @enum {string} */
-      addon_type: 'custom_domain' | 'compute_instance' | 'pitr'
+      addon_variant: components['schemas']['AddonVariantId']
+      addon_type: components['schemas']['ProjectAddonType']
     }
     ServiceApiKey: {
       api_key_encrypted?: string
@@ -4193,7 +4392,6 @@ export interface components {
     }
     SyncVercelEnvError: {
       message: string
-      details: string
     }
     CreateVercelConnectionResponse: {
       id: string
@@ -4314,9 +4512,8 @@ export interface components {
       expiry_time: string
     }
     UpdateAddonAdminBody: {
-      addon_variant: string
-      /** @enum {string} */
-      addon_type: 'custom_domain' | 'compute_instance' | 'pitr'
+      addon_variant: components['schemas']['AddonVariantId']
+      addon_type: components['schemas']['ProjectAddonType']
       price_id?: string
     }
     DatabaseResponse: {
@@ -4416,7 +4613,8 @@ export interface components {
       ipv4_addresses: string[]
     }
     NetworkRestrictionsRequest: {
-      dbAllowedCidrs: string[]
+      dbAllowedCidrs?: string[]
+      dbAllowedCidrsV6?: string[]
     }
     NetworkRestrictionsResponse: {
       /** @enum {string} */
@@ -4480,7 +4678,6 @@ export interface components {
       current_app_version: string
       latest_app_version: string
       target_upgrade_versions: components['schemas']['ProjectVersion'][]
-      requires_manual_intervention: string | null
       potential_breaking_changes: string[]
       duration_estimate_hours: number
       legacy_auth_custom_roles: string[]
@@ -4501,6 +4698,7 @@ export interface components {
         | '8_upgrade_completion_failed'
       /** @enum {string} */
       progress?:
+        | '0_requested'
         | '1_started'
         | '2_launched_upgraded_instance'
         | '3_detached_volume_from_upgraded_instance'
@@ -4531,6 +4729,7 @@ export interface components {
         | 'us-east-1'
         | 'us-west-1'
         | 'us-west-2'
+        | 'ap-east-1'
         | 'ap-southeast-1'
         | 'ap-northeast-1'
         | 'ap-northeast-2'
@@ -4573,6 +4772,7 @@ export interface components {
       default_pool_size?: number
       ignore_startup_parameters?: string
       max_client_conn?: number
+      connection_string?: string
     }
     AuthConfigResponse: {
       smtp_admin_email?: string
@@ -4672,6 +4872,23 @@ export interface components {
       created_at?: string
       updated_at?: string
     }
+    V1Backup: {
+      /** @enum {string} */
+      status: 'COMPLETED' | 'FAILED' | 'PENDING' | 'REMOVED' | 'ARCHIVED'
+      is_physical_backup: boolean
+      inserted_at: string
+    }
+    PhysicalBackup: {
+      earliest_physical_backup_date_unix?: number
+      latest_physical_backup_date_unix?: number
+    }
+    V1BackupsResponse: {
+      region: string
+      walg_enabled: boolean
+      pitr_enabled: boolean
+      backups: components['schemas']['V1Backup'][]
+      physical_backup_data: components['schemas']['PhysicalBackup']
+    }
     V1RestorePitrBody: {
       recovery_time_target_unix: number
     }
@@ -4689,6 +4906,14 @@ export interface components {
       entrypoint_path?: string
       import_map_path?: string
     }
+    V1StorageBucketResponse: {
+      id: string
+      name: string
+      owner: string
+      created_at: string
+      updated_at: string
+      public: boolean
+    }
     OrganizationResponseV1: {
       id: string
       name: string
@@ -4702,6 +4927,12 @@ export interface components {
       email?: string
       role_name: string
       mfa_enabled: boolean
+    }
+    V1OrganizationSlugResponse: {
+      plan?: components['schemas']['BillingPlanId']
+      opt_in_tags: ('AI_SQL_GENERATOR_OPT_IN' | 'PREVIEW_BRANCHES_OPT_IN')[]
+      id: string
+      name: string
     }
     OAuthTokenBody: {
       /** @enum {string} */
@@ -4765,7 +4996,7 @@ export interface components {
       updated_by: components['schemas']['SnippetUser']
       content: components['schemas']['SnippetContent']
     }
-    ResourceStatusResponse: {
+    ResourceWithServicesStatusResponse: {
       /** @description Supabase project instance compute size */
       compute: string
       /** @description Unique ID representing the fly extension */
@@ -4792,6 +5023,8 @@ export interface components {
        * @example fly_123456789
        */
       supabase_org_id: string
+      /** @description Supabase project services health status */
+      services: components['schemas']['ServiceHealthResponse'][]
     }
     ResourceProvisioningConfigResponse: {
       /**
@@ -4799,6 +5032,11 @@ export interface components {
        * @example postgresql://postgres:dbpass@db.abcdefghijklmnop.supabase.co:5432/postgres
        */
       DATABASE_URL: string
+      /**
+       * @description Pooler connection string
+       * @example postgres://postgres.abcdefghijklmnop:dbpass@aws-0-us-east-1.pooler.supabase.com:6543/postgres
+       */
+      DATABASE_POOLER_URL: string
     }
     ResourceProvisioningResponse: {
       /** @description Supabase envs config */
@@ -4822,8 +5060,7 @@ export interface components {
       supabase_org_id: string
     }
     FlyOrganization: {
-      /** @enum {string} */
-      plan: 'free' | 'pro' | 'team' | 'enterprise'
+      plan: components['schemas']['BillingPlanId']
       id: string
       supabase_org_id: string
       name: string
@@ -4914,7 +5151,10 @@ export interface operations {
   NotificationsController_getNotificationsV2: {
     parameters: {
       query: {
-        archived?: boolean
+        status: 'new' | 'seen' | 'archived'
+        priority: 'Critical' | 'Warning' | 'Info'
+        org_slug?: string[]
+        project_ref?: string[]
         offset: number
         limit: number
       }
@@ -4964,6 +5204,28 @@ export interface operations {
         }
       }
       /** @description Failed to update notifications */
+      500: {
+        content: never
+      }
+    }
+  }
+  /** Get an aggregated data of interest across all notifications for the user */
+  NotificationsController_getNotificationsSummary: {
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['NotificationsSummary']
+        }
+      }
+    }
+  }
+  /** Archives all notifications */
+  NotificationsController_archiveAllNotifications: {
+    responses: {
+      200: {
+        content: never
+      }
+      /** @description Failed to archive all notifications */
       500: {
         content: never
       }
@@ -6296,12 +6558,26 @@ export interface operations {
     }
   }
   /** Sets up a payment method */
-  SetupIntentController_setUpPaymentMethod: {
+  SetupIntentOrgController_setUpPaymentMethod: {
+    parameters: {
+      path: {
+        /** @description Organization slug */
+        slug: string
+      }
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['HCaptchaBody']
+      }
+    }
     responses: {
       201: {
         content: {
           'application/json': components['schemas']['SetupIntentResponse']
         }
+      }
+      403: {
+        content: never
       }
       /** @description Failed to set up a payment method */
       500: {
@@ -6359,7 +6635,7 @@ export interface operations {
     }
   }
   /** Preview subscription changes */
-  SubscriptionController_previewSubscriptionChangeV2: {
+  SubscriptionController_previewSubscriptionChange: {
     parameters: {
       path: {
         /** @description Organization slug */
@@ -6416,7 +6692,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          'application/json': Record<string, never>
+          'application/json': components['schemas']['PlansResponse']
         }
       }
       403: {
@@ -6429,7 +6705,7 @@ export interface operations {
     }
   }
   /** Gets the upcoming invoice */
-  OrgInvoicesController_getUpcomingInvoiceV2: {
+  OrgInvoicesController_getUpcomingInvoice: {
     parameters: {
       path: {
         /** @description Organization slug */
@@ -8291,12 +8567,6 @@ export interface operations {
   }
   /** Updates project's content */
   ContentController_updateWholeContent: {
-    parameters: {
-      path: {
-        /** @description Project ref */
-        ref: string
-      }
-    }
     requestBody: {
       content: {
         'application/json': components['schemas']['UpsertContentParams']
@@ -8408,6 +8678,42 @@ export interface operations {
       }
     }
   }
+  /** Gets non-removed databases of a specified project */
+  DatabasesController_getDatabases: {
+    parameters: {
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+    }
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['DatabaseDetailResponse'][]
+        }
+      }
+    }
+  }
+  /** Gets statuses of databases within a project */
+  DatabasesStatusesController_getStatus: {
+    parameters: {
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+    }
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['DatabaseStatusResponse'][]
+        }
+      }
+      /** @description Failed to get statuses of databases of a project */
+      500: {
+        content: never
+      }
+    }
+  }
   /** Updates the database password */
   DbPasswordController_updatePassword: {
     parameters: {
@@ -8452,6 +8758,22 @@ export interface operations {
       /** @description Failed to get project health check */
       500: {
         content: never
+      }
+    }
+  }
+  /** Gets non-removed databases of a specified project */
+  LoadBalancersController_getLoadBalancers: {
+    parameters: {
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+    }
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['LoadBalancerDetailResponse'][]
+        }
       }
     }
   }
@@ -8537,48 +8859,6 @@ export interface operations {
         }
       }
       /** @description Failed to get project's usage metrics */
-      500: {
-        content: never
-      }
-    }
-  }
-  /** Gets project's invoices */
-  InvoicesController_getInvoices: {
-    parameters: {
-      query?: {
-        limit?: string
-        offset?: string
-      }
-      path: {
-        /** @description Project ref */
-        ref: string
-      }
-    }
-    responses: {
-      200: {
-        content: {
-          'application/json': Record<string, never>[]
-        }
-      }
-      /** @description Failed to get project's invoices */
-      500: {
-        content: never
-      }
-    }
-  }
-  /** Gets project's invoice count */
-  InvoicesController_getInvoiceCount: {
-    parameters: {
-      path: {
-        /** @description Project ref */
-        ref: string
-      }
-    }
-    responses: {
-      200: {
-        content: never
-      }
-      /** @description Failed to get project's invoice count */
       500: {
         content: never
       }
@@ -9054,6 +9334,26 @@ export interface operations {
       }
     }
   }
+  /** Gets project's pgbouncer status */
+  PgbouncerConfigController_getPgbouncerStatus: {
+    parameters: {
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+    }
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['PgbouncerStatusResponse']
+        }
+      }
+      /** @description Failed to retrieve project's pgbouncer status */
+      500: {
+        content: never
+      }
+    }
+  }
   /** Gets project's postgrest config */
   PostgrestConfigController_getPostgRESTConfig: {
     parameters: {
@@ -9226,6 +9526,26 @@ export interface operations {
       }
     }
   }
+  /** Gets project's supavisor config */
+  SupavisorConfigController_getSupavisorConfig: {
+    parameters: {
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+    }
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['SupavisorConfigResponse'][]
+        }
+      }
+      /** @description Failed to retrieve project's supavisor config */
+      500: {
+        content: never
+      }
+    }
+  }
   /** Gets project addons */
   ProjectAddonController_getProjectAddons: {
     parameters: {
@@ -9281,7 +9601,7 @@ export interface operations {
       path: {
         /** @description Project ref */
         ref: string
-        addon_variant: string
+        addon_variant: components['schemas']['AddonVariantId']
       }
     }
     responses: {
@@ -9724,6 +10044,28 @@ export interface operations {
       }
     }
   }
+  /** Gets invoices for the given customer */
+  InvoicesController_getInvoices: {
+    parameters: {
+      query: {
+        customer: string
+        slug?: string
+        limit: string
+        offset: string
+      }
+    }
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['Invoice'][]
+        }
+      }
+      /** @description Failed to retrieve invoices */
+      500: {
+        content: never
+      }
+    }
+  }
   /** Gets the total count of invoices for the given customer */
   InvoicesController_countInvoices: {
     parameters: {
@@ -9770,6 +10112,25 @@ export interface operations {
         }
       }
       /** @description Failed to retrieve invoice */
+      500: {
+        content: never
+      }
+    }
+  }
+  /** Sets up a payment method */
+  SetupIntentController_setUpPaymentMethod: {
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['HCaptchaBody']
+      }
+    }
+    responses: {
+      201: {
+        content: {
+          'application/json': components['schemas']['SetupIntentResponse']
+        }
+      }
+      /** @description Failed to set up a payment method */
       500: {
         content: never
       }
@@ -9877,7 +10238,7 @@ export interface operations {
       }
     }
   }
-  /** Gets the project with the given ID if provided, otherwise gets the list of projects */
+  /** Gets the list of Vercel projects */
   VercelProjectsController_getVercelProjects: {
     parameters: {
       query: {
@@ -9891,10 +10252,33 @@ export interface operations {
     responses: {
       200: {
         content: {
+          'application/json': Record<string, never>[]
+        }
+      }
+      /** @description Failed to get projects */
+      500: {
+        content: never
+      }
+    }
+  }
+  /** Gets the Vercel project with the given ID */
+  VercelProjectsController_getVercelProject: {
+    parameters: {
+      header: {
+        vercel_authorization: string
+      }
+      path: {
+        id: string
+        teamId: string
+      }
+    }
+    responses: {
+      200: {
+        content: {
           'application/json': Record<string, never>
         }
       }
-      /** @description Failed to get project(s) */
+      /** @description Failed to get project */
       500: {
         content: never
       }
@@ -10090,7 +10474,7 @@ export interface operations {
     }
   }
   /** Syncs supabase project envs with given connection id */
-  VercelConnectionsController_syncVercelConnectionEnvs: {
+  VercelConnectionsController_syncVercelConnectionEnvironments: {
     parameters: {
       path: {
         connection_id: string
@@ -10780,7 +11164,7 @@ export interface operations {
       path: {
         /** @description Project ref */
         ref: string
-        addon_variant: string
+        addon_variant: components['schemas']['AddonVariantId']
       }
     }
     responses: {
@@ -10880,11 +11264,6 @@ export interface operations {
         'x-vercel-signature': string
       }
     }
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['Buffer']
-      }
-    }
     responses: {
       201: {
         content: never
@@ -10902,11 +11281,6 @@ export interface operations {
         'x-github-delivery': string
         'x-github-event': string
         'x-hub-signature-256': string
-      }
-    }
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['Buffer']
       }
     }
     responses: {
@@ -11032,6 +11406,7 @@ export interface operations {
       }
     }
   }
+  /** Get project api keys */
   ApiKeysController_getProjectApiKeys: {
     parameters: {
       path: {
@@ -12132,6 +12507,26 @@ export interface operations {
       }
     }
   }
+  /** Lists all backups */
+  V1BackupsController_getBackups: {
+    parameters: {
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+    }
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['V1BackupsResponse']
+        }
+      }
+      /** @description Failed to get backups */
+      500: {
+        content: never
+      }
+    }
+  }
   /** Restores a PITR backup for a database */
   V1RestorePitrController_v1RestorePitr: {
     parameters: {
@@ -12273,6 +12668,29 @@ export interface operations {
       }
     }
   }
+  /** Lists all buckets */
+  V1StorageBucketsController_getBuckets: {
+    parameters: {
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+    }
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['V1StorageBucketResponse'][]
+        }
+      }
+      403: {
+        content: never
+      }
+      /** @description Failed to get list of buckets */
+      500: {
+        content: never
+      }
+    }
+  }
   /** Create an organization */
   OrganizationsController_createOrganization: {
     requestBody: {
@@ -12303,6 +12721,21 @@ export interface operations {
       200: {
         content: {
           'application/json': components['schemas']['V1OrganizationMemberResponse'][]
+        }
+      }
+    }
+  }
+  /** Gets information about the organization */
+  V1OrganizationSlugController_getOrganization: {
+    parameters: {
+      path: {
+        slug: string
+      }
+    }
+    responses: {
+      200: {
+        content: {
+          'application/json': components['schemas']['V1OrganizationSlugResponse']
         }
       }
     }
@@ -12398,7 +12831,7 @@ export interface operations {
     responses: {
       200: {
         content: {
-          'application/json': components['schemas']['ResourceStatusResponse']
+          'application/json': components['schemas']['ResourceWithServicesStatusResponse']
         }
       }
     }

@@ -1,20 +1,24 @@
+import { useParams } from 'common'
 import { useRouter } from 'next/router'
 import * as React from 'react'
-import { IconHome } from '../Icon/icons/IconHome'
 
+import { AiIconAnimation } from '../../layout/ai-icon-animation/ai-icon-animation'
+import { IconHome } from '../Icon/icons/IconHome'
 import { IconArrowRight } from './../Icon/icons/IconArrowRight'
 import { IconBook } from './../Icon/icons/IconBook'
 import { IconColumns } from './../Icon/icons/IconColumns'
 import { IconInbox } from './../Icon/icons/IconInbox'
+import { IconKey } from './../Icon/icons/IconKey'
 import { IconLifeBuoy } from './../Icon/icons/IconLifeBuoy'
+import { IconLink } from './../Icon/icons/IconLink'
 import { IconMonitor } from './../Icon/icons/IconMonitor'
 import { IconPhone } from './../Icon/icons/IconPhone'
 import { IconUser } from './../Icon/icons/IconUser'
-import { IconKey } from './../Icon/icons/IconKey'
-import { IconLink } from './../Icon/icons/IconLink'
-
+import APIKeys from './APIKeys'
 import AiCommand from './AiCommand'
-import sharedItems from './utils/shared-nav-items.json'
+import ChildItem from './ChildItem'
+import { BadgeExperimental } from './Command.Badges'
+import { COMMAND_ROUTES } from './Command.constants'
 import { AiIcon } from './Command.icons'
 import {
   CommandDialog,
@@ -26,18 +30,13 @@ import {
   FORCE_MOUNT_ITEM,
   copyToClipboard,
 } from './Command.utils'
-import { COMMAND_ROUTES } from './Command.constants'
 import { useCommandMenu } from './CommandMenuProvider'
-
+import CommandMenuShortcuts from './CommandMenuShortcuts'
 import DocsSearch from './DocsSearch'
 import GenerateSQL from './GenerateSQL'
-import ThemeOptions from './ThemeOptions'
-import APIKeys from './APIKeys'
 import SearchableStudioItems from './SearchableStudioItems'
-import CommandMenuShortcuts from './CommandMenuShortcuts'
-import { BadgeExperimental } from './Command.Badges'
-import { AiIconAnimation } from '@ui/layout/ai-icon-animation'
-import ChildItem from './ChildItem'
+import ThemeOptions from './ThemeOptions'
+import sharedItems from './utils/shared-nav-items.json'
 
 export const CHAT_ROUTES = [
   COMMAND_ROUTES.AI, // this one is temporary
@@ -58,12 +57,9 @@ const iconPicker: { [key: string]: React.ReactNode } = {
   products: <IconColumns />,
 }
 
-interface CommandMenuProps {
-  projectRef?: string
-}
-
-const CommandMenu = ({ projectRef }: CommandMenuProps) => {
+const CommandMenu = () => {
   const router = useRouter()
+  const { ref: projectRef } = useParams()
 
   const {
     isOpen,
@@ -86,7 +82,11 @@ const CommandMenu = ({ projectRef }: CommandMenuProps) => {
   }
 
   const commandListMaxHeight =
-    currentPage === COMMAND_ROUTES.DOCS_SEARCH ? 'min(600px, 50vh)' : '300px'
+    currentPage === COMMAND_ROUTES.DOCS_SEARCH ||
+    currentPage === COMMAND_ROUTES.AI ||
+    currentPage === COMMAND_ROUTES.GENERATE_SQL
+      ? 'min(600px, 50vh)'
+      : '300px'
 
   return (
     <>
@@ -115,7 +115,12 @@ const CommandMenu = ({ projectRef }: CommandMenuProps) => {
         <CommandList
           style={{
             maxHeight: commandListMaxHeight,
-            height: currentPage === COMMAND_ROUTES.DOCS_SEARCH ? commandListMaxHeight : 'auto',
+            height:
+              currentPage === COMMAND_ROUTES.DOCS_SEARCH ||
+              currentPage === COMMAND_ROUTES.AI ||
+              currentPage === COMMAND_ROUTES.GENERATE_SQL
+                ? commandListMaxHeight
+                : 'auto',
           }}
           className="my-2"
         >
@@ -127,7 +132,7 @@ const CommandMenu = ({ projectRef }: CommandMenuProps) => {
                   value={site === 'docs' ? `${FORCE_MOUNT_ITEM}--docs-search` : undefined}
                   onSelect={() => setPages([...pages, COMMAND_ROUTES.DOCS_SEARCH])}
                 >
-                  <IconBook className="" />
+                  <IconBook />
 
                   <span>
                     Search the docs
@@ -179,7 +184,13 @@ const CommandMenu = ({ projectRef }: CommandMenuProps) => {
               {site === 'docs' && (
                 <CommandGroup heading="Projects">
                   {sharedItems.projectTools.map((item) => (
-                    <CommandItem key={item.url} type="link" onSelect={() => router.push(item.url)}>
+                    <CommandItem
+                      key={item.url}
+                      type="link"
+                      onSelect={() =>
+                        window.open(`https://supabase.com/dashboard${item.url}`, '_blank')
+                      }
+                    >
                       <IconArrowRight className="text-foreground-muted" />
                       <CommandLabel>
                         <span className="font-bold"> {item.label}</span>
@@ -192,7 +203,13 @@ const CommandMenu = ({ projectRef }: CommandMenuProps) => {
               {site === 'docs' && (
                 <CommandGroup heading="Studio tools">
                   {sharedItems.tools.map((item) => (
-                    <CommandItem key={item.url} type="link" onSelect={() => router.push(item.url)}>
+                    <CommandItem
+                      key={item.url}
+                      type="link"
+                      onSelect={() =>
+                        window.open(`https://supabase.com/dashboard${item.url}`, '_blank')
+                      }
+                    >
                       <IconArrowRight className="text-foreground-muted" />
                       <CommandLabel>
                         Go to <span className="font-bold"> {item.label}</span>
@@ -246,9 +263,7 @@ const CommandMenu = ({ projectRef }: CommandMenuProps) => {
               {site === 'studio' && (
                 <CommandGroup heading="Navigate">
                   {sharedItems.tools.map((item) => {
-                    const itemUrl = (
-                      projectRef ? item.url.replace('_', projectRef) : item.url
-                    ).split('https://supabase.com/dashboard')[1]
+                    const itemUrl = projectRef ? item.url.replace('_', projectRef) : item.url
 
                     return (
                       <CommandItem

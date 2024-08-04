@@ -32,6 +32,8 @@ import {
 
 import * as Tooltip from '@radix-ui/react-tooltip'
 import { useOrgSubscriptionQuery } from 'data/subscriptions/org-subscription-query'
+import { AddonVariantId } from 'data/subscriptions/types'
+import { formatCurrency } from 'lib/helpers'
 
 const COMPUTE_CATEGORY_OPTIONS: {
   id: 'micro' | 'optimized'
@@ -42,14 +44,14 @@ const COMPUTE_CATEGORY_OPTIONS: {
   {
     id: 'micro',
     name: 'Micro Compute',
-    imageUrl: `${BASE_PATH}/img/optimized-compute-off.png`,
-    imageUrlLight: `${BASE_PATH}/img/optimized-compute-off--light.png`,
+    imageUrl: `${BASE_PATH}/img/optimized-compute-off.svg`,
+    imageUrlLight: `${BASE_PATH}/img/optimized-compute-off--light.svg`,
   },
   {
     id: 'optimized',
     name: 'Optimized Compute',
-    imageUrl: `${BASE_PATH}/img/optimized-compute-on.png`,
-    imageUrlLight: `${BASE_PATH}/img/optimized-compute-on--light.png`,
+    imageUrl: `${BASE_PATH}/img/optimized-compute-on.svg`,
+    imageUrlLight: `${BASE_PATH}/img/optimized-compute-on--light.svg`,
   },
 ]
 
@@ -74,7 +76,10 @@ const ComputeInstanceSidePanel = () => {
   const snap = useSubscriptionPageStateSnapshot()
   const visible = snap.panelKey === 'computeInstance'
   const onClose = () => {
-    router.push(router.asPath.split('?')[0], undefined, { shallow: true })
+    const { panel, ...queryWithoutPanel } = router.query
+    router.push({ pathname: router.pathname, query: queryWithoutPanel }, undefined, {
+      shallow: true,
+    })
     snap.setPanelKey(undefined)
   }
 
@@ -167,7 +172,11 @@ const ComputeInstanceSidePanel = () => {
     if (selectedOption === 'ci_micro' && subscriptionCompute !== undefined) {
       removeAddon({ projectRef, variant: subscriptionCompute.variant.identifier })
     } else {
-      updateAddon({ projectRef, type: 'compute_instance', variant: selectedOption })
+      updateAddon({
+        projectRef,
+        type: 'compute_instance',
+        variant: selectedOption as AddonVariantId,
+      })
     }
   }
 
@@ -190,8 +199,8 @@ const ComputeInstanceSidePanel = () => {
           isFreePlan
             ? 'Unable to update compute instance on a free plan'
             : !canUpdateCompute
-            ? 'You do not have permission to update compute instance'
-            : undefined
+              ? 'You do not have permission to update compute instance'
+              : undefined
         }
         header={
           <div className="flex items-center justify-between">
@@ -321,7 +330,7 @@ const ComputeInstanceSidePanel = () => {
                           <div className="flex justify-between items-center mt-2">
                             <div className="flex items-center space-x-1">
                               <span className="text-foreground text-sm">
-                                ${option.price.toLocaleString()}
+                                {formatCurrency(option.price)}
                               </span>
                               <span className="text-foreground-light translate-y-[1px]">
                                 {' '}
@@ -375,38 +384,22 @@ const ComputeInstanceSidePanel = () => {
               </p>
             )}
 
-            {hasChanges &&
-              (selectedCategory !== 'micro' && selectedCompute?.price_interval === 'monthly' ? (
-                // Monthly payment with project-level subscription
-                <p className="text-sm text-foreground-light">
-                  Upon clicking confirm, the amount of{' '}
-                  <span className="text-foreground">
-                    ${selectedCompute?.price.toLocaleString()}
-                  </span>{' '}
-                  will be added to your monthly invoice. Any previous compute addon is prorated and
-                  you're immediately charged for the remaining days of your billing cycle. The addon
-                  is prepaid per month and in case of a downgrade, you get credits for the remaining
-                  time.
-                </p>
-              ) : selectedCategory !== 'micro' ? (
-                // Hourly usage-billing with org-based subscription
-                <p className="text-sm text-foreground-light">
-                  There are no immediate charges when changing compute. Compute Hours are a
-                  usage-based item and you're billed at the end of your billing cycle based on your
-                  compute usage. Read more about{' '}
-                  <Link
-                    href="https://supabase.com/docs/guides/platform/org-based-billing#usage-based-billing-for-compute"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="underline"
-                  >
-                    Compute Billing
-                  </Link>
-                  .
-                </p>
-              ) : (
-                <></>
-              ))}
+            {hasChanges && selectedCategory !== 'micro' && (
+              <p className="text-sm text-foreground-light">
+                There are no immediate charges when changing compute. Compute Hours are a
+                usage-based item and you're billed at the end of your billing cycle based on your
+                compute usage. Read more about{' '}
+                <Link
+                  href="https://supabase.com/docs/guides/platform/org-based-billing#usage-based-billing-for-compute"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline"
+                >
+                  Compute Billing
+                </Link>
+                .
+              </p>
+            )}
 
             {hasChanges && !blockMicroDowngradeDueToPitr && (
               <Alert
@@ -414,8 +407,7 @@ const ComputeInstanceSidePanel = () => {
                 variant="info"
                 title="Your project will need to be restarted when changing it's compute size"
               >
-                It will take up to 2 minutes for changes to take place, in which your project will
-                be unavailable during that time.
+                Your project will be unavailable for up to 2 minutes while the changes take place.
               </Alert>
             )}
 
@@ -446,7 +438,7 @@ const ComputeInstanceSidePanel = () => {
                   <IconAlertTriangle className="h-4 w-4" />
                   <AlertDescription_Shadcn_>
                     You have a scheduled subscription change that will be canceled if you change
-                    your PITR add on.
+                    your Optimized Compute add on.
                   </AlertDescription_Shadcn_>
                 </Alert_Shadcn_>
               )}
@@ -470,8 +462,7 @@ const ComputeInstanceSidePanel = () => {
               variant="warning"
               title="Your project will need to be restarted when changing it's compute size"
             >
-              It will take up to 2 minutes for changes to take place, in which your project will be
-              unavailable during that time.
+              Your project will be unavailable for up to 2 minutes while the changes take place.
             </Alert>
           </div>
         </Modal.Content>
