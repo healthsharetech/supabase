@@ -412,6 +412,21 @@ services:
       # GOOGLE_PROJECT_NUMBER: ${GOOGLE_PROJECT_NUMBER}
     ports:
       - 4000:4000
+      
+  admin:
+    container_name: reimbursement-tracker-admin
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+    volumes:
+      - './volumes/admin/app:/app'
+      - ./volumes/admin/caddy_data:/data
+      - ./volumes/admin/caddy_config:/config
+    healthcheck:
+      test: [ "CMD", "curl", "http://admin:8080/health-check" ]
+      timeout: 10s
+      interval: 30s
+      retries: 10
 
   # Comment out everything below this point if you are using an external Postgres database
   db:
