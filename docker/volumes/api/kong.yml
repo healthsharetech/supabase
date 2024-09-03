@@ -65,6 +65,17 @@ services:
     plugins:
       - name: cors
 
+  ## Open Laravel routes (auth handled on laravel side)
+  - name: admin
+    url: http://admin:8080
+    routes:
+      - name: admin-all
+        strip_path: true
+        paths:
+          - /admin
+    plugins:
+      - name: cors
+
   ## Secure Auth routes
   - name: auth-v1
     _comment: 'GoTrue: /auth/v1/* -> http://auth:9999/*'
