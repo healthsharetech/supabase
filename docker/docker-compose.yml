@@ -435,7 +435,7 @@ services:
       APP_KEY: ${ADMIN_APP_KEY}
       APP_URL: ${ADMIN_APP_URL}
       PROXY_URL: ${ADMIN_APP_URL}/admin
-      DB_CONNECTION: postgres
+      DB_CONNECTION: pgsql
       DB_HOST: ${POSTGRES_HOST}
       DB_PORT: ${POSTGRES_PORT}
       DB_DATABASE: ${POSTGRES_DB}
