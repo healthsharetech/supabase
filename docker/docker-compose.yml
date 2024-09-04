@@ -434,7 +434,7 @@ services:
       APP_ENV: production
       APP_KEY: ${ADMIN_APP_KEY}
       APP_URL: ${ADMIN_APP_URL}
-      ASSET_URL: ${ADMIN_APP_URL}
+      ASSET_URL: ${ADMIN_APP_URL}/admin
       PROXY_URL: ${ADMIN_APP_URL}/admin
       PROXY_SCHEMA: https
       DB_CONNECTION: pgsql
