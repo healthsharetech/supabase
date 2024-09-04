@@ -427,6 +427,21 @@ services:
       timeout: 10s
       interval: 30s
       retries: 10
+    environment:
+      APP_DEBUG: false
+      APP_ENV: production
+      APP_KEY: ${ADMIN_APP_KEY}
+      APP_URL: ${ADMIN_APP_URL}
+      PROXY_URL: ${ADMIN_APP_URL}/admin
+      DB_CONNECTION: postgres
+      DB_HOST: ${POSTGRES_HOST}
+      DB_PORT: ${POSTGRES_PORT}
+      DB_DATABASE: ${POSTGRES_DB}
+      DB_USERNAME: reimbursement-tracker-admin
+      DB_PASSWORD: ${ADMIN_POSTGRES_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      LOG_CHANNEL: ${ADMIN_LOG_CHANNEL:-stdout}
+      LOG_LEVEL: ${ADMIN_LOG_LEVEL:-error}
 
   # Comment out everything below this point if you are using an external Postgres database
   db:
