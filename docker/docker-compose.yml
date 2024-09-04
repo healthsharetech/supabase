@@ -422,6 +422,8 @@ services:
       - './volumes/admin/app:/app'
       - ./volumes/admin/caddy_data:/data
       - ./volumes/admin/caddy_config:/config
+    ports:
+      - '8080'
     healthcheck:
       test: [ "CMD", "curl", "http://admin:8080/health-check" ]
       timeout: 10s
@@ -442,6 +444,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       LOG_CHANNEL: ${ADMIN_LOG_CHANNEL:-stdout}
       LOG_LEVEL: ${ADMIN_LOG_LEVEL:-error}
+      SERVER_NAME: ':8080'
 
   # Comment out everything below this point if you are using an external Postgres database
   db:
