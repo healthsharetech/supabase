@@ -1,4 +1,7 @@
 {
+	# Caddy is running behind a reverse proxy, so it should not handle HTTPS
+	auto_https off
+
 	{$CADDY_GLOBAL_OPTIONS}
 
 	frankenphp {
