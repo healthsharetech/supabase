@@ -418,6 +418,13 @@ services:
     build:
       context: ./admin
       dockerfile: Dockerfile
+    restart: unless-stopped
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: supabase
+        tag: "{{.Name}}/{{.ID}}"
     volumes:
       - './volumes/admin/app:/app'
       - ./volumes/admin/caddy_data:/data
@@ -445,7 +452,7 @@ services:
       DB_PASSWORD: ${ADMIN_POSTGRES_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       LOG_CHANNEL: ${ADMIN_LOG_CHANNEL:-stdout}
-      LOG_LEVEL: ${ADMIN_LOG_LEVEL:-error}
+      LOG_LEVEL: ${ADMIN_LOG_LEVEL:-info}
       SERVER_NAME: ':8080'
 
   # Comment out everything below this point if you are using an external Postgres database
