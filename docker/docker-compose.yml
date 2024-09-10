@@ -454,6 +454,7 @@ services:
       LOG_CHANNEL: ${ADMIN_LOG_CHANNEL:-stdout}
       LOG_LEVEL: ${ADMIN_LOG_LEVEL:-info}
       SERVER_NAME: ':8080'
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
 
   # Comment out everything below this point if you are using an external Postgres database
   db:
