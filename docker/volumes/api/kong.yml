@@ -73,6 +73,10 @@ services:
         strip_path: true
         paths:
           - /admin
+      - name: admin-livewire
+        strip_path: false
+        paths:
+          - /livewire
     plugins:
       - name: cors
 
