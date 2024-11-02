@@ -455,6 +455,9 @@ services:
       LOG_LEVEL: ${ADMIN_LOG_LEVEL:-info}
       SERVER_NAME: ':8080'
       SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      BACKGROUND_JOB_PING_MONITOR_URL: ${ADMIN_BACKGROUND_JOB_PING_MONITOR_URL}
+      MAIL_MAILER: ${ADMIN_MAIL_MAILER:-sendgrid}
+      SENDGRID_API_KEY: ${ADMIN_SENDGRID_API_KEY}
 
   # Comment out everything below this point if you are using an external Postgres database
   db:
