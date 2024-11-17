@@ -458,6 +458,8 @@ services:
       BACKGROUND_JOB_PING_MONITOR_URL: ${ADMIN_BACKGROUND_JOB_PING_MONITOR_URL}
       MAIL_MAILER: ${ADMIN_MAIL_MAILER:-sendgrid}
       SENDGRID_API_KEY: ${ADMIN_SENDGRID_API_KEY}
+      MAILCHIMP_API_KEY: ${ADMIN_MAILCHIMP_API_KEY}
+      MAILCHIMP_NEW_USER_LIST_ID: ${ADMIN_MAILCHIMP_NEW_USER_LIST_ID}
 
   # Comment out everything below this point if you are using an external Postgres database
   db:
