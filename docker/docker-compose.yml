@@ -462,6 +462,7 @@ services:
       MAILCHIMP_API_KEY: ${ADMIN_MAILCHIMP_API_KEY}
       MAILCHIMP_NEW_USER_LIST_ID: ${ADMIN_MAILCHIMP_NEW_USER_LIST_ID}
       SENTRY_ENVIRONMENT: ${ADMIN_SENTRY_ENVIRONMENT:-production}
+      FIREBASE_CREDENTIALS: ${ADMIN_FIREBASE_CREDENTIALS}
 
   # Comment out everything below this point if you are using an external Postgres database
   db:
