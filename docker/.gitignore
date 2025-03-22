@@ -4,3 +4,4 @@ volumes/admin
 .env
 test.http
 docker-compose.override.yml
+.envrc
