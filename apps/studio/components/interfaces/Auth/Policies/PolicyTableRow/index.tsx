@@ -1,18 +1,29 @@
-import type { PostgresPolicy, PostgresTable } from '@supabase/postgres-meta'
+import type { PostgresPolicy } from '@supabase/postgres-meta'
 import { noop } from 'lodash'
-import { Alert } from 'ui'
 
 import { useProjectContext } from 'components/layouts/ProjectLayout/ProjectContext'
 import Panel from 'components/ui/Panel'
 import { useDatabasePoliciesQuery } from 'data/database-policies/database-policies-query'
+import { Info } from 'lucide-react'
+import { cn, Tooltip, TooltipContent, TooltipTrigger } from 'ui'
 import PolicyRow from './PolicyRow'
 import PolicyTableRowHeader from './PolicyTableRowHeader'
 
-interface PolicyTableRowProps {
-  table: PostgresTable
+export interface PolicyTableRowProps {
+  table: {
+    id: number
+    schema: string
+    name: string
+    rls_enabled: boolean
+  }
   isLocked: boolean
-  onSelectToggleRLS: (table: PostgresTable) => void
-  onSelectCreatePolicy: (table: PostgresTable) => void
+  onSelectToggleRLS: (table: {
+    id: number
+    schema: string
+    name: string
+    rls_enabled: boolean
+  }) => void
+  onSelectCreatePolicy: () => void
   onSelectEditPolicy: (policy: PostgresPolicy) => void
   onSelectDeletePolicy: (policy: PostgresPolicy) => void
 }
@@ -21,7 +32,7 @@ const PolicyTableRow = ({
   table,
   isLocked,
   onSelectToggleRLS = noop,
-  onSelectCreatePolicy = noop,
+  onSelectCreatePolicy,
   onSelectEditPolicy = noop,
   onSelectDeletePolicy = noop,
 }: PolicyTableRowProps) => {
@@ -36,6 +47,7 @@ const PolicyTableRow = ({
 
   return (
     <Panel
+      className="!m-0"
       title={
         <PolicyTableRowHeader
           table={table}
@@ -45,31 +57,38 @@ const PolicyTableRow = ({
         />
       }
     >
-      {(policies ?? []).length === 0 && (
-        <div className="p-4 px-6 space-y-1">
-          <p className="text-foreground-light text-sm">No policies created yet</p>
-          {!isLocked &&
-            (table.rls_enabled ? (
-              <p className="text-foreground-light text-sm">
-                RLS is enabled - create a policy to allow access to this table.
-              </p>
-            ) : (
-              <Alert
-                withIcon
-                variant="warning"
-                className="!px-4 !py-3 !mt-3"
-                title="Warning: RLS is disabled. Your table is publicly readable and writable."
-              >
-                Anyone with the anon. key can modify or delete your data. You should turn on RLS and
-                create access policies to keep your data secure.
-              </Alert>
-            ))}
+      {!table.rls_enabled && !isLocked && (
+        <div
+          className={cn(
+            'dark:bg-alternative-200 bg-surface-200 px-6 py-2 text-xs flex items-center gap-2',
+            policies.length === 0 ? '' : 'border-b'
+          )}
+        >
+          <div className="w-1.5 h-1.5 bg-warning-600 rounded-full" />
+          <span className="font-bold text-warning-600">Warning:</span>{' '}
+          <span className="text-foreground-light">
+            Row Level Security is disabled. Your table is publicly readable and writable.
+          </span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="w-3 h-3" />
+            </TooltipTrigger>
+            <TooltipContent className="w-[400px]">
+              Anyone with the project's anonymous key can modify or delete your data. Enable RLS and
+              create access policies to keep your data secure.
+            </TooltipContent>
+          </Tooltip>
         </div>
       )}
-
+      {policies.length === 0 && (
+        <div className="px-6 py-4 flex flex-col gap-y-3">
+          <p className="text-foreground-lighter text-sm">No policies created yet</p>
+        </div>
+      )}
       {policies?.map((policy) => (
         <PolicyRow
           key={policy.id}
+          isLocked={isLocked}
           policy={policy}
           onSelectEditPolicy={onSelectEditPolicy}
           onSelectDeletePolicy={onSelectDeletePolicy}

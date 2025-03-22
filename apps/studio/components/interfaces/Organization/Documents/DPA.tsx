@@ -1,9 +1,11 @@
+import { ExternalLink } from 'lucide-react'
+
 import {
   ScaffoldSection,
   ScaffoldSectionContent,
   ScaffoldSectionDetail,
 } from 'components/layouts/Scaffold'
-import { Button, IconExternalLink } from 'ui'
+import { Button } from 'ui'
 
 const DPA = () => {
   return (
@@ -17,8 +19,8 @@ const DPA = () => {
             us.
           </p>
           <p>
-            Please review these details and modify any data fields that are not relevant to your use
-            of Supabase. Sign and return the signed DPA document to{' '}
+            Please review these details and add data specific to user processing where required.
+            Sign and return the signed DPA document to{' '}
             <a
               href="mailto:privacy@supabase.com"
               target="_blank"
@@ -31,16 +33,16 @@ const DPA = () => {
         </div>
       </ScaffoldSectionDetail>
       <ScaffoldSectionContent className="flex items-center justify-center h-full">
-        <a
-          href="https://supabase.com/downloads/docs/Supabase+DPA+231211.pdf"
-          target="_blank"
-          rel="noreferrer noopener"
-          download={true}
-        >
-          <Button type="default" iconRight={<IconExternalLink />}>
+        <Button asChild type="default" iconRight={<ExternalLink />}>
+          <a
+            download={true}
+            target="_blank"
+            rel="noreferrer noopener"
+            href="https://supabase.com/downloads/docs/Supabase+DPA+231211.pdf"
+          >
             View DPA
-          </Button>
-        </a>
+          </a>
+        </Button>
       </ScaffoldSectionContent>
     </ScaffoldSection>
   )

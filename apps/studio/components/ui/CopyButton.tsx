@@ -1,12 +1,38 @@
-import { Button, ButtonProps, IconCheck, IconClipboard } from 'ui'
-import { copyToClipboard } from 'lib/helpers'
+import { Check, Clipboard } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-export interface CopyButtonProps extends ButtonProps {
-  text: string
+import { copyToClipboard } from 'lib/helpers'
+import { Button, ButtonProps, cn } from 'ui'
+
+type CopyButtonBaseProps = {
   iconOnly?: boolean
+  copyLabel?: string
+  copiedLabel?: string
+  onCopy?: () => Promise<string> | string
 }
-const CopyButton = ({ text, iconOnly = false, children, onClick, ...props }: CopyButtonProps) => {
+
+type CopyButtonWithText = CopyButtonBaseProps & {
+  text: string
+  asyncText?: never
+}
+
+type CopyButtonWithAsyncText = CopyButtonBaseProps & {
+  text?: never
+  asyncText: () => Promise<string> | string
+}
+
+export type CopyButtonProps = (CopyButtonWithText | CopyButtonWithAsyncText) & ButtonProps
+
+const CopyButton = ({
+  text,
+  asyncText,
+  iconOnly = false,
+  children,
+  onClick,
+  copyLabel = 'Copy',
+  copiedLabel = 'Copied',
+  ...props
+}: CopyButtonProps) => {
   const [showCopied, setShowCopied] = useState(false)
 
   useEffect(() => {
@@ -17,22 +43,26 @@ const CopyButton = ({ text, iconOnly = false, children, onClick, ...props }: Cop
 
   return (
     <Button
-      onClick={(e) => {
+      onClick={async (e) => {
+        const textToCopy = asyncText ? await asyncText() : text
         setShowCopied(true)
-        copyToClipboard(text)
+        await copyToClipboard(textToCopy!)
         onClick?.(e)
       }}
-      icon={
-        showCopied ? (
-          <IconCheck size="tiny" strokeWidth={2} className="text-brand" />
-        ) : (
-          <IconClipboard size="tiny" />
-        )
-      }
       {...props}
+      className={cn(
+        {
+          'px-1': iconOnly,
+        },
+        props.className
+      )}
+      icon={
+        showCopied ? <Check strokeWidth={2} className="text-brand" /> : props.icon ?? <Clipboard />
+      }
     >
-      {!iconOnly && <>{children ?? (showCopied ? 'Copied' : 'Copy')}</>}
+      {!iconOnly && <>{children ?? (showCopied ? copiedLabel : copyLabel)}</>}
     </Button>
   )
 }
+
 export default CopyButton

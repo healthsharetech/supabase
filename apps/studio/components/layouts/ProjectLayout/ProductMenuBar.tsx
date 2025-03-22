@@ -7,9 +7,13 @@ interface ProductMenuBarProps {
 const ProductMenuBar = ({ title, children }: PropsWithChildren<ProductMenuBarProps>) => {
   return (
     <div
+      /**
+       * id used in playwright-tests/tests/snapshot/spec/table-editor.spec.ts
+       * */
+      id="spec-click-target"
       className={[
-        'hide-scrollbar flex w-64 flex-col border-r', // Layout
-        'bg-background',
+        'hide-scrollbar flex flex-col w-full h-full', // Layout
+        'bg-dash-sidebar',
         'border-default ',
       ].join(' ')}
     >
@@ -19,9 +23,7 @@ const ProductMenuBar = ({ title, children }: PropsWithChildren<ProductMenuBarPro
       >
         <h4 className="text-lg">{title}</h4>
       </div>
-      <div className="flex-grow overflow-y-auto" style={{ maxHeight: 'calc(100vh - 96px)' }}>
-        {children}
-      </div>
+      <div className="flex-grow overflow-y-auto">{children}</div>
     </div>
   )
 }

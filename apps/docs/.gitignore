@@ -24,6 +24,11 @@ yarn-error.log*
 !**/*/generated/.gitkeep
 !**/*/generated/**/.gitkeep
 
-# Temporary to avoid storing a lot of duplicate Markdown
-# before finalizing the codemod
-/content
+# Sitemap
+public/sitemap.xml
+# llms.txt (generated)
+public/llms.txt
+public/llms/
+
+# Copied examples folder
+/examples/

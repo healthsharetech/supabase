@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button, SidePanel } from 'ui'
 
 import { useParams } from 'common'
-import { useProjectApiQuery } from 'data/config/project-api-query'
+import { getAPIKeys, useProjectSettingsV2Query } from 'data/config/project-settings-v2-query'
 import { useCustomDomainsQuery } from 'data/custom-domains/custom-domains-query'
 import { useAppStateSnapshot } from 'state/app-state'
 import {
@@ -42,16 +42,19 @@ const ProjectAPIDocs = () => {
   const [showKeys, setShowKeys] = useState(false)
   const language = snap.docsLanguage
 
-  const { data } = useProjectApiQuery({ projectRef: ref })
+  const { data: settings } = useProjectSettingsV2Query({ projectRef: ref })
   const { data: customDomainData } = useCustomDomainsQuery({ projectRef: ref })
 
+  const { anonKey } = getAPIKeys(settings)
   const apikey = showKeys
-    ? data?.autoApiService.defaultApiKey ?? 'SUPABASE_CLIENT_ANON_KEY'
+    ? anonKey?.api_key ?? 'SUPABASE_CLIENT_ANON_KEY'
     : 'SUPABASE_CLIENT_ANON_KEY'
+  const protocol = settings?.app_config?.protocol ?? 'https'
+  const hostEndpoint = settings?.app_config?.endpoint
   const endpoint =
     customDomainData?.customDomain?.status === 'active'
-      ? `https://${customDomainData.customDomain?.hostname}/auth/v1/callback`
-      : `https://${data?.autoApiService.endpoint ?? ''}`
+      ? `https://${customDomainData.customDomain?.hostname}`
+      : `${protocol}://${hostEndpoint ?? ''}`
 
   return (
     <SidePanel
@@ -62,7 +65,7 @@ const ProjectAPIDocs = () => {
       onCancel={() => snap.setShowProjectApiDocs(false)}
     >
       <div className="flex items-start h-full">
-        <div className="w-64 border-r h-full">
+        <div className="w-72 border-r h-full">
           <div className="border-b px-4 py-2 flex items-center justify-between">
             <h4>API Docs</h4>
             <div className="flex items-center space-x-1">

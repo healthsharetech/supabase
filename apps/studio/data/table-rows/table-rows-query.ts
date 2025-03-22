@@ -1,18 +1,33 @@
-import { QueryKey, UseQueryOptions } from '@tanstack/react-query'
+import {
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+  type UseQueryOptions,
+} from '@tanstack/react-query'
 
 import { IS_PLATFORM } from 'common'
-import { Filter, Query, Sort, SupaRow, SupaTable } from 'components/grid'
+import { Query } from '@supabase/pg-meta/src/query'
+import { parseSupaTable } from 'components/grid/SupabaseGrid.utils'
+import { Filter, Sort, SupaRow, SupaTable } from 'components/grid/types'
+import {
+  JSON_TYPES,
+  TEXT_TYPES,
+} from 'components/interfaces/TableGridEditor/SidePanelEditor/SidePanelEditor.constants'
+import { prefetchTableEditor } from 'data/table-editor/table-editor-query'
+import { KB } from 'lib/constants'
 import {
   ImpersonationRole,
   ROLE_IMPERSONATION_NO_RESULTS,
   wrapWithRoleImpersonation,
 } from 'lib/role-impersonation'
-import { useIsRoleImpersonationEnabled } from 'state/role-impersonation-state'
-import { ExecuteSqlData, executeSql, useExecuteSqlQuery } from '../sql/execute-sql-query'
+import { isRoleImpersonationEnabled } from 'state/role-impersonation-state'
+import { ExecuteSqlError, executeSql } from '../sql/execute-sql-query'
 import { getPagination } from '../utils/pagination'
+import { tableRowKeys } from './keys'
+import { THRESHOLD_COUNT } from './table-rows-count-query'
 import { formatFilterValue } from './utils'
 
-type GetTableRowsArgs = {
+export interface GetTableRowsArgs {
   table?: SupaTable
   filters?: Filter[]
   sorts?: Sort[]
@@ -21,6 +36,45 @@ type GetTableRowsArgs = {
   impersonatedRole?: ImpersonationRole
 }
 
+// [Joshen] We can probably make this reasonably high, but for now max aim to load 10kb
+export const MAX_CHARACTERS = 10 * KB
+
+// return the primary key columns if exists, otherwise return the first column to use as a default sort
+const getDefaultOrderByColumns = (table: SupaTable) => {
+  const primaryKeyColumns = table.columns.filter((col) => col?.isPrimaryKey).map((col) => col.name)
+  if (primaryKeyColumns.length === 0) {
+    return [table.columns[0]?.name]
+  } else {
+    return primaryKeyColumns
+  }
+}
+
+async function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function executeWithRetry(
+  fn: () => Promise<any>,
+  maxRetries: number = 3,
+  baseDelay: number = 500
+): Promise<any> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (error: any) {
+      if (error?.status === 429 && attempt < maxRetries) {
+        // Get retry delay from headers or use exponential backoff (1s, then 2s, then 4s)
+        const retryAfter = error.headers?.get('retry-after')
+        const delayMs = retryAfter ? parseInt(retryAfter) * 1000 : baseDelay * Math.pow(2, attempt)
+        await sleep(delayMs)
+        continue
+      }
+      throw error
+    }
+  }
+}
+
+// Updated fetchAllTableRows function
 export const fetchAllTableRows = async ({
   projectRef,
   connectionString,
@@ -28,6 +82,7 @@ export const fetchAllTableRows = async ({
   filters = [],
   sorts = [],
   impersonatedRole,
+  progressCallback,
 }: {
   projectRef: string
   connectionString?: string
@@ -35,6 +90,7 @@ export const fetchAllTableRows = async ({
   filters?: Filter[]
   sorts?: Sort[]
   impersonatedRole?: ImpersonationRole
+  progressCallback?: (value: number) => void
 }) => {
   if (IS_PLATFORM && !connectionString) {
     console.error('Connection string is required')
@@ -44,48 +100,71 @@ export const fetchAllTableRows = async ({
   const rows: any[] = []
   const query = new Query()
 
-  let queryChains = query.from(table.name, table.schema ?? undefined).select()
+  const arrayBasedColumns = table.columns
+    .filter(
+      (column) => (column?.enum ?? []).length > 0 && column.dataType.toLowerCase() === 'array'
+    )
+    .map((column) => `"${column.name}"::text[]`)
+
+  let queryChains = query
+    .from(table.name, table.schema ?? undefined)
+    .select(arrayBasedColumns.length > 0 ? `*,${arrayBasedColumns.join(',')}` : '*')
+
   filters
     .filter((filter) => filter.value && filter.value !== '')
     .forEach((filter) => {
       const value = formatFilterValue(table, filter)
       queryChains = queryChains.filter(filter.column, filter.operator, value)
     })
-  sorts.forEach((sort) => {
-    queryChains = queryChains.order(sort.column, sort.ascending, sort.nullsFirst)
-  })
 
-  // Starting from page 0, fetch 500 records per call
-  let page = -1
-  let from = 0
-  let to = 0
-  let pageData = []
-  const rowsPerPage = 500
-
-  await (async () => {
-    do {
-      page += 1
-      from = page * rowsPerPage
-      to = (page + 1) * rowsPerPage - 1
-      const query = wrapWithRoleImpersonation(queryChains.range(from, to).toSql(), {
-        projectRef,
-        role: impersonatedRole,
+  // If sorts is empty and table row count is within threshold, use the primary key as the default sort
+  if (sorts.length === 0 && table.estimateRowCount <= THRESHOLD_COUNT) {
+    const primaryKeys = getDefaultOrderByColumns(table)
+    if (primaryKeys.length > 0) {
+      primaryKeys.forEach((col) => {
+        queryChains = queryChains.order(table.name, col, true, true)
       })
+    }
+  } else {
+    sorts.forEach((sort) => {
+      queryChains = queryChains.order(sort.table, sort.column, sort.ascending, sort.nullsFirst)
+    })
+  }
 
-      try {
-        const { result } = await executeSql({ projectRef, connectionString, sql: query })
-        rows.push(...result)
-        pageData = result
-      } catch (error) {
-        return { data: { rows: [] } }
-      }
-    } while (pageData.length === rowsPerPage)
-  })()
+  const rowsPerPage = 500
+  const THROTTLE_DELAY = 500
+
+  let page = -1
+  while (true) {
+    page += 1
+    const from = page * rowsPerPage
+    const to = (page + 1) * rowsPerPage - 1
+    const query = wrapWithRoleImpersonation(queryChains.range(from, to).toSql(), {
+      projectRef,
+      role: impersonatedRole,
+    })
+
+    try {
+      const { result } = await executeWithRetry(async () =>
+        executeSql({ projectRef, connectionString, sql: query })
+      )
+      rows.push(...result)
+      progressCallback?.(rows.length)
+
+      if (result.length < rowsPerPage) break
+
+      await sleep(THROTTLE_DELAY)
+    } catch (error) {
+      throw new Error(
+        `Error fetching table rows: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
+    }
+  }
 
   return rows.filter((row) => row[ROLE_IMPERSONATION_NO_RESULTS] !== 1)
 }
 
-export const getTableRowsSqlQuery = ({
+export const getTableRowsSql = ({
   table,
   filters = [],
   sorts = [],
@@ -94,22 +173,17 @@ export const getTableRowsSqlQuery = ({
 }: GetTableRowsArgs) => {
   const query = new Query()
 
-  if (!table) {
-    return ``
-  }
+  if (!table) return ``
 
-  const enumArrayColumns = table.columns
-    .filter((column) => {
-      return (column?.enum ?? []).length > 0 && column.dataType.toLowerCase() === 'array'
-    })
-    .map((column) => column.name)
+  const arrayBasedColumns = table.columns
+    .filter(
+      (column) => (column?.enum ?? []).length > 0 && column.dataType.toLowerCase() === 'array'
+    )
+    .map((column) => `"${column.name}"::text[]`)
 
-  let queryChains =
-    enumArrayColumns.length > 0
-      ? query
-          .from(table.name, table.schema ?? undefined)
-          .select(`*,${enumArrayColumns.map((x) => `"${x}"::text[]`).join(',')}`)
-      : query.from(table.name, table.schema ?? undefined).select()
+  let queryChains = query
+    .from(table.name, table.schema ?? undefined)
+    .select(arrayBasedColumns.length > 0 ? `*,${arrayBasedColumns.join(',')}` : '*')
 
   filters
     .filter((x) => x.value && x.value != '')
@@ -117,66 +191,134 @@ export const getTableRowsSqlQuery = ({
       const value = formatFilterValue(table, x)
       queryChains = queryChains.filter(x.column, x.operator, value)
     })
-  sorts.forEach((x) => {
-    queryChains = queryChains.order(x.column, x.ascending, x.nullsFirst)
-  })
+
+  // If sorts is empty and table row count is within threshold, use the primary key as the default sort
+  if (sorts.length === 0 && table.estimateRowCount <= THRESHOLD_COUNT && table.columns.length > 0) {
+    const defaultOrderByColumns = getDefaultOrderByColumns(table)
+    if (defaultOrderByColumns.length > 0) {
+      defaultOrderByColumns.forEach((col) => {
+        queryChains = queryChains.order(table.name, col, true, true)
+      })
+    }
+  } else {
+    sorts.forEach((x) => {
+      queryChains = queryChains.order(x.table, x.column, x.ascending, x.nullsFirst)
+    })
+  }
 
   // getPagination is expecting to start from 0
   const { from, to } = getPagination((page ?? 1) - 1, limit)
-  const sql = queryChains.range(from, to).toSql()
+  const baseSql = queryChains.range(from, to).toSql()
 
-  return sql
+  // [Joshen] Only truncate text/json based columns as their length could go really big
+  // Note: Risk of payload being too large if the user has many many text/json based columns
+  // although possibly negligible risk.
+  const truncatedColumns = table.columns
+    .filter((column) => TEXT_TYPES.includes(column.format) || JSON_TYPES.includes(column.format))
+    .map((column) => {
+      return `case when length("${column.name}"::text) > ${MAX_CHARACTERS} then concat(left("${column.name}"::text, ${MAX_CHARACTERS}), '...') else "${column.name}"::text end "${column.name}"`
+    })
+  const outputSql =
+    truncatedColumns.length > 0
+      ? `with _temp as (${baseSql.slice(0, -1)}) select *, ${truncatedColumns.join(',')} from _temp`
+      : baseSql
+
+  return outputSql
 }
 
-export type TableRows = {
-  rows: SupaRow[]
-}
+export type TableRows = { rows: SupaRow[] }
 
-export type TableRowsVariables = GetTableRowsArgs & {
+export type TableRowsVariables = Omit<GetTableRowsArgs, 'table'> & {
+  queryClient: QueryClient
   projectRef?: string
   connectionString?: string
-  queryKey?: QueryKey
+  tableId?: number
 }
 
 export type TableRowsData = TableRows
-export type TableRowsError = unknown
+export type TableRowsError = ExecuteSqlError
 
-export const useTableRowsQuery = <TData extends TableRowsData = TableRowsData>(
-  { projectRef, connectionString, queryKey, table, impersonatedRole, ...args }: TableRowsVariables,
-  options: UseQueryOptions<ExecuteSqlData, TableRowsError, TData> = {}
-) => {
-  const isRoleImpersonationEnabled = useIsRoleImpersonationEnabled()
+export async function getTableRows(
+  {
+    queryClient,
+    projectRef,
+    connectionString,
+    tableId,
+    impersonatedRole,
+    filters,
+    sorts,
+    limit,
+    page,
+  }: TableRowsVariables,
+  signal?: AbortSignal
+) {
+  const entity = await prefetchTableEditor(queryClient, {
+    projectRef,
+    connectionString,
+    id: tableId,
+  })
+  if (!entity) {
+    throw new Error('Table not found')
+  }
 
-  return useExecuteSqlQuery(
+  const table = parseSupaTable(entity)
+
+  const sql = wrapWithRoleImpersonation(
+    getTableRowsSql({ table, filters, sorts, limit, page, impersonatedRole }),
+    {
+      projectRef: projectRef ?? 'ref',
+      role: impersonatedRole,
+    }
+  )
+  const { result } = await executeSql(
     {
       projectRef,
       connectionString,
-      sql: wrapWithRoleImpersonation(getTableRowsSqlQuery({ table, ...args }), {
-        projectRef: projectRef ?? 'ref',
-        role: impersonatedRole,
-      }),
-      queryKey: [
-        ...(queryKey ?? []),
-        {
-          table: { name: table?.name, schema: table?.schema },
-          impersonatedRole,
-          ...args,
-        },
-      ],
-      isRoleImpersonationEnabled,
+      sql,
+      queryKey: ['table-rows', table?.id],
+      isRoleImpersonationEnabled: isRoleImpersonationEnabled(impersonatedRole),
     },
-    {
-      select(data) {
-        const rows = data.result.map((x: any, index: number) => {
-          return { idx: index, ...x } as SupaRow
-        })
+    signal
+  )
 
-        return {
-          rows,
-        } as TData
-      },
-      enabled: typeof projectRef !== 'undefined' && typeof table !== 'undefined',
+  const rows = result.map((x: any, index: number) => {
+    return { idx: index, ...x }
+  }) as SupaRow[]
+
+  return {
+    rows,
+  }
+}
+
+export const useTableRowsQuery = <TData = TableRowsData>(
+  { projectRef, connectionString, tableId, ...args }: Omit<TableRowsVariables, 'queryClient'>,
+  { enabled = true, ...options }: UseQueryOptions<TableRowsData, TableRowsError, TData> = {}
+) => {
+  const queryClient = useQueryClient()
+  return useQuery<TableRowsData, TableRowsError, TData>(
+    tableRowKeys.tableRows(projectRef, { table: { id: tableId }, ...args }),
+    ({ signal }) =>
+      getTableRows({ queryClient, projectRef, connectionString, tableId, ...args }, signal),
+    {
+      enabled: enabled && typeof projectRef !== 'undefined' && typeof tableId !== 'undefined',
       ...options,
     }
+  )
+}
+
+export function prefetchTableRows(
+  client: QueryClient,
+  {
+    projectRef,
+    connectionString,
+    tableId,
+    impersonatedRole,
+    ...args
+  }: Omit<TableRowsVariables, 'queryClient'>
+) {
+  return client.fetchQuery(
+    tableRowKeys.tableRows(projectRef, { table: { id: tableId }, ...args }),
+    ({ signal }) =>
+      getTableRows({ queryClient: client, projectRef, connectionString, tableId, ...args }, signal)
   )
 }

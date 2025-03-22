@@ -1,30 +1,37 @@
-import clsx from 'clsx'
+import { PermissionAction } from '@supabase/shared-types/out/constants'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 
 import { useParams } from 'common'
-import { ScaffoldContainer } from 'components/layouts/Scaffold'
-import DateRangePicker from 'components/to-be-cleaned/DateRangePicker'
+import { ScaffoldContainer, ScaffoldContainerLegacy } from 'components/layouts/Scaffold'
 import AlertError from 'components/ui/AlertError'
-import InformationBox from 'components/ui/InformationBox'
+import { DateRangePicker } from 'components/ui/DateRangePicker'
+import { DocsButton } from 'components/ui/DocsButton'
+import NoPermission from 'components/ui/NoPermission'
 import ShimmeringLoader from 'components/ui/ShimmeringLoader'
 import { useProjectsQuery } from 'data/projects/projects-query'
 import { useOrgSubscriptionQuery } from 'data/subscriptions/org-subscription-query'
-import { useOrgUsageQuery } from 'data/usage/org-usage-query'
-import { useSelectedOrganization } from 'hooks'
+import { useCheckPermissions } from 'hooks/misc/useCheckPermissions'
+import { useSelectedOrganization } from 'hooks/misc/useSelectedOrganization'
 import { TIME_PERIODS_BILLING, TIME_PERIODS_REPORTS } from 'lib/constants/metrics'
-import Link from 'next/link'
-import { Alert, Button, IconExternalLink, IconInfo, Listbox } from 'ui'
+import { cn, Listbox } from 'ui'
+import { Admonition } from 'ui-patterns'
+import { Restriction } from '../BillingSettings/Restriction'
 import Activity from './Activity'
 import Bandwidth from './Bandwidth'
-import SizeAndCounts from './SizeAndCounts'
 import Compute from './Compute'
+import SizeAndCounts from './SizeAndCounts'
 import TotalUsage from './TotalUsage'
 
 const Usage = () => {
   const { slug, projectRef } = useParams()
   const [dateRange, setDateRange] = useState<any>()
   const [selectedProjectRef, setSelectedProjectRef] = useState<string>()
+
+  const canReadSubscriptions = useCheckPermissions(
+    PermissionAction.BILLING_READ,
+    'stripe.subscriptions'
+  )
 
   const organization = useSelectedOrganization()
   const { data: projects, isSuccess } = useProjectsQuery()
@@ -35,8 +42,6 @@ const Usage = () => {
     isError: isErrorSubscription,
     isSuccess: isSuccessSubscription,
   } = useOrgSubscriptionQuery({ orgSlug: slug })
-
-  const { data: usage } = useOrgUsageQuery({ orgSlug: slug })
 
   const orgProjects = projects?.filter((project) => project.organization_id === organization?.id)
 
@@ -50,20 +55,23 @@ const Usage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectRef, isSuccess])
 
-  const billingCycleStart = dayjs.unix(subscription?.current_period_start ?? 0).utc()
-  const billingCycleEnd = dayjs.unix(subscription?.current_period_end ?? 0).utc()
+  const billingCycleStart = useMemo(() => {
+    return dayjs.unix(subscription?.current_period_start ?? 0).utc()
+  }, [subscription])
+
+  const billingCycleEnd = useMemo(() => {
+    return dayjs.unix(subscription?.current_period_end ?? 0).utc()
+  }, [subscription])
 
   const currentBillingCycleSelected = useMemo(() => {
     // Selected by default
-    if (!dateRange?.period_start || !dateRange?.period_end || !subscription) return true
-
-    const { current_period_start, current_period_end } = subscription
+    if (!dateRange?.period_start || !dateRange?.period_end) return true
 
     return (
-      dayjs(dateRange.period_start.date).isSame(new Date(current_period_start * 1000)) &&
-      dayjs(dateRange.period_end.date).isSame(new Date(current_period_end * 1000))
+      dayjs(dateRange.period_start.date).isSame(billingCycleStart) &&
+      dayjs(dateRange.period_end.date).isSame(billingCycleEnd)
     )
-  }, [dateRange, subscription])
+  }, [dateRange, billingCycleStart, billingCycleEnd])
 
   const startDate = useMemo(() => {
     // If end date is in future, set end date to now
@@ -94,17 +102,18 @@ const Usage = () => {
     ? orgProjects?.find((it) => it.ref === selectedProjectRef)
     : undefined
 
-  const hasExceededAnyLimits = Boolean(
-    usage?.usages.find(
-      (metric) =>
-        !metric.unlimited && metric.capped && metric.usage > (metric?.pricing_free_units ?? 0)
+  if (!canReadSubscriptions) {
+    return (
+      <ScaffoldContainerLegacy>
+        <NoPermission resourceText="view organization usage" />
+      </ScaffoldContainerLegacy>
     )
-  )
+  }
 
   return (
     <>
-      <ScaffoldContainer className="sticky top-0 border-b bg-background z-10 overflow-hidden">
-        <div className="py-4 flex items-center space-x-4">
+      <ScaffoldContainer className="sticky top-0 border-b bg-studio z-10 overflow-hidden">
+        <div className="py-4 flex flex-col md:flex-row md:items-center gap-4">
           {isLoadingSubscription && <ShimmeringLoader className="w-[250px]" />}
 
           {isErrorSubscription && (
@@ -129,7 +138,7 @@ const Usage = () => {
               <Listbox
                 size="tiny"
                 name="schema"
-                className="w-[180px]"
+                className="w-full md:w-[180px]"
                 value={selectedProjectRef}
                 onChange={(value: any) => {
                   if (value === 'all-projects') setSelectedProjectRef(undefined)
@@ -157,7 +166,7 @@ const Usage = () => {
               </Listbox>
 
               <div className="flex flex-col xl:flex-row xl:gap-3">
-                <p className={clsx('text-sm transition', isLoadingSubscription && 'opacity-50')}>
+                <p className={cn('text-sm transition', isLoadingSubscription && 'opacity-50')}>
                   Organization is on the {subscription.plan.name} plan
                 </p>
                 <p className="text-sm text-foreground-light">
@@ -170,63 +179,24 @@ const Usage = () => {
         </div>
       </ScaffoldContainer>
 
-      {!selectedProject && subscription && hasExceededAnyLimits && (
+      {selectedProjectRef ? (
         <ScaffoldContainer className="mt-5">
-          <Alert
-            withIcon
-            variant="danger"
-            title="Your organization's usage has exceeded its included quota"
-            actions={[
-              <Button key="upgrade-button" asChild type="default" className="ml-8">
-                <Link
-                  href={`/org/${slug}/billing?panel=${
-                    subscription.plan.id === 'free' ? 'subscriptionPlan' : 'costControl'
-                  }`}
-                >
-                  {subscription.plan.id === 'free' ? 'Upgrade plan' : 'Change spend cap'}
-                </Link>
-              </Button>,
-            ]}
-          >
-            Your projects can become unresponsive or enter read-only mode.{' '}
-            {subscription.plan.id === 'free'
-              ? 'Please upgrade to the Pro plan to ensure that your projects remain available.'
-              : 'Please disable spend cap to ensure that your projects remain available.'}
-          </Alert>
-        </ScaffoldContainer>
-      )}
-
-      {selectedProjectRef && (
-        <ScaffoldContainer className="mt-5">
-          <InformationBox
+          <Admonition
+            type="default"
             title="Usage filtered by project"
-            description={
-              <div className="space-y-3">
-                <p>
-                  You are currently viewing usage for the "
-                  {selectedProject?.name || selectedProjectRef}" project. Since your organization is
-                  using the new organization-based billing, the included quota is for your whole
-                  organization and not just this project. For billing purposes, we sum up usage from
+            description={`You are currently viewing usage for the "${selectedProject?.name || selectedProjectRef}" project. Supabase uses organization-level billing and quotas. For billing purposes, we sum up usage from
                   all your projects. To view your usage quota, set the project filter above back to
-                  "All Projects".
-                </p>
-                <div>
-                  <Button asChild type="default" icon={<IconExternalLink strokeWidth={1.5} />}>
-                    <Link
-                      href="https://supabase.com/docs/guides/platform/org-based-billing"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Documentation
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            }
-            defaultVisibility
-            hideCollapse
-            icon={<IconInfo />}
-          />
+                  "All Projects".`}
+          >
+            <DocsButton
+              abbrev={false}
+              href="https://supabase.com/docs/guides/platform/billing-on-supabase#organization-based-billing"
+            />
+          </Admonition>
+        </ScaffoldContainer>
+      ) : (
+        <ScaffoldContainer id="restriction" className="mt-5">
+          <Restriction />
         </ScaffoldContainer>
       )}
 
@@ -239,13 +209,15 @@ const Usage = () => {
         currentBillingCycleSelected={currentBillingCycleSelected}
       />
 
-      <Compute
-        orgSlug={slug as string}
-        projectRef={selectedProjectRef}
-        subscription={subscription}
-        startDate={startDate}
-        endDate={endDate}
-      />
+      {subscription?.plan.id !== 'free' && (
+        <Compute
+          orgSlug={slug as string}
+          projectRef={selectedProjectRef}
+          subscription={subscription}
+          startDate={startDate}
+          endDate={endDate}
+        />
+      )}
 
       <Bandwidth
         orgSlug={slug as string}

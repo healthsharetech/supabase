@@ -1,15 +1,16 @@
-import clsx from 'clsx'
+import type { OAuthScope } from '@supabase/shared-types/out/constants'
+import { Edit, Upload } from 'lucide-react'
 import { ChangeEvent, useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
-import { OAuthScope } from '@supabase/shared-types/out/constants'
 import { useParams } from 'common'
+import { DocsButton } from 'components/ui/DocsButton'
 import {
   OAuthAppCreateResponse,
   useOAuthAppCreateMutation,
 } from 'data/oauth/oauth-app-create-mutation'
 import { useOAuthAppUpdateMutation } from 'data/oauth/oauth-app-update-mutation'
-import { OAuthApp } from 'data/oauth/oauth-apps-query'
-import { useStore } from 'hooks'
+import type { OAuthApp } from 'data/oauth/oauth-apps-query'
 import { isValidHttpUrl, uuidv4 } from 'lib/helpers'
 import { uploadAttachment } from 'lib/upload'
 import {
@@ -20,16 +21,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Form,
-  IconEdit,
-  IconExternalLink,
-  IconUpload,
   Input,
   Modal,
   SidePanel,
+  cn,
 } from 'ui'
 import AuthorizeRequesterDetails from '../AuthorizeRequesterDetails'
 import { ScopesPanel } from './Scopes'
-import Link from 'next/link'
 
 export interface PublishAppSidePanelProps {
   visible: boolean
@@ -44,43 +42,28 @@ const PublishAppSidePanel = ({
   onClose,
   onCreateSuccess,
 }: PublishAppSidePanelProps) => {
-  const { ui } = useStore()
   const { slug } = useParams()
   const uploadButtonRef = useRef<any>()
   const { mutate: createOAuthApp } = useOAuthAppCreateMutation({
     onSuccess: (res, variables) => {
-      ui.setNotification({
-        category: 'success',
-        message: `Successfully created OAuth app "${variables.name}"!`,
-      })
+      toast.success(`Successfully created OAuth app "${variables.name}"!`)
       onClose()
       onCreateSuccess(res)
       setIsSubmitting(false)
     },
     onError: (error) => {
-      ui.setNotification({
-        error,
-        category: 'error',
-        message: `Failed to create OAuth application: ${error.message}`,
-      })
+      toast.error(`Failed to create OAuth application: ${error.message}`)
       setIsSubmitting(false)
     },
   })
   const { mutate: updateOAuthApp } = useOAuthAppUpdateMutation({
     onSuccess: (res, variables) => {
-      ui.setNotification({
-        category: 'success',
-        message: `Successfully updated OAuth app "${variables.name}"!`,
-      })
+      toast.success(`Successfully updated OAuth app "${variables.name}"!`)
       onClose()
       setIsSubmitting(false)
     },
     onError: (error) => {
-      ui.setNotification({
-        error,
-        category: 'error',
-        message: `Failed to update OAuth application: ${error.message}`,
-      })
+      toast.error(`Failed to update OAuth application: ${error.message}`)
       setIsSubmitting(false)
     },
   })
@@ -102,11 +85,11 @@ const PublishAppSidePanel = ({
 
       if (selectedApp !== undefined) {
         setUrls(
-          selectedApp.redirect_uris.map((url) => {
+          selectedApp.redirect_uris?.map((url) => {
             return { id: uuidv4(), value: url }
-          })
+          }) ?? []
         )
-        setScopes(selectedApp.scopes)
+        setScopes((selectedApp?.scopes ?? []) as OAuthScope[])
         setIconUrl(selectedApp.icon === null ? undefined : selectedApp.icon)
       } else {
         setUrls([{ id: uuidv4(), value: '' }])
@@ -239,7 +222,7 @@ const PublishAppSidePanel = ({
                         <div>
                           {iconUrl !== undefined ? (
                             <div
-                              className={clsx(
+                              className={cn(
                                 'shadow transition group relative',
                                 'bg-center bg-cover bg-no-repeat',
                                 'mt-4 mr-4 space-y-2 rounded-full h-[120px] w-[120px] flex flex-col items-center justify-center'
@@ -252,7 +235,7 @@ const PublishAppSidePanel = ({
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <Button type="default" className="px-1">
-                                      <IconEdit />
+                                      <Edit />
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end" side="bottom">
@@ -280,7 +263,7 @@ const PublishAppSidePanel = ({
                             </div>
                           ) : (
                             <div
-                              className={clsx(
+                              className={cn(
                                 'border border-strong transition opacity-75 hover:opacity-100',
                                 'mt-4 mr-4 space-y-2 rounded-full h-[120px] w-[120px] flex flex-col items-center justify-center cursor-pointer'
                               )}
@@ -289,7 +272,7 @@ const PublishAppSidePanel = ({
                                   (uploadButtonRef.current as any).click()
                               }}
                             >
-                              <IconUpload size={18} strokeWidth={1.5} className="text-foreground" />
+                              <Upload size={18} strokeWidth={1.5} className="text-foreground" />
                               <p className="text-xs text-foreground-light">Upload logo</p>
                             </div>
                           )}
@@ -353,15 +336,7 @@ const PublishAppSidePanel = ({
                             of its projects.
                           </span>
                         </div>
-                        <Button asChild type="default" icon={<IconExternalLink />}>
-                          <Link
-                            href="https://supabase.com/docs/guides/platform/oauth-apps/oauth-scopes"
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            Documentation
-                          </Link>
-                        </Button>
+                        <DocsButton href="https://supabase.com/docs/guides/platform/oauth-apps/oauth-scopes" />
                       </div>
 
                       <ScopesPanel scopes={scopes} setScopes={setScopes} />
@@ -398,33 +373,29 @@ const PublishAppSidePanel = ({
                   onCancel={() => setShowPreview(false)}
                 >
                   <Modal.Content>
-                    <div className="pt-4 pb-2 px-2 flex items-center justify-between">
+                    <div className="flex items-center justify-between">
                       <p>Authorize API access for {values.name}</p>
-                      <Badge color="green">Preview</Badge>
+                      <Badge variant="brand">Preview</Badge>
                     </div>
                   </Modal.Content>
                   <Modal.Separator />
                   <Modal.Content>
-                    <div className="px-2 py-4">
-                      <AuthorizeRequesterDetails
-                        icon={iconUrl || null}
-                        name={values.name}
-                        domain={values.website}
-                        scopes={scopes}
-                      />
-                      <div className="pt-4 space-y-2">
-                        <p className="prose text-sm">
-                          Select an organization to grant API access to
-                        </p>
-                        <div className="border border-control text-foreground-light rounded px-4 py-2 text-sm bg-surface-200">
-                          Organizations that you have access to will be listed here
-                        </div>
+                    <AuthorizeRequesterDetails
+                      icon={iconUrl || null}
+                      name={values.name}
+                      domain={values.website}
+                      scopes={scopes}
+                    />
+                    <div className="pt-4 space-y-2">
+                      <p className="prose text-sm">Select an organization to grant API access to</p>
+                      <div className="border border-control text-foreground-light rounded px-4 py-2 text-sm bg-surface-200">
+                        Organizations that you have access to will be listed here
                       </div>
                     </div>
                   </Modal.Content>
                   <Modal.Separator />
                   <Modal.Content>
-                    <div className="pt-2 pb-3 flex items-center justify-between">
+                    <div className="flex items-center justify-between">
                       <p className="prose text-xs">
                         This is what your users will see when authorizing with your app
                       </p>

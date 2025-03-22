@@ -1,6 +1,7 @@
 import { QueryClient, onlineManager } from '@tanstack/react-query'
 import { IS_PLATFORM } from 'lib/constants'
 import { useState } from 'react'
+import { ResponseError } from 'types'
 
 // When running locally we don't need the internet
 // so we can pretend we're online all the time
@@ -16,13 +17,14 @@ export function getQueryClient() {
     new QueryClient({
       defaultOptions: {
         queries: {
-          retry: (failureCount, error) => {
-            // Don't retry on 404s
+          staleTime: 60 * 1000, // 1 minute
+          retry(failureCount, error) {
+            // Don't retry on 4xx errors
             if (
-              typeof error === 'object' &&
-              error !== null &&
-              'code' in error &&
-              (error as any).code === 404
+              error instanceof ResponseError &&
+              error.code !== undefined &&
+              error.code >= 400 &&
+              error.code < 500
             ) {
               return false
             }

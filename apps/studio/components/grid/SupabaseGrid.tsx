@@ -1,29 +1,107 @@
-import { useParams } from 'common'
 import { useEffect, useRef, useState } from 'react'
 import { DataGridHandle } from 'react-data-grid'
 import { DndProvider } from 'react-dnd'
 import { HTML5Backend } from 'react-dnd-html5-backend'
 import { createPortal } from 'react-dom'
 
+import { useParams } from 'common'
 import { useProjectContext } from 'components/layouts/ProjectLayout/ProjectContext'
 import { useTableRowsQuery } from 'data/table-rows/table-rows-query'
-import { useUrlState } from 'hooks'
+import { useUrlState } from 'hooks/ui/useUrlState'
+import { EMPTY_ARR } from 'lib/void'
 import { useRoleImpersonationStateSnapshot } from 'state/role-impersonation-state'
 import { useTableEditorStateSnapshot } from 'state/table-editor'
+import { useTableEditorTableStateSnapshot } from 'state/table-editor-table'
 import {
   cleanupProps,
   formatFilterURLParams,
   formatSortURLParams,
-  initTable,
+  getStorageKey,
   saveStorageDebounced,
 } from './SupabaseGrid.utils'
-import { Shortcuts } from './components/common'
-import Footer from './components/footer'
-import { Grid } from './components/grid'
-import Header from './components/header'
+import { Shortcuts } from './components/common/Shortcuts'
+import Footer from './components/footer/Footer'
+import { Grid } from './components/grid/Grid'
+import Header from './components/header/Header'
 import { RowContextMenu } from './components/menu'
-import { StoreProvider, useDispatch, useTrackedState } from './store'
-import { SupabaseGridProps } from './types'
+import { STORAGE_KEY_PREFIX } from './constants'
+import { StoreProvider, useDispatch, useTrackedState } from './store/Store'
+import { InitialStateType } from './store/reducers'
+import type { SupabaseGridProps } from './types'
+import { getGridColumns } from './utils/gridColumns'
+
+export function loadTableEditorSortsAndFiltersFromLocalStorage(
+  projectRef: string,
+  tableName: string,
+  schema?: string | null
+) {
+  const storageKey = getStorageKey(STORAGE_KEY_PREFIX, projectRef)
+  const jsonStr = localStorage.getItem(storageKey)
+  if (!jsonStr) return
+  const json = JSON.parse(jsonStr)
+  const tableKey = !schema || schema == 'public' ? tableName : `${schema}.${tableName}`
+  return json[tableKey]
+}
+
+async function initTable(
+  props: SupabaseGridProps,
+  state: InitialStateType,
+  dispatch: (value: any) => void,
+  sort?: string[], // Comes directly from URL param
+  filter?: string[] // Comes directly from URL param
+): Promise<{ savedState: { sorts?: string[]; filters?: string[] } }> {
+  const savedState = props.projectRef
+    ? loadTableEditorSortsAndFiltersFromLocalStorage(
+        props.projectRef,
+        props.table.name,
+        props.table.schema
+      )
+    : undefined
+
+  // Check for saved state on initial load and also, load sort and filters via URL param only if given
+  // Otherwise load from local storage to resume user session
+  if (
+    !state.isInitialComplete &&
+    sort === undefined &&
+    filter === undefined &&
+    (savedState?.sorts || savedState?.filters)
+  ) {
+    return {
+      savedState: {
+        sorts: savedState.sorts,
+        filters: savedState.filters,
+      },
+    }
+  }
+
+  const gridColumns = getGridColumns(props.table, {
+    projectRef: props.projectRef,
+    tableId: props.tableId,
+    editable: props.editable,
+    defaultWidth: props.gridProps?.defaultColumnWidth,
+    onAddColumn: props.editable ? props.onAddColumn : undefined,
+    onExpandJSONEditor: props.onExpandJSONEditor,
+    onExpandTextEditor: props.onExpandTextEditor,
+  })
+
+  const defaultErrorHandler = (error: any) => {
+    console.error('Supabase grid error: ', error)
+  }
+
+  dispatch({
+    type: 'INIT_TABLE',
+    payload: {
+      table: props.table,
+      gridProps: props.gridProps,
+      gridColumns,
+      savedState,
+      editable: props.editable,
+      onError: props.onError ?? defaultErrorHandler,
+    },
+  })
+
+  return { savedState: {} }
+}
 
 /** Supabase Grid: React component to render database table */
 
@@ -57,7 +135,8 @@ const SupabaseGridLayout = (props: SupabaseGridProps) => {
   const { id: tableId } = useParams()
   const dispatch = useDispatch()
   const state = useTrackedState()
-  const snap = useTableEditorStateSnapshot()
+  const tableEditorSnap = useTableEditorStateSnapshot()
+  const snap = useTableEditorTableStateSnapshot()
 
   const gridRef = useRef<DataGridHandle>(null)
   const [mounted, setMounted] = useState(false)
@@ -65,7 +144,7 @@ const SupabaseGridLayout = (props: SupabaseGridProps) => {
   const [{ sort, filter }, setParams] = useUrlState({
     arrayKeys: ['sort', 'filter'],
   })
-  const sorts = formatSortURLParams(sort as string[])
+  const sorts = formatSortURLParams(props.table.name, sort as string[] | undefined)
   const filters = formatFilterURLParams(filter as string[])
 
   const roleImpersonationState = useRoleImpersonationStateSnapshot()
@@ -73,14 +152,13 @@ const SupabaseGridLayout = (props: SupabaseGridProps) => {
   const { project } = useProjectContext()
   const { data, error, isSuccess, isError, isLoading, isRefetching } = useTableRowsQuery(
     {
-      queryKey: [props.table.schema, props.table.name],
       projectRef: project?.ref,
       connectionString: project?.connectionString,
-      table: props.table,
+      tableId: props.table.id,
       sorts,
       filters,
       page: snap.page,
-      limit: snap.rowsPerPage,
+      limit: tableEditorSnap.rowsPerPage,
       impersonatedRole: roleImpersonationState.role,
     },
     {
@@ -99,30 +177,12 @@ const SupabaseGridLayout = (props: SupabaseGridProps) => {
         }
         return 5000
       },
-      onSuccess(data) {
-        dispatch({
-          type: 'SET_ROWS_COUNT',
-          payload: data.rows.length,
-        })
-      },
     }
   )
 
   useEffect(() => {
     if (!mounted) setMounted(true)
   }, [])
-
-  useEffect(() => {
-    if (mounted) {
-      dispatch({ type: 'UPDATE_FILTERS', payload: {} })
-    }
-  }, [JSON.stringify(filters)])
-
-  useEffect(() => {
-    if (mounted) {
-      dispatch({ type: 'UPDATE_SORTS', payload: {} })
-    }
-  }, [JSON.stringify(sorts)])
 
   useEffect(() => {
     if (state.isInitialComplete && projectRef && state.table) {
@@ -173,13 +233,12 @@ const SupabaseGridLayout = (props: SupabaseGridProps) => {
   }, [state.table, props.table, props.schema])
 
   return (
-    <div className="sb-grid">
+    <div className="sb-grid h-full flex flex-col">
       <Header
         table={props.table}
         sorts={sorts}
         filters={filters}
-        isRefetching={isRefetching}
-        onAddRow={editable ? onAddRow : undefined}
+        onAddRow={editable && (props.table.columns ?? []).length > 0 ? onAddRow : undefined}
         onAddColumn={editable ? onAddColumn : undefined}
         onImportData={editable ? onImportData : undefined}
         headerActions={headerActions}
@@ -192,7 +251,7 @@ const SupabaseGridLayout = (props: SupabaseGridProps) => {
           <Grid
             ref={gridRef}
             {...gridProps}
-            rows={data?.rows ?? []}
+            rows={data?.rows ?? EMPTY_ARR}
             error={error}
             isLoading={isLoading}
             isSuccess={isSuccess}
@@ -204,12 +263,12 @@ const SupabaseGridLayout = (props: SupabaseGridProps) => {
             onImportData={onImportData}
             onEditForeignKeyColumnValue={onEditForeignKeyColumnValue}
           />
-          <Footer isLoading={isLoading || isRefetching} />
-          <Shortcuts gridRef={gridRef} />
+          <Footer isRefetching={isRefetching} />
+          <Shortcuts gridRef={gridRef} rows={data?.rows ?? EMPTY_ARR} />
         </>
       )}
 
-      {mounted && createPortal(<RowContextMenu rows={data?.rows ?? []} />, document.body)}
+      {mounted && createPortal(<RowContextMenu rows={data?.rows ?? EMPTY_ARR} />, document.body)}
     </div>
   )
 }

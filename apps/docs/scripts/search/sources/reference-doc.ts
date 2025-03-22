@@ -1,17 +1,18 @@
 import { createHash } from 'crypto'
 import { readFile } from 'fs/promises'
 import yaml from 'js-yaml'
-import { OpenAPIV3 } from 'openapi-types'
-import {
+import type { OpenAPIV3 } from 'openapi-types'
+import type {
   ICommonItem,
   ICommonSection,
   IFunctionDefinition,
   ISpec,
 } from '../../../components/reference/Reference.types'
-import { CliCommand, CliSpec } from '../../../generator/types/CliSpec'
+import type { CliCommand, CliSpec } from '../../../generator/types/CliSpec'
 import { flattenSections } from '../../../lib/helpers'
 import { enrichedOperation, gen_v3 } from '../../../lib/refGenerator/helpers'
-import { BaseLoader, BaseSource, Json } from './base'
+import type { Json } from '../../helpers.mdx'
+import { BaseLoader, BaseSource } from './base'
 
 export abstract class ReferenceLoader<SpecSection> extends BaseLoader {
   type = 'reference' as const
@@ -162,7 +163,7 @@ export class OpenApiReferenceSource extends ReferenceSource<enrichedOperation> {
 
   extractIndexedContent(): string {
     const { summary, description, operation, tags } = this.specSection
-    return `${this.meta.title}\n\n${summary}\n\n${description}\n\n${operation}\n\n${tags.join(
+    return `# ${this.meta.title ?? ''}\n\n${summary ?? ''}\n\n${description ?? ''}\n\n${operation ?? ''}\n\n${tags.join(
       ', '
     )}`
   }
@@ -211,8 +212,12 @@ export class ClientLibReferenceSource extends ReferenceSource<IFunctionDefinitio
   }
 
   extractIndexedContent(): string {
-    const { title, description } = this.specSection
-    return `${this.meta.title}\n\n${title}\n\n${description}`
+    const { title, description, examples } = this.specSection
+    const exampleText =
+      examples
+        ?.map((example) => `### ${example.name ?? ''}\n\n${example.code ?? ''}`)
+        .join('\n\n') ?? ''
+    return `# ${this.meta.title ?? ''}\n\n${title ?? ''}\n\n${description ?? ''}\n\n## Examples\n\n${exampleText}`
   }
 }
 
@@ -258,6 +263,6 @@ export class CliReferenceSource extends ReferenceSource<CliCommand> {
 
   extractIndexedContent(): string {
     const { summary, description, usage } = this.specSection
-    return `${this.meta.title}\n\n${summary}\n\n${description}\n\n${usage}`
+    return `# ${this.meta.title ?? ''}\n\n${summary ?? ''}\n\n${description ?? ''}\n\n${usage ?? ''}`
   }
 }

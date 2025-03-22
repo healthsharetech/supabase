@@ -1,16 +1,19 @@
+import { useParams } from 'common'
 import { useState } from 'react'
 
-import { useParams } from 'common'
+import { useSendEventMutation } from 'data/telemetry/send-event-mutation'
 import { Header } from './Header'
 import MessagesTable from './MessagesTable'
 import { SendMessageModal } from './SendMessageModal'
 import { RealtimeConfig, useRealtimeMessages } from './useRealtimeMessages'
+import { useSelectedOrganization } from 'hooks/misc/useSelectedOrganization'
 
 /**
  * Acts as a container component for the entire log display
  */
 export const RealtimeInspector = () => {
   const { ref } = useParams()
+  const org = useSelectedOrganization()
   const [sendMessageShown, setSendMessageShown] = useState(false)
 
   const [realtimeConfig, setRealtimeConfig] = useState<RealtimeConfig>({
@@ -21,6 +24,7 @@ export const RealtimeInspector = () => {
     token: '', // will be filled out by RealtimeTokensPopover
     schema: 'public',
     table: '*',
+    isChannelPrivate: false,
     filter: undefined,
     bearer: null,
     enablePresence: true,
@@ -28,7 +32,8 @@ export const RealtimeInspector = () => {
     enableBroadcast: true,
   })
 
-  const { logData, sendMessage } = useRealtimeMessages(realtimeConfig)
+  const { mutate: sendEvent } = useSendEventMutation()
+  const { logData, sendMessage } = useRealtimeMessages(realtimeConfig, setRealtimeConfig)
 
   return (
     <div className="flex flex-col grow h-full">
@@ -47,6 +52,10 @@ export const RealtimeInspector = () => {
         visible={sendMessageShown}
         onSelectCancel={() => setSendMessageShown(false)}
         onSelectConfirm={(v) => {
+          sendEvent({
+            action: 'realtime_inspector_broadcast_sent',
+            groups: { project: ref ?? 'Unknown', organization: org?.slug ?? 'Unknown' },
+          })
           sendMessage(v.message, v.payload, () => setSendMessageShown(false))
         }}
       />

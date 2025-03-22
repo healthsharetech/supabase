@@ -1,5 +1,6 @@
 import dayjs from 'dayjs'
-import { DatetimeHelper, FilterTableSet, LogTemplate } from '.'
+
+import type { DatetimeHelper, FilterTableSet, LogTemplate } from './Logs.types'
 
 export const LOGS_EXPLORER_DOCS_URL =
   'https://supabase.com/docs/guides/platform/logs#querying-with-the-logs-explorer'
@@ -214,12 +215,35 @@ from edge_logs
   cross join unnest(m.request) AS r
   cross join unnest(r.headers) AS h
 where
-  path like '%rest/v1/object%'
-group by 
+  path like '%storage/v1/object/%'
+group by
   r.path, r.method
 order by
   num_requests desc
 limit 100
+`,
+    for: ['api'],
+  },
+  {
+    label: 'Storage Egress Requests',
+    description: 'Check the number of requests done on Storage Affecting Egress',
+    mode: 'custom',
+    searchString: `select
+    r.method as http_verb,
+    r.path as filepath,
+    count(*) as num_requests,
+  from edge_logs
+    cross join unnest(metadata) as m
+    cross join unnest(m.request) AS r
+    cross join unnest(r.headers) AS h
+  where
+    (path like '%storage/v1/object/%' or path like '%storage/v1/render/%')
+    and r.method = 'GET'
+  group by
+    r.path, r.method
+  order by
+    num_requests desc
+  limit 100
 `,
     for: ['api'],
   },
@@ -236,7 +260,7 @@ from edge_logs f
   cross join unnest(m.request) as r
   cross join unnest(m.response) as res
   cross join unnest(res.headers) as h
-where starts_with(r.path, '/storage/v1/object') 
+where starts_with(r.path, '/storage/v1/object')
   and r.method = 'GET'
   and h.cf_cache_status in ('MISS', 'NONE/UNKNOWN', 'EXPIRED', 'BYPASS', 'DYNAMIC')
 group by path, search
@@ -254,12 +278,14 @@ const _SQL_FILTER_COMMON = {
 export const SQL_FILTER_TEMPLATES: any = {
   postgres_logs: {
     ..._SQL_FILTER_COMMON,
+    database: (value: string) => `identifier = '${value}'`,
     'severity.error': `parsed.error_severity in ('ERROR', 'FATAL', 'PANIC')`,
     'severity.noError': `parsed.error_severity not in ('ERROR', 'FATAL', 'PANIC')`,
     'severity.log': `parsed.error_severity = 'LOG'`,
   },
   edge_logs: {
     ..._SQL_FILTER_COMMON,
+    database: (value: string) => `identifier = '${value}'`,
     'status_code.error': `response.status_code between 500 and 599`,
     'status_code.success': `response.status_code between 200 and 299`,
     'status_code.warning': `response.status_code between 400 and 499`,
@@ -296,10 +322,10 @@ export const SQL_FILTER_TEMPLATES: any = {
     'severity.error': `metadata.level = 'error' or metadata.level = 'fatal'`,
     'severity.warning': `metadata.level = 'warning'`,
     'severity.info': `metadata.level = 'info'`,
-    'status_code.server_error': `metadata.status between 500 and 599`,
-    'status_code.client_error': `metadata.status between 400 and 499`,
-    'status_code.redirection': `metadata.status between 300 and 399`,
-    'status_code.success': `metadata.status between 200 and 299`,
+    'status_code.server_error': `cast(metadata.status as int64) between 500 and 599`,
+    'status_code.client_error': `cast(metadata.status as int64) between 400 and 499`,
+    'status_code.redirection': `cast(metadata.status as int64) between 300 and 399`,
+    'status_code.success': `cast(metadata.status as int64) between 200 and 299`,
     'endpoints.admin': `REGEXP_CONTAINS(metadata.path, "/admin")`,
     'endpoints.signup': `REGEXP_CONTAINS(metadata.path, "/signup|/invite|/verify")`,
     'endpoints.authentication': `REGEXP_CONTAINS(metadata.path, "/token|/authorize|/callback|/otp|/magiclink")`,
@@ -315,11 +341,16 @@ export const SQL_FILTER_TEMPLATES: any = {
   },
   postgrest_logs: {
     ..._SQL_FILTER_COMMON,
+    database: (value: string) => `identifier = '${value}'`,
   },
   pgbouncer_logs: {
     ..._SQL_FILTER_COMMON,
   },
   supavisor_logs: {
+    ..._SQL_FILTER_COMMON,
+    database: (value: string) => `m.project like '${value}%'`,
+  },
+  pg_cron_logs: {
     ..._SQL_FILTER_COMMON,
   },
 }
@@ -332,9 +363,11 @@ export enum LogsTableName {
   AUTH = 'auth_logs',
   REALTIME = 'realtime_logs',
   STORAGE = 'storage_logs',
-  PGBOUNCER = 'pgbouncer_logs',
   POSTGREST = 'postgrest_logs',
   SUPAVISOR = 'supavisor_logs',
+  PGBOUNCER = 'pgbouncer_logs',
+  WAREHOUSE = 'warehouse_logs',
+  PG_CRON = 'pg_cron_logs',
 }
 
 export const LOGS_TABLES = {
@@ -346,8 +379,10 @@ export const LOGS_TABLES = {
   realtime: LogsTableName.REALTIME,
   storage: LogsTableName.STORAGE,
   postgrest: LogsTableName.POSTGREST,
-  pgbouncer: LogsTableName.PGBOUNCER,
   supavisor: LogsTableName.SUPAVISOR,
+  warehouse: LogsTableName.WAREHOUSE,
+  pg_cron: LogsTableName.POSTGRES,
+  pgbouncer: LogsTableName.PGBOUNCER,
 }
 
 export const LOGS_SOURCE_DESCRIPTION = {
@@ -358,22 +393,13 @@ export const LOGS_SOURCE_DESCRIPTION = {
   [LogsTableName.AUTH]: 'Authentication logs from GoTrue',
   [LogsTableName.REALTIME]: 'Realtime server for Postgres logical replication broadcasting',
   [LogsTableName.STORAGE]: 'Object storage logs',
-  [LogsTableName.PGBOUNCER]: 'Postgres connection pooler logs',
   [LogsTableName.POSTGREST]: 'RESTful API web server logs',
-  [LogsTableName.SUPAVISOR]: 'Cloud-native Postgres connection pooler logs',
+  [LogsTableName.SUPAVISOR]: 'Shared connection pooler logs for PostgreSQL',
+  [LogsTableName.PGBOUNCER]: 'Dedicated connection pooler for PostgreSQL',
+  [LogsTableName.WAREHOUSE]: 'Logs obtained from a data warehouse collection',
+  [LogsTableName.PG_CRON]: 'Postgres logs from pg_cron cron jobs',
 }
 
-export const genQueryParams = (params: { [k: string]: string }) => {
-  // remove keys which are empty strings, null, or undefined
-  for (const k in params) {
-    const v = params[k]
-    if (v === null || v === '' || v === undefined) {
-      delete params[k]
-    }
-  }
-  const qs = new URLSearchParams(params).toString()
-  return qs
-}
 export const FILTER_OPTIONS: FilterTableSet = {
   // Postgres logs
   postgres_logs: {
@@ -564,7 +590,7 @@ export const FILTER_OPTIONS: FilterTableSet = {
         {
           key: 'info',
           label: 'Info',
-          description: 'Show all events that have error severity',
+          description: 'Show all events that have info severity',
         },
       ],
     },
@@ -640,6 +666,16 @@ export const LOGS_TAILWIND_CLASSES = {
 
 export const PREVIEWER_DATEPICKER_HELPERS: DatetimeHelper[] = [
   {
+    text: 'Last 15 minutes',
+    calcFrom: () => dayjs().subtract(15, 'minute').startOf('minute').toISOString(),
+    calcTo: () => '',
+  },
+  {
+    text: 'Last 30 minutes',
+    calcFrom: () => dayjs().subtract(30, 'minute').startOf('minute').toISOString(),
+    calcTo: () => '',
+  },
+  {
     text: 'Last hour',
     calcFrom: () => dayjs().subtract(1, 'hour').startOf('hour').toISOString(),
     calcTo: () => '',
@@ -658,10 +694,15 @@ export const PREVIEWER_DATEPICKER_HELPERS: DatetimeHelper[] = [
 ]
 export const EXPLORER_DATEPICKER_HELPERS: DatetimeHelper[] = [
   {
+    text: 'Last hour',
+    calcFrom: () => dayjs().subtract(1, 'hour').startOf('hour').toISOString(),
+    calcTo: () => '',
+    default: true,
+  },
+  {
     text: 'Last 24 hours',
     calcFrom: () => dayjs().subtract(1, 'day').startOf('day').toISOString(),
     calcTo: () => '',
-    default: true,
   },
   {
     text: 'Last 3 days',
@@ -687,3 +728,10 @@ export const TIER_QUERY_LIMITS: {
   TEAM: { text: '28 days', value: 28, unit: 'day', promptUpgrade: true },
   ENTERPRISE: { text: '90 days', value: 90, unit: 'day', promptUpgrade: false },
 }
+
+export const LOG_ROUTES_WITH_REPLICA_SUPPORT = [
+  '/project/[ref]/logs/edge-logs',
+  '/project/[ref]/logs/pooler-logs',
+  '/project/[ref]/logs/postgres-logs',
+  '/project/[ref]/logs/postgrest-logs',
+]

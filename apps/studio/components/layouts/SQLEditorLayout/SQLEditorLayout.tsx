@@ -1,7 +1,8 @@
-import { withAuth } from 'hooks'
+import { OngoingQueriesPanel } from 'components/interfaces/SQLEditor/OngoingQueriesPanel'
+import { withAuth } from 'hooks/misc/withAuth'
 import { ReactNode, useMemo } from 'react'
-import ProjectLayout from '../'
-import SQLEditorMenu from './SQLEditorMenu'
+import ProjectLayout from '../ProjectLayout/ProjectLayout'
+import { SQLEditorMenu } from './SQLEditorMenu'
 
 export interface SQLEditorLayoutProps {
   title: string
@@ -17,8 +18,10 @@ const SQLEditorLayout = ({ title, children }: SQLEditorLayoutProps) => {
       product="SQL Editor"
       productMenu={productMenu}
       isBlocking={false}
+      resizableSidebar
     >
       {children}
+      <OngoingQueriesPanel />
     </ProjectLayout>
   )
 }

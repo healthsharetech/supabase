@@ -1,26 +1,22 @@
-import { useEffect, useState } from 'react'
-import { NextSeo } from 'next-seo'
+import { useState } from 'react'
 import { GetStaticProps, GetStaticPaths } from 'next'
+import dayjs from 'dayjs'
+import { NextSeo } from 'next-seo'
 import Link from 'next/link'
 import Error from 'next/error'
-import dynamic from 'next/dynamic'
-import { useTheme } from 'next-themes'
-import { Session } from '@supabase/supabase-js'
+import { createClient, Session } from '@supabase/supabase-js'
 import { Button } from 'ui'
-import { SITE_URL } from '~/lib/constants'
-import supabase from '~/lib/supabaseMisc'
+import { LW_URL, SITE_ORIGIN } from '~/lib/constants'
+import supabase from '~/lib/supabase'
+import { Database } from '~/lib/database.types'
+import { AnimatePresence, m, LazyMotion, domAnimation } from 'framer-motion'
+import { DEFAULT_TRANSITION, INITIAL_BOTTOM, getAnimation } from '~/lib/animations'
 
-import FaviconImports from '~/components/LaunchWeek/X/FaviconImports'
 import DefaultLayout from '~/components/Layouts/Default'
 import SectionContainer from '~/components/Layouts/SectionContainer'
 import { TicketState, ConfDataContext, UserData } from '~/components/LaunchWeek/hooks/use-conf-data'
-import LWXBackground from '~/components/LaunchWeek/X/LWXBackground'
-
-const LWXTicketContainer = dynamic(() => import('~/components/LaunchWeek/X/Ticket/TicketContainer'))
-const LaunchWeekPrizeSection = dynamic(
-  () => import('~/components/LaunchWeek/X/LaunchWeekPrizeSection')
-)
-const CTABanner = dynamic(() => import('~/components/CTABanner'))
+import CanvasSingleMode from '~/components/LaunchWeek/13/Multiplayer/CanvasSingleMode'
+import ThreeTicketCanvas from '~/components/LaunchWeek/13/ThreeTicketCanvas'
 
 interface Props {
   user: UserData
@@ -29,31 +25,25 @@ interface Props {
 }
 
 export default function UsernamePage({ user, ogImageUrl }: Props) {
-  const { username, ticketNumber, name } = user
+  const { username, name, platinum, secret } = user
 
-  const TITLE = `${name ? name + '’s' : 'Get your'} #SupaLaunchWeek Ticket`
-  const DESCRIPTION = `Claim and share your Supabase Launch Week X ticket for a chance to win Supabase swag.`
-  const OG_URL = `${SITE_URL}/tickets/${username}`
+  const ticketType = secret ? 'secret' : platinum ? 'platinum' : 'regular'
 
-  const [session, setSession] = useState<Session | null>(null)
-  const { resolvedTheme, setTheme } = useTheme()
-  const [initialDarkMode] = useState(resolvedTheme?.includes('dark'))
+  const DISPLAY_NAME = name || username
+  const TITLE = `${DISPLAY_NAME ? DISPLAY_NAME.split(' ')[0] + '’s' : 'Get your'} Launch Week Ticket`
+  const DESCRIPTION = `Claim your Supabase Launch Week 13 ticket for a chance to win supa swag.`
 
+  const [session] = useState<Session | null>(null)
   const [ticketState, setTicketState] = useState<TicketState>('ticket')
 
-  if (!ticketNumber) {
+  const transition = DEFAULT_TRANSITION
+  const initial = INITIAL_BOTTOM
+  const animate = getAnimation({ duration: 1 })
+  const exit = { opacity: 0, transition: { ...transition, duration: 0.2 } }
+
+  if (!username) {
     return <Error statusCode={404} />
   }
-
-  useEffect(() => {
-    document.body.classList.add('bg-[#060809]')
-
-    return () => {
-      if (document.body.classList.contains('bg-[#060809]')) {
-        document.body.classList.remove('bg-[#060809]')
-      }
-    }
-  }, [])
 
   return (
     <>
@@ -62,7 +52,7 @@ export default function UsernamePage({ user, ogImageUrl }: Props) {
         openGraph={{
           title: TITLE,
           description: DESCRIPTION,
-          url: OG_URL,
+          url: `${LW_URL}/tickets/${username}`,
           images: [
             {
               url: ogImageUrl,
@@ -72,7 +62,6 @@ export default function UsernamePage({ user, ogImageUrl }: Props) {
           ],
         }}
       />
-      <FaviconImports />
       <ConfDataContext.Provider
         value={{
           supabase,
@@ -83,34 +72,53 @@ export default function UsernamePage({ user, ogImageUrl }: Props) {
           setTicketState,
         }}
       >
-        <DefaultLayout>
-          <div className="-mt-[65px]">
-            <SectionContainer className="relative z-10 flex flex-col justify-around items-center gap-2 md:gap-10 !px-2 !mx-auto md:min-h-[auto]">
-              <div className="w-full min-h-[400px] pt-24 flex items-center">
-                <LWXTicketContainer />
-              </div>
-              <div className="flex flex-col items-center justify-center text-center gap-2 max-w-lg">
-                <h1 className="text-2xl">
-                  {name}'s
-                  <br />
-                  Launch Week X Ticket
-                </h1>
-                <span className="text-foreground-lighter">
-                  Claim your own ticket and share it for a chance to win.
-                </span>
-              </div>
-              <Button type="secondary" asChild>
-                <Link href={`${SITE_URL}${username ? '?referral=' + username : ''}`}>
-                  Join Launch Week X
-                </Link>
-              </Button>
-            </SectionContainer>
-            <LWXBackground className="absolute z-0 top-0 left-0 right-0 w-full flex items-center justify-center opacity-20" />
-          </div>
-          <SectionContainer className="!pt-4 !pb-0">
-            <LaunchWeekPrizeSection />
+        <DefaultLayout className="lg:h-[calc(100dvh-65px)] min-h-[calc(100vh)] md:min-h-[calc(100vh-65px)] overflow-hidden">
+          <SectionContainer className="relative h-full flex-1 pt-4 md:pt-4 pointer-events-none">
+            <div className="relative z-10 flex h-full">
+              <LazyMotion features={domAnimation}>
+                <AnimatePresence mode="wait" key={ticketState}>
+                  <m.div
+                    key="ticket"
+                    initial={initial}
+                    animate={animate}
+                    exit={exit}
+                    className="w-full flex-1 h-full flex flex-col lg:flex-row items-center lg:justify-center lg:items-center gap-8 md:gap-10 lg:gap-32 text-foreground text-center md:text-left"
+                  >
+                    <div className="w-full lg:w-full h-full mt-3 md:mt-6 lg:mt-0 max-w-lg flex flex-col items-center justify-center gap-3"></div>
+                    <div className="lg:h-full w-full max-w-lg gap-8 flex flex-col items-center justify-center lg:items-start lg:justify-center text-center lg:text-left">
+                      <div className="flex flex-col items-center justify-center lg:justify-start lg:items-start gap-2 text-foreground text-center md:text-left max-w-sm">
+                        <h1 className="text-foreground text-2xl">
+                          Join {DISPLAY_NAME?.split(' ')[0]} <br /> for Launch Week 13
+                        </h1>
+                        <span className="text-foreground-lighter">
+                          Claim your own ticket for a chance to win limited swag and to follow all
+                          the announcements.
+                        </span>
+                      </div>
+                      <div>
+                        <Button type="primary" asChild size="small">
+                          <Link
+                            href={`${LW_URL}${username ? '?referral=' + username : ''}`}
+                            className="pointer-events-auto"
+                          >
+                            Claim your ticket
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </m.div>
+                </AnimatePresence>
+              </LazyMotion>
+            </div>
           </SectionContainer>
-          <CTABanner className="!bg-[#060809] border-t-0" />
+          <CanvasSingleMode />
+          <ThreeTicketCanvas
+            username={DISPLAY_NAME ?? ''}
+            className="relative -mt-40 -mb-20 lg:my-0 lg:absolute"
+            ticketPosition="left"
+            ticketType={ticketType}
+            sharePage={true}
+          />
         </DefaultLayout>
       </ConfDataContext.Provider>
     </>
@@ -121,35 +129,42 @@ export const getStaticProps: GetStaticProps = async ({ params }) => {
   const username = params?.username?.toString() || null
   let user
 
-  fetch(
-    `https://obuldanrptloktxcffvn.supabase.co/functions/v1/lwx-og?username=${encodeURIComponent(
-      username ?? ''
-    )}`
+  const supabaseAdmin = createClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.LIVE_SUPABASE_COM_SERVICE_ROLE_KEY!
   )
-  fetch(
-    `https://obuldanrptloktxcffvn.supabase.co/functions/v1/lwx-ticket?username=${encodeURIComponent(
-      username ?? ''
-    )}`
-  )
+
+  // fetch the normal ticket
+  // stores the og images in supabase storage
+  fetch(`${SITE_ORIGIN}/api-v2/ticket-og?username=${encodeURIComponent(username ?? '')}`)
 
   // fetch a specific user
   if (username) {
-    const { data } = await supabase!
-      .from('lwx_tickets_golden')
-      .select('name, username, ticketNumber, metadata, golden')
+    const { data } = await supabaseAdmin!
+      .from('tickets_view')
+      .select('name, username, ticket_number, metadata, platinum, secret, role, company, location')
+      .eq('launch_week', 'lw13')
       .eq('username', username)
       .single()
 
     user = data
   }
 
-  const ticketType = user?.metadata?.hasSecretTicket
-    ? 'secret'
-    : user?.golden
-      ? 'platinum'
-      : 'regular'
+  // fetch the platinum ticket
+  // stores the og images in supabase storage
+  if (user?.secret) {
+    fetch(
+      `${SITE_ORIGIN}/api-v2/ticket-og?username=${encodeURIComponent(username ?? '')}&secret=true`
+    )
+  } else if (user?.platinum) {
+    // fetch /api-v2/ticket-og
+    fetch(
+      `${SITE_ORIGIN}/api-v2/ticket-og?username=${encodeURIComponent(username ?? '')}&platinum=true`
+    )
+  }
 
-  const ogImageUrl = `https://obuldanrptloktxcffvn.supabase.co/storage/v1/object/public/images/lwx/og/${ticketType}/${username}.png`
+  const ticketType = user?.secret ? 'secret' : user?.platinum ? 'platinum' : 'regular'
+  const ogImageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/images/launch-week/lw13/og/${ticketType}/${username}.png?t=${dayjs(new Date()).format('DHHmmss')}`
 
   return {
     props: {

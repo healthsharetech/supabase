@@ -1,3 +1,4 @@
+import { Check, ChevronsUpDown, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useState } from 'react'
@@ -5,7 +6,8 @@ import { useState } from 'react'
 import ShimmeringLoader from 'components/ui/ShimmeringLoader'
 import { useOrganizationsQuery } from 'data/organizations/organizations-query'
 import { useOrgSubscriptionQuery } from 'data/subscriptions/org-subscription-query'
-import { useIsFeatureEnabled, useSelectedOrganization } from 'hooks'
+import { useIsFeatureEnabled } from 'hooks/misc/useIsFeatureEnabled'
+import { useSelectedOrganization } from 'hooks/misc/useSelectedOrganization'
 import {
   Badge,
   Button,
@@ -14,15 +16,14 @@ import {
   CommandInput_Shadcn_,
   CommandItem_Shadcn_,
   CommandList_Shadcn_,
+  CommandSeparator_Shadcn_,
   Command_Shadcn_,
-  IconCheck,
-  IconCode,
-  IconPlus,
   PopoverContent_Shadcn_,
   PopoverTrigger_Shadcn_,
   Popover_Shadcn_,
   ScrollArea,
 } from 'ui'
+import PartnerIcon from 'components/ui/PartnerIcon'
 
 interface OrganizationDropdownProps {
   isNewNav?: boolean
@@ -46,23 +47,15 @@ const OrganizationDropdown = ({ isNewNav = false }: OrganizationDropdownProps) =
   }
 
   return (
-    <div className="flex items-center px-2">
+    <div className="flex items-center">
       <Popover_Shadcn_ open={open} onOpenChange={setOpen} modal={false}>
         <PopoverTrigger_Shadcn_ asChild>
-          <div className="flex items-center space-x-2 cursor-pointer">
-            <Button
-              type="text"
-              className="pr-2"
-              iconRight={
-                <IconCode className="text-foreground-light rotate-90" strokeWidth={2} size={12} />
-              }
-            >
-              <div className="flex items-center space-x-2">
-                <p className={isNewNav ? 'text-sm' : 'text-xs'}>{orgName}</p>
-                {isSuccess && <Badge color="scale">{subscription?.plan.name}</Badge>}
-              </div>
-            </Button>
-          </div>
+          <Button type="text" className="pr-2" iconRight={<ChevronsUpDown />}>
+            <div className="flex items-center space-x-2">
+              <p className={isNewNav ? 'text-sm' : 'text-xs'}>{orgName}</p>
+              {isSuccess && <Badge variant="default">{subscription?.plan.name}</Badge>}
+            </div>
+          </Button>
         </PopoverTrigger_Shadcn_>
         <PopoverContent_Shadcn_ className="p-0" side="bottom" align="start">
           <Command_Shadcn_>
@@ -80,7 +73,7 @@ const OrganizationDropdown = ({ isNewNav = false }: OrganizationDropdownProps) =
                     return (
                       <CommandItem_Shadcn_
                         key={org.slug}
-                        value={`${org.name} - ${org.slug}`}
+                        value={`${org.name.replaceAll('"', '')} - ${org.slug}`}
                         className="cursor-pointer w-full"
                         onSelect={() => {
                           setOpen(false)
@@ -89,8 +82,11 @@ const OrganizationDropdown = ({ isNewNav = false }: OrganizationDropdownProps) =
                         onClick={() => setOpen(false)}
                       >
                         <Link href={href} className="w-full flex items-center justify-between">
-                          {org.name}
-                          {org.slug === slug && <IconCheck />}
+                          <div className="flex items-center gap-2">
+                            <span>{org.name}</span>
+                            <PartnerIcon organization={org} />
+                          </div>
+                          {org.slug === slug && <Check size={16} />}
                         </Link>
                       </CommandItem_Shadcn_>
                     )
@@ -98,21 +94,24 @@ const OrganizationDropdown = ({ isNewNav = false }: OrganizationDropdownProps) =
                 </ScrollArea>
               </CommandGroup_Shadcn_>
               {organizationCreationEnabled && (
-                <CommandGroup_Shadcn_ className="border-t">
-                  <CommandItem_Shadcn_
-                    className="cursor-pointer w-full"
-                    onSelect={(e) => {
-                      setOpen(false)
-                      router.push(`/new`)
-                    }}
-                    onClick={() => setOpen(false)}
-                  >
-                    <Link href="/new" className="flex items-center gap-2 w-full">
-                      <IconPlus size={14} strokeWidth={1.5} />
-                      <p>New organization</p>
-                    </Link>
-                  </CommandItem_Shadcn_>
-                </CommandGroup_Shadcn_>
+                <>
+                  <CommandSeparator_Shadcn_ />
+                  <CommandGroup_Shadcn_>
+                    <CommandItem_Shadcn_
+                      className="cursor-pointer w-full"
+                      onSelect={(e) => {
+                        setOpen(false)
+                        router.push(`/new`)
+                      }}
+                      onClick={() => setOpen(false)}
+                    >
+                      <Link href="/new" className="flex items-center gap-2 w-full">
+                        <Plus size={14} strokeWidth={1.5} />
+                        <p>New organization</p>
+                      </Link>
+                    </CommandItem_Shadcn_>
+                  </CommandGroup_Shadcn_>
+                </>
               )}
             </CommandList_Shadcn_>
           </Command_Shadcn_>

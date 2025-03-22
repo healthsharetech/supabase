@@ -1,9 +1,10 @@
 import { useQuery, UseQueryOptions } from '@tanstack/react-query'
 
-import { get } from 'data/fetchers'
-import { ResponseError } from 'types'
+import type { components } from 'data/api'
+import { get, handleError } from 'data/fetchers'
+import { useIsOrioleDb } from 'hooks/misc/useSelectedProject'
+import type { ResponseError } from 'types'
 import { databaseKeys } from './keys'
-import { components } from 'data/api'
 
 export type BackupsVariables = {
   projectRef?: string
@@ -19,7 +20,7 @@ export async function getBackups({ projectRef }: BackupsVariables, signal?: Abor
     signal,
   })
 
-  if (error) throw error
+  if (error) handleError(error)
   return data
 }
 
@@ -29,9 +30,13 @@ export type BackupsError = ResponseError
 export const useBackupsQuery = <TData = BackupsData>(
   { projectRef }: BackupsVariables,
   { enabled = true, ...options }: UseQueryOptions<BackupsData, BackupsError, TData> = {}
-) =>
-  useQuery<BackupsData, BackupsError, TData>(
+) => {
+  // [Joshen] Check for specifically false to account for project not loaded yet
+  const isOrioleDb = useIsOrioleDb()
+
+  return useQuery<BackupsData, BackupsError, TData>(
     databaseKeys.backups(projectRef),
     ({ signal }) => getBackups({ projectRef }, signal),
-    { enabled: enabled && typeof projectRef !== 'undefined', ...options }
+    { enabled: enabled && isOrioleDb === false && typeof projectRef !== 'undefined', ...options }
   )
+}

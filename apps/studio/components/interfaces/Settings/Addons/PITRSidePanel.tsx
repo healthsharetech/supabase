@@ -1,35 +1,36 @@
 import { PermissionAction } from '@supabase/shared-types/out/constants'
-import clsx from 'clsx'
+import { useTheme } from 'next-themes'
 import Link from 'next/link'
-import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 
 import { useParams } from 'common'
-import { useTheme } from 'next-themes'
+import { subscriptionHasHipaaAddon } from 'components/interfaces/Billing/Subscription/Subscription.utils'
+import { useReadReplicasQuery } from 'data/read-replicas/replicas-query'
+import { useOrgSubscriptionQuery } from 'data/subscriptions/org-subscription-query'
 import { useProjectAddonRemoveMutation } from 'data/subscriptions/project-addon-remove-mutation'
 import { useProjectAddonUpdateMutation } from 'data/subscriptions/project-addon-update-mutation'
 import { useProjectAddonsQuery } from 'data/subscriptions/project-addons-query'
-import { useCheckPermissions, useSelectedOrganization, useSelectedProject, useStore } from 'hooks'
+import type { AddonVariantId } from 'data/subscriptions/types'
+import { useCheckPermissions } from 'hooks/misc/useCheckPermissions'
+import { useSelectedOrganization } from 'hooks/misc/useSelectedOrganization'
+import { useSelectedProject } from 'hooks/misc/useSelectedProject'
 import { BASE_PATH } from 'lib/constants'
-import Telemetry from 'lib/telemetry'
-
-import { useSubscriptionPageStateSnapshot } from 'state/subscription-page'
+import { formatCurrency } from 'lib/helpers'
+import { useAddonsPagePanel } from 'state/addons-page'
 import {
   Alert,
   AlertDescription_Shadcn_,
   AlertTitle_Shadcn_,
   Alert_Shadcn_,
   Button,
-  IconExternalLink,
+  CriticalIcon,
   Radio,
   SidePanel,
-  IconAlertTriangle,
+  WarningIcon,
+  cn,
 } from 'ui'
-import { useOrgSubscriptionQuery } from 'data/subscriptions/org-subscription-query'
-import { AlertTriangleIcon } from 'lucide-react'
-import { AddonVariantId } from 'data/subscriptions/types'
-import { subscriptionHasHipaaAddon } from 'components/interfaces/Billing/Subscription/Subscription.utils'
-import { formatCurrency } from 'lib/helpers'
+import { ExternalLink, AlertTriangle } from 'lucide-react'
 
 const PITR_CATEGORY_OPTIONS: {
   id: 'off' | 'on'
@@ -52,8 +53,6 @@ const PITR_CATEGORY_OPTIONS: {
 ]
 
 const PITRSidePanel = () => {
-  const { ui } = useStore()
-  const router = useRouter()
   const { ref: projectRef } = useParams()
   const { resolvedTheme } = useTheme()
   const project = useSelectedProject()
@@ -66,50 +65,30 @@ const PITRSidePanel = () => {
   const isBranchingEnabled =
     project?.is_branch_enabled === true || project?.parent_project_ref !== undefined
 
-  const snap = useSubscriptionPageStateSnapshot()
-  const visible = snap.panelKey === 'pitr'
-  const onClose = () => {
-    const { panel, ...queryWithoutPanel } = router.query
-    router.push({ pathname: router.pathname, query: queryWithoutPanel }, undefined, {
-      shallow: true,
-    })
-    snap.setPanelKey(undefined)
-  }
+  const { panel, setPanel, closePanel } = useAddonsPagePanel()
+  const visible = panel === 'pitr'
 
+  const { data: databases } = useReadReplicasQuery({ projectRef })
   const { data: addons, isLoading } = useProjectAddonsQuery({ projectRef })
   const { data: subscription } = useOrgSubscriptionQuery({ orgSlug: organization?.slug })
   const hasHipaaAddon = subscriptionHasHipaaAddon(subscription)
 
   const { mutate: updateAddon, isLoading: isUpdating } = useProjectAddonUpdateMutation({
     onSuccess: () => {
-      ui.setNotification({
-        category: 'success',
-        message: `Successfully updated point in time recovery duration`,
-      })
-      onClose()
+      toast.success(`Successfully updated point in time recovery duration`)
+      closePanel()
     },
     onError: (error) => {
-      ui.setNotification({
-        error,
-        category: 'error',
-        message: `Unable to update PITR: ${error.message}`,
-      })
+      toast.error(`Unable to update PITR: ${error.message}`)
     },
   })
   const { mutate: removeAddon, isLoading: isRemoving } = useProjectAddonRemoveMutation({
     onSuccess: () => {
-      ui.setNotification({
-        category: 'success',
-        message: `Successfully disabled point in time recovery`,
-      })
-      onClose()
+      toast.success(`Successfully disabled point in time recovery`)
+      closePanel()
     },
     onError: (error) => {
-      ui.setNotification({
-        error,
-        category: 'error',
-        message: `Unable to disable PITR: ${error.message}`,
-      })
+      toast.error(`Unable to disable PITR: ${error.message}`)
     },
   })
   const isSubmitting = isUpdating || isRemoving
@@ -121,9 +100,12 @@ const PITRSidePanel = () => {
   const subscriptionPitr = selectedAddons.find((addon) => addon.type === 'pitr')
   const availableOptions = availableAddons.find((addon) => addon.type === 'pitr')?.variants ?? []
 
+  const hasReadReplicas = (databases ?? []).length > 1
   const hasChanges = selectedOption !== (subscriptionPitr?.variant.identifier ?? 'pitr_0')
   const selectedPitr = availableOptions.find((option) => option.identifier === selectedOption)
   const isFreePlan = subscription?.plan?.id === 'free'
+  const blockDowngradeDueToReadReplicas =
+    hasChanges && hasReadReplicas && selectedCategory === 'off' && selectedOption === 'pitr_0'
 
   useEffect(() => {
     if (visible) {
@@ -134,18 +116,6 @@ const PITRSidePanel = () => {
         setSelectedCategory('off')
         setSelectedOption('pitr_0')
       }
-      Telemetry.sendActivity(
-        {
-          activity: 'Side Panel Viewed',
-          source: 'Dashboard',
-          data: {
-            title: 'Point in Time Recovery',
-            section: 'Add ons',
-          },
-          projectRef,
-        },
-        router
-      )
     }
   }, [visible, isLoading])
 
@@ -163,17 +133,23 @@ const PITRSidePanel = () => {
     <SidePanel
       size="xlarge"
       visible={visible}
-      onCancel={onClose}
+      onCancel={closePanel}
       onConfirm={onConfirm}
       loading={isLoading || isSubmitting}
       disabled={
-        isFreePlan || isLoading || !hasChanges || isSubmitting || !canUpdatePitr || hasHipaaAddon
+        isFreePlan ||
+        isLoading ||
+        !hasChanges ||
+        isSubmitting ||
+        !canUpdatePitr ||
+        hasHipaaAddon ||
+        blockDowngradeDueToReadReplicas
       }
       tooltip={
         hasHipaaAddon
           ? 'Unable to change PITR with HIPAA add-on'
           : isFreePlan
-            ? 'Unable to enable point in time recovery on a free plan'
+            ? 'Unable to enable point in time recovery on a Free Plan'
             : !canUpdatePitr
               ? 'You do not have permission to update PITR'
               : undefined
@@ -181,7 +157,7 @@ const PITRSidePanel = () => {
       header={
         <div className="flex items-center justify-between">
           <h4>Point in Time Recovery</h4>
-          <Button asChild type="default" icon={<IconExternalLink strokeWidth={1.5} />}>
+          <Button asChild type="default" icon={<ExternalLink strokeWidth={1.5} />}>
             <Link
               href="https://supabase.com/docs/guides/platform/backups#point-in-time-recovery"
               target="_blank"
@@ -222,28 +198,21 @@ const PITRSidePanel = () => {
                 return (
                   <div
                     key={option.id}
-                    className={clsx('col-span-3 group space-y-1', isFreePlan && 'opacity-75')}
+                    className={cn('col-span-3 group space-y-1', isFreePlan && 'opacity-75')}
                     onClick={() => {
                       setSelectedCategory(option.id)
-                      if (option.id === 'off') setSelectedOption('pitr_0')
-                      Telemetry.sendActivity(
-                        {
-                          activity: 'Option Selected',
-                          source: 'Dashboard',
-                          data: {
-                            title: 'Point in Time Recovery',
-                            section: 'Add ons',
-                            option: option.name,
-                          },
-                          projectRef,
-                        },
-                        router
-                      )
+                      if (option.id === 'off') {
+                        setSelectedOption('pitr_0')
+                      } else if (subscriptionPitr?.variant.identifier !== undefined) {
+                        setSelectedOption(subscriptionPitr.variant.identifier)
+                      } else {
+                        setSelectedOption('pitr_7')
+                      }
                     }}
                   >
                     <img
                       alt="Point-In-Time-Recovery"
-                      className={clsx(
+                      className={cn(
                         'relative rounded-xl transition border bg-no-repeat bg-center bg-cover cursor-pointer w-[160px] h-[96px]',
                         isSelected
                           ? 'border-foreground'
@@ -255,7 +224,7 @@ const PITRSidePanel = () => {
                     />
 
                     <p
-                      className={clsx(
+                      className={cn(
                         'text-sm transition',
                         isSelected ? 'text-foreground' : 'text-foreground-light'
                       )}
@@ -270,13 +239,32 @@ const PITRSidePanel = () => {
 
           {selectedCategory === 'off' && subscriptionPitr !== undefined && isBranchingEnabled && (
             <Alert_Shadcn_ variant="warning">
-              <AlertTriangleIcon strokeWidth={2} />
+              <CriticalIcon />
               <AlertTitle_Shadcn_>
                 Are you sure you want to disable this while using Branching?
               </AlertTitle_Shadcn_>
               <AlertDescription_Shadcn_>
                 Without PITR, you might not be able to recover lost data if you accidentally merge a
                 branch that deletes a column or user data. We don't recommend this.
+              </AlertDescription_Shadcn_>
+            </Alert_Shadcn_>
+          )}
+
+          {blockDowngradeDueToReadReplicas && (
+            <Alert_Shadcn_>
+              <WarningIcon />
+              <AlertTitle_Shadcn_>Remove all read replicas before downgrading</AlertTitle_Shadcn_>
+              <AlertDescription_Shadcn_>
+                You currently have active read replicas. The minimum compute size for using read
+                replicas is the Small Compute. You need to remove all read replicas before
+                downgrading Compute as it requires at least a Small compute instance.
+              </AlertDescription_Shadcn_>
+              <AlertDescription_Shadcn_ className="mt-2">
+                <Button asChild type="default">
+                  <Link href={`/project/${projectRef}/settings/infrastructure`}>
+                    Manage read replicas
+                  </Link>
+                </Button>
               </AlertDescription_Shadcn_>
             </Alert_Shadcn_>
           )}
@@ -288,10 +276,12 @@ const PITRSidePanel = () => {
                   withIcon
                   variant="info"
                   className="mb-4"
-                  title="Changing your Point-In-Time-Recovery is only available on the Pro plan"
+                  title="Changing your Point-In-Time-Recovery is only available on the Pro Plan"
                   actions={
                     <Button asChild type="default">
-                      <Link href={`/org/${organization?.slug}/billing?panel=subscriptionPlan`}>
+                      <Link
+                        href={`/org/${organization?.slug}/billing?panel=subscriptionPlan&source=pitrSidePanel`}
+                      >
                         View available plans
                       </Link>
                     </Button>
@@ -309,7 +299,7 @@ const PITRSidePanel = () => {
                     <Button
                       key="change-compute"
                       type="default"
-                      onClick={() => snap.setPanelKey('computeInstance')}
+                      onClick={() => setPanel('computeInstance')}
                     >
                       Change compute size
                     </Button>,
@@ -358,48 +348,11 @@ const PITRSidePanel = () => {
             </div>
           )}
 
-          {hasChanges && (
-            <>
-              {selectedOption === 'pitr_0' ||
-              (selectedPitr?.price ?? 0) < (subscriptionPitr?.variant.price ?? 0) ? (
-                subscription?.billing_via_partner === false && (
-                  <p className="text-sm text-foreground-light">
-                    Upon clicking confirm, the add-on is removed immediately and any unused time in
-                    the current billing cycle is added as prorated credits to your organization and
-                    used in subsequent billing cycles.
-                  </p>
-                )
-              ) : (
-                <p className="text-sm text-foreground-light">
-                  Upon clicking confirm, the amount of{' '}
-                  <span className="text-foreground">{formatCurrency(selectedPitr?.price)}</span>{' '}
-                  will be added to your monthly invoice.{' '}
-                  {subscription?.billing_via_partner ? (
-                    <>
-                      For the current billing cycle you'll be charged a prorated amount at the end
-                      of the cycle.{' '}
-                    </>
-                  ) : (
-                    <>
-                      The addon is prepaid per month and in case of a downgrade, you get credits for
-                      the remaining time. For the current billing cycle you're immediately charged a
-                      prorated amount for the remaining days.
-                    </>
-                  )}
-                </p>
-              )}
-
-              {subscription?.billing_via_partner &&
-                subscription.scheduled_plan_change?.target_plan !== undefined && (
-                  <Alert_Shadcn_ variant={'warning'} className="mb-2">
-                    <IconAlertTriangle className="h-4 w-4" />
-                    <AlertDescription_Shadcn_>
-                      You have a scheduled subscription change that will be canceled if you change
-                      your PITR add on.
-                    </AlertDescription_Shadcn_>
-                  </Alert_Shadcn_>
-                )}
-            </>
+          {hasChanges && !blockDowngradeDueToReadReplicas && selectedOption !== 'pitr_0' && (
+            <p className="text-sm text-foreground-light">
+              There are no immediate charges. The addon is billed at the end of your billing cycle
+              based on your usage and prorated to the hour.
+            </p>
           )}
         </div>
       </SidePanel.Content>
