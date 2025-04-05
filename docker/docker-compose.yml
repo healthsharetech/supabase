@@ -515,6 +515,8 @@ services:
     container_name: supabase-db
     image: supabase/postgres:15.8.1.049
     restart: unless-stopped
+    ports:
+      - ${POSTGRES_PORT}:5432
     logging:
       driver: awslogs
       options:
