@@ -143,6 +143,8 @@ services:
       GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: false
       GOTRUE_MAILER_AUTOCONFIRM: ${ENABLE_EMAIL_AUTOCONFIRM}
       GOTRUE_MFA_ENABLED: true
+      GOTRUE_LOG_LEVEL: debug
+      LOG_LEVEL: debug
 
       # Uncomment to bypass nonce check in ID Token flow. Commonly set to true when using Google Sign In on mobile.
       # GOTRUE_EXTERNAL_SKIP_NONCE_CHECK: true
