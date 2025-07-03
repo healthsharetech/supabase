@@ -68,13 +68,15 @@ services:
     url: http://admin:8080
     routes:
       - name: admin-all
-        strip_path: true
-        paths:
-          - /admin
-      - name: admin-livewire
         strip_path: false
         paths:
+          - /admin
+          - /backend
           - /livewire
+          - /vendor/livewire
+        protocols: 
+          - http
+          - https
     plugins:
       - name: cors
 
