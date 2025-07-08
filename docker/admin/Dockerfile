@@ -13,10 +13,10 @@ RUN \
 	# Give write access to /data/caddy and /config/caddy
 	chown -R ${USER}:${USER} /data/caddy && chown -R ${USER}:${USER} /config/caddy
 
-# copy custom caddyfile
-COPY Caddyfile /etc/caddy/Caddyfile
+# # copy custom caddyfile
+# COPY Caddyfile /etc/caddy/Caddyfile
 
-RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
+# RUN cp $PHP_INI_DIR/php.ini-production $PHP_INI_DIR/php.ini
 
 USER ${USER}
 
