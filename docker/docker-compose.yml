@@ -498,7 +498,7 @@ services:
       DB_HOST: ${POSTGRES_HOST}
       DB_PORT: ${POSTGRES_PORT}
       DB_DATABASE: ${POSTGRES_DB}
-      DB_USERNAME: reimbursement-tracker-admin
+      DB_USERNAME: ${ADMIN_DB_USERNAME}
       DB_PASSWORD: ${ADMIN_POSTGRES_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       LOG_CHANNEL: ${ADMIN_LOG_CHANNEL:-stdout}
