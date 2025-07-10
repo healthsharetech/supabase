@@ -22,7 +22,7 @@
 	#	}
 	#}
 
-	root /app/current/public
+	root * /app/current/public
 	encode zstd br gzip
 
 	# Uncomment the following lines to enable Mercure and Vulcain modules
