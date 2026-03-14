@@ -136,3 +136,5 @@ gcloud.json
 
 # project functions
 docker/volumes/functions/*
+
+.claude/settings.local.json
