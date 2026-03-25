@@ -488,7 +488,7 @@ services:
       retries: 10
     environment:
       APP_DEBUG: false
-      APP_ENV: ${ADMIN_APP_ENV:-staging}
+      APP_ENV: ${ADMIN_APP_ENV:-production}
       APP_KEY: ${ADMIN_APP_KEY}
       APP_URL: ${ADMIN_APP_URL}
       ASSET_URL: ${ADMIN_ASSET_URL:-${ADMIN_APP_URL}}
