@@ -525,7 +525,8 @@ services:
       FIREBASE_CREDENTIALS: ${ADMIN_FIREBASE_CREDENTIALS}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
-      STRIPE_PRICE_ID: ${STRIPE_PRICE_ID}
+      STRIPE_BASIC_PRICE_ID: ${STRIPE_BASIC_PRICE_ID}
+      STRIPE_PREMIUM_PRICE_ID: ${STRIPE_PREMIUM_PRICE_ID}
 
   # Comment out everything below this point if you are using an external Postgres database
   db:
