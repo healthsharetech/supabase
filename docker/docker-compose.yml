@@ -528,6 +528,10 @@ services:
       STRIPE_BASIC_PRICE_ID: ${STRIPE_BASIC_PRICE_ID}
       STRIPE_PREMIUM_PRICE_ID: ${STRIPE_PREMIUM_PRICE_ID}
       STRIPE_TEAM_PRICE_ID: ${STRIPE_TEAM_PRICE_ID}
+      PLAID_CLIENT_ID: ${PLAID_CLIENT_ID}
+      PLAID_SECRET: ${PLAID_SECRET}
+      PLAID_ENV: ${PLAID_ENV}
+      PLAID_WEBHOOK_URL: ${PLAID_WEBHOOK_URL}
 
   # Comment out everything below this point if you are using an external Postgres database
   db:
