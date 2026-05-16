@@ -208,6 +208,8 @@ Next we create a trigger function to queue embedding jobs. We'll use this functi
 create or replace function util.queue_embeddings()
 returns trigger
 language plpgsql
+security definer
+set search_path = ''
 as $$
 declare
   content_function text = TG_ARGV[0];
@@ -275,7 +277,7 @@ begin
       group by batch_num
     )
   -- Finally aggregate all batches into array
-  select array_agg(batch_array)
+  select coalesce(array_agg(batch_array), array[]::jsonb[])
   from batched_jobs
   into job_batches;
 

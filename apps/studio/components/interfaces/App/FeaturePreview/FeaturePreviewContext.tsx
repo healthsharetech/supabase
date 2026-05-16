@@ -1,35 +1,20 @@
+import { FeatureFlagContext, LOCAL_STORAGE_KEYS, useFlag } from 'common'
 import { noop } from 'lodash'
-import { PropsWithChildren, createContext, useContext, useEffect, useState } from 'react'
+import { useQueryState } from 'nuqs'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type PropsWithChildren,
+} from 'react'
 
-import { LOCAL_STORAGE_KEYS } from 'lib/constants'
-import { EMPTY_OBJ } from 'lib/void'
-import { APISidePanelPreview } from './APISidePanelPreview'
-import { CLSPreview } from './CLSPreview'
-import InlineEditorPreview from './InlineEditorPreview'
-
-export const FEATURE_PREVIEWS = [
-  {
-    key: LOCAL_STORAGE_KEYS.UI_PREVIEW_API_SIDE_PANEL,
-    name: 'Project API documentation',
-    content: <APISidePanelPreview />,
-    discussionsUrl: 'https://github.com/orgs/supabase/discussions/18038',
-    isNew: false,
-  },
-  {
-    key: LOCAL_STORAGE_KEYS.UI_PREVIEW_CLS,
-    name: 'Column-level privileges',
-    content: <CLSPreview />,
-    discussionsUrl: 'https://github.com/orgs/supabase/discussions/20295',
-    isNew: false,
-  },
-  {
-    key: LOCAL_STORAGE_KEYS.UI_PREVIEW_INLINE_EDITOR,
-    name: 'Inline SQL Editor',
-    content: <InlineEditorPreview />,
-    discussionsUrl: 'https://github.com/orgs/supabase/discussions/33690',
-    isNew: true,
-  },
-]
+import { useFeaturePreviews } from './useFeaturePreviews'
+import { useIsEnterpriseOrSupabaseOrg } from './useIsEnterpriseOrSupabaseOrg'
+import { useStaticEffectEvent } from '@/hooks/useStaticEffectEvent'
+import { EMPTY_OBJ } from '@/lib/void'
 
 type FeaturePreviewContextType = {
   flags: { [key: string]: boolean }
@@ -43,28 +28,46 @@ const FeaturePreviewContext = createContext<FeaturePreviewContextType>({
 
 export const useFeaturePreviewContext = () => useContext(FeaturePreviewContext)
 
-export const FeaturePreviewContextProvider = ({ children }: PropsWithChildren<{}>) => {
+export const FeaturePreviewContextProvider = ({ children }: PropsWithChildren) => {
+  const { hasLoaded } = useContext(FeatureFlagContext)
+  const featurePreviews = useFeaturePreviews()
+
   const [flags, setFlags] = useState(() =>
-    FEATURE_PREVIEWS.reduce((a, b) => {
-      return { ...a, [b.key]: false }
-    }, {})
+    featurePreviews.reduce((a, b) => ({ ...a, [b.key]: false }), {})
   )
+
+  const initializeFlags = useStaticEffectEvent(() => {
+    setFlags(
+      featurePreviews.reduce((a, b) => {
+        const defaultOptIn = b.isDefaultOptIn
+        try {
+          const localStorageValue = window.localStorage.getItem(b.key)
+          return {
+            ...a,
+            [b.key]: !localStorageValue ? defaultOptIn : localStorageValue === 'true',
+          }
+        } catch {
+          return { ...a, [b.key]: defaultOptIn }
+        }
+      }, {})
+    )
+  })
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setFlags(
-        FEATURE_PREVIEWS.reduce((a, b) => {
-          return { ...a, [b.key]: localStorage.getItem(b.key) === 'true' }
-        }, {})
-      )
+      initializeFlags()
     }
-  }, [])
+  }, [hasLoaded, initializeFlags])
 
   const value = {
     flags,
     onUpdateFlag: (key: string, value: boolean) => {
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(key, value.toString())
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem(key, value ? 'true' : 'false')
+        }
+      } catch {
+        // Silently fail in restricted storage modes (e.g. Safari private browsing)
       }
       const updatedFlags = { ...flags, [key]: value }
       setFlags(updatedFlags)
@@ -76,17 +79,93 @@ export const FeaturePreviewContextProvider = ({ children }: PropsWithChildren<{}
 
 // Helpers
 
-export const useIsAPIDocsSidePanelEnabled = () => {
-  const { flags } = useFeaturePreviewContext()
-  return flags[LOCAL_STORAGE_KEYS.UI_PREVIEW_API_SIDE_PANEL]
-}
-
 export const useIsColumnLevelPrivilegesEnabled = () => {
   const { flags } = useFeaturePreviewContext()
   return flags[LOCAL_STORAGE_KEYS.UI_PREVIEW_CLS]
 }
 
-export const useIsInlineEditorEnabled = () => {
+export const useUnifiedLogsPreview = () => {
+  const { flags, onUpdateFlag } = useFeaturePreviewContext()
+  const { hasLoaded: flagsHaveLoaded } = useContext(FeatureFlagContext)
+  const unifiedLogsEnabled = useFlag('unifiedLogs')
+
+  const { isEligible: isEnterpriseOrSupabaseOrg, isLoading: isOrgLoading } =
+    useIsEnterpriseOrSupabaseOrg()
+
+  const isLoading = !flagsHaveLoaded || isOrgLoading
+  const isEligible = unifiedLogsEnabled || isEnterpriseOrSupabaseOrg
+  const isEnabled = isEligible && flags[LOCAL_STORAGE_KEYS.UI_PREVIEW_UNIFIED_LOGS]
+
+  const enable = () => onUpdateFlag(LOCAL_STORAGE_KEYS.UI_PREVIEW_UNIFIED_LOGS, true)
+  const disable = () => onUpdateFlag(LOCAL_STORAGE_KEYS.UI_PREVIEW_UNIFIED_LOGS, false)
+
+  return { isEnabled, isEligible, isLoading, enable, disable }
+}
+
+export const useIsPgDeltaDiffEnabled = () => {
   const { flags } = useFeaturePreviewContext()
-  return flags[LOCAL_STORAGE_KEYS.UI_PREVIEW_INLINE_EDITOR]
+  const pgDeltaDiffEnabled = useFlag('pgdeltaDiff')
+  return pgDeltaDiffEnabled && flags[LOCAL_STORAGE_KEYS.UI_PREVIEW_PG_DELTA_DIFF]
+}
+
+export const useIsAdvisorRulesEnabled = () => {
+  const { flags } = useFeaturePreviewContext()
+  return flags[LOCAL_STORAGE_KEYS.UI_PREVIEW_ADVISOR_RULES]
+}
+
+export const useIsPlatformWebhooksEnabled = () => {
+  const { flags } = useFeaturePreviewContext()
+  const platformWebhooksEnabled = useFlag('platformWebhooks')
+  return platformWebhooksEnabled && flags[LOCAL_STORAGE_KEYS.UI_PREVIEW_PLATFORM_WEBHOOKS]
+}
+
+export const useIsJitDbAccessEnabled = () => {
+  const { flags } = useFeaturePreviewContext()
+  const jitDbAccessEnabled = useFlag('jitDbAccess')
+  return jitDbAccessEnabled && flags[LOCAL_STORAGE_KEYS.UI_PREVIEW_JIT_DB_ACCESS]
+}
+
+export const useIsRLSTesterEnabled = () => {
+  const { flags } = useFeaturePreviewContext()
+  return flags[LOCAL_STORAGE_KEYS.UI_PREVIEW_RLS_TESTER]
+}
+
+export const useFeaturePreviewModal = () => {
+  const featurePreviews = useFeaturePreviews()
+  const [featurePreviewModal, setFeaturePreviewModal] = useQueryState('featurePreviewModal')
+
+  const selectedFeatureKeyFromQuery = featurePreviewModal?.trim() ?? null
+  const showFeaturePreviewModal = selectedFeatureKeyFromQuery !== null
+
+  const selectedFeatureKey = (
+    !selectedFeatureKeyFromQuery ? featurePreviews[0].key : selectedFeatureKeyFromQuery
+  ) as (typeof featurePreviews)[number]['key']
+
+  const selectFeaturePreview = useCallback(
+    (featureKey: (typeof featurePreviews)[number]['key']) => {
+      setFeaturePreviewModal(featureKey)
+    },
+    [setFeaturePreviewModal]
+  )
+
+  const toggleFeaturePreviewModal = useCallback(
+    (value: boolean) => {
+      if (!value) {
+        setFeaturePreviewModal(null)
+      } else {
+        selectFeaturePreview(selectedFeatureKey)
+      }
+    },
+    [selectFeaturePreview, setFeaturePreviewModal, selectedFeatureKey]
+  )
+
+  return useMemo(
+    () => ({
+      showFeaturePreviewModal,
+      selectedFeatureKey,
+      selectFeaturePreview,
+      toggleFeaturePreviewModal,
+    }),
+    [showFeaturePreviewModal, selectedFeatureKey, selectFeaturePreview, toggleFeaturePreviewModal]
+  )
 }

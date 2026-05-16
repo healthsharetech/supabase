@@ -1,25 +1,25 @@
+import { debounce } from 'lodash'
+import { Check, Code, Loader } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import {
-  AlertDescription_Shadcn_,
-  AlertTitle_Shadcn_,
-  Alert_Shadcn_,
+  Alert,
+  AlertDescription,
+  AlertTitle,
   Button,
+  Command_Shadcn_,
   CommandEmpty_Shadcn_,
   CommandGroup_Shadcn_,
   CommandInput_Shadcn_,
   CommandItem_Shadcn_,
   CommandList_Shadcn_,
-  Command_Shadcn_,
-  PopoverContent_Shadcn_,
-  PopoverTrigger_Shadcn_,
-  Popover_Shadcn_,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   ScrollArea,
 } from 'ui'
 
-import { useProjectContext } from 'components/layouts/ProjectLayout/ProjectContext'
-import { useEntityTypesQuery } from 'data/entity-types/entity-types-infinite-query'
-import { debounce } from 'lodash'
-import { Loader, Code, Check } from 'lucide-react'
+import { useEntityTypesQuery } from '@/data/entity-types/entity-types-infinite-query'
+import { useSelectedProjectQuery } from '@/hooks/misc/useSelectedProject'
 
 interface TableSelectorProps {
   className?: string
@@ -40,10 +40,17 @@ const TableSelector = ({
 }: TableSelectorProps) => {
   const [open, setOpen] = useState(false)
   const [initiallyLoaded, setInitiallyLoaded] = useState(false)
-  const { project } = useProjectContext()
+  const { data: project } = useSelectedProjectQuery()
   const [searchInput, setSearchInput] = useState('')
 
-  const { data, isLoading, isSuccess, isError, error, refetch } = useEntityTypesQuery({
+  const {
+    data,
+    isPending: isLoading,
+    isSuccess,
+    isError,
+    error,
+    refetch,
+  } = useEntityTypesQuery({
     projectRef: project?.ref,
     search: searchInput,
     connectionString: project?.connectionString,
@@ -69,8 +76,8 @@ const TableSelector = ({
 
   return (
     <div className={className}>
-      <Popover_Shadcn_ open={open} onOpenChange={setOpen} modal={false}>
-        <PopoverTrigger_Shadcn_ asChild>
+      <Popover open={open} onOpenChange={setOpen} modal={false}>
+        <PopoverTrigger asChild>
           <Button
             size={size}
             type="outline"
@@ -92,8 +99,8 @@ const TableSelector = ({
               <p className="flex text-xs text-light">Loading tables...</p>
             )}
           </Button>
-        </PopoverTrigger_Shadcn_>
-        <PopoverContent_Shadcn_ className="p-0 w-64" side="bottom" align="start">
+        </PopoverTrigger>
+        <PopoverContent className="p-0 w-64" side="bottom" align="start">
           <Command_Shadcn_>
             <CommandInput_Shadcn_
               placeholder="Find table..."
@@ -108,24 +115,24 @@ const TableSelector = ({
               )}
 
               {showError && isError && (
-                <Alert_Shadcn_ variant="warning" className="!px-3 !py-3 !border-0 rounded-none">
-                  <AlertTitle_Shadcn_ className="text-xs text-amber-900">
-                    Failed to load tables
-                  </AlertTitle_Shadcn_>
-                  <AlertDescription_Shadcn_ className="text-xs mb-2">
+                <Alert variant="warning" className="px-3! py-3! border-0! rounded-none">
+                  <AlertTitle className="text-xs text-amber-900">Failed to load tables</AlertTitle>
+                  <AlertDescription className="text-xs mb-2">
                     Error: {(error as any)?.message}
-                  </AlertDescription_Shadcn_>
+                  </AlertDescription>
                   <Button type="default" size="tiny" onClick={() => refetch()}>
                     Reload tables
                   </Button>
-                </Alert_Shadcn_>
+                </Alert>
               )}
 
               {isSuccess && (
                 <>
                   <CommandGroup_Shadcn_ forceMount>
                     <ScrollArea className={(entities || []).length > 7 ? 'h-[210px]' : ''}>
-                      <CommandEmpty_Shadcn_>No tables found</CommandEmpty_Shadcn_>
+                      {entities.length === 0 && (
+                        <CommandEmpty_Shadcn_>No tables found</CommandEmpty_Shadcn_>
+                      )}
                       {!searchInput && (
                         <CommandItem_Shadcn_
                           key="all-tables"
@@ -170,8 +177,8 @@ const TableSelector = ({
               )}
             </CommandList_Shadcn_>
           </Command_Shadcn_>
-        </PopoverContent_Shadcn_>
-      </Popover_Shadcn_>
+        </PopoverContent>
+      </Popover>
     </div>
   )
 }

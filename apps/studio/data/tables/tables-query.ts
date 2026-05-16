@@ -1,21 +1,23 @@
-import type { PostgresTable } from '@supabase/postgres-meta'
-import { useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query'
+import type { PGTable } from '@supabase/pg-meta'
+import { DEFAULT_PLATFORM_APPLICATION_NAME } from '@supabase/pg-meta/src/constants'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { sortBy } from 'lodash'
 import { useCallback } from 'react'
 
-import { get, handleError } from 'data/fetchers'
-import type { ResponseError } from 'types'
 import { tableKeys } from './keys'
+import { get, handleError } from '@/data/fetchers'
+import type { SafePostgresTable } from '@/lib/postgres-types'
+import type { ResponseError, UseCustomQueryOptions } from '@/types'
 
 export type TablesVariables = {
   projectRef?: string
-  connectionString?: string
+  connectionString?: string | null
   schema?: string
   /**
    * Defaults to false
    */
   includeColumns?: boolean
-  sortByProperty?: keyof PostgresTable
+  sortByProperty?: keyof PGTable
 }
 
 export async function getTables(
@@ -45,7 +47,10 @@ export async function getTables(
 
   const { data, error } = await get('/platform/pg-meta/{ref}/tables', {
     params: {
-      header: { 'x-connection-encrypted': connectionString! },
+      header: {
+        'x-connection-encrypted': connectionString!,
+        'x-pg-application-name': DEFAULT_PLATFORM_APPLICATION_NAME,
+      },
       path: { ref: projectRef },
       query: queryParams as any,
     },
@@ -57,9 +62,10 @@ export async function getTables(
 
   // Sort the data if the sortByName option is true
   if (Array.isArray(data) && sortByProperty) {
-    return sortBy(data, (t) => t[sortByProperty]) as PostgresTable[]
+    return sortBy(data, (t) => t[sortByProperty]) as SafePostgresTable[]
   }
-  return data as Omit<PostgresTable, 'columns'>[]
+
+  return data as SafePostgresTable[]
 }
 
 export type TablesData = Awaited<ReturnType<typeof getTables>>
@@ -67,13 +73,15 @@ export type TablesError = ResponseError
 
 export const useTablesQuery = <TData = TablesData>(
   { projectRef, connectionString, schema, includeColumns }: TablesVariables,
-  { enabled = true, ...options }: UseQueryOptions<TablesData, TablesError, TData> = {}
+  { enabled = true, ...options }: UseCustomQueryOptions<TablesData, TablesError, TData> = {}
 ) => {
-  return useQuery<TablesData, TablesError, TData>(
-    tableKeys.list(projectRef, schema, includeColumns),
-    ({ signal }) => getTables({ projectRef, connectionString, schema, includeColumns }, signal),
-    { enabled: enabled && typeof projectRef !== 'undefined', ...options }
-  )
+  return useQuery<TablesData, TablesError, TData>({
+    queryKey: tableKeys.list(projectRef, schema, includeColumns),
+    queryFn: ({ signal }) =>
+      getTables({ projectRef, connectionString, schema, includeColumns }, signal),
+    enabled: enabled && typeof projectRef !== 'undefined',
+    ...options,
+  })
 }
 
 /**

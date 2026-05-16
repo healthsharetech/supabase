@@ -1,17 +1,22 @@
-import type { PostgresTable } from '@supabase/postgres-meta'
 import { some } from 'lodash'
 
-import type { ForeignKeyConstraint } from 'data/database/foreign-key-constraints-query'
 import {
   generateColumnField,
-  generateColumnFieldFromPostgresColumn,
+  generateColumnFieldFromPGColumn,
 } from '../ColumnEditor/ColumnEditor.utils'
 import type { ColumnField } from '../SidePanelEditor.types'
 import { DEFAULT_COLUMNS } from './TableEditor.constants'
 import type { ImportContent, TableField } from './TableEditor.types'
+import type { ForeignKeyConstraint } from '@/data/database/foreign-key-constraints-query'
+import type { SafePostgresTable } from '@/lib/postgres-types'
 
-export const validateFields = (field: TableField) => {
-  const errors = {} as any
+type ValidateFieldsReturn = {
+  name?: string
+  columns?: string
+}
+
+export const validateFields = (field: TableField): ValidateFieldsReturn => {
+  const errors: ValidateFieldsReturn = {}
   if (field.name.length === 0) {
     errors['name'] = 'Please assign a name for your table'
   }
@@ -35,8 +40,8 @@ export const generateTableField = (): TableField => {
   }
 }
 
-export const generateTableFieldFromPostgresTable = (
-  table: PostgresTable,
+export const generateTableFieldFromPGTable = (
+  table: SafePostgresTable,
   foreignKeys: ForeignKeyConstraint[],
   isDuplicating = false,
   isRealtimeEnabled = false
@@ -44,9 +49,9 @@ export const generateTableFieldFromPostgresTable = (
   return {
     id: table.id,
     name: isDuplicating ? `${table.name}_duplicate` : table.name,
-    comment: isDuplicating ? `This is a duplicate of ${table.name}` : table?.comment ?? '',
+    comment: isDuplicating ? `This is a duplicate of ${table.name}` : table?.comment,
     columns: (table.columns ?? []).map((column) => {
-      return generateColumnFieldFromPostgresColumn(column, table, foreignKeys)
+      return generateColumnFieldFromPGColumn(column, table, foreignKeys)
     }),
     isRLSEnabled: table.rls_enabled,
     isRealtimeEnabled,

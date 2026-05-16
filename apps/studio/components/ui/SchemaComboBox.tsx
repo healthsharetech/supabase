@@ -1,25 +1,24 @@
 import { Check, ChevronsUpDown } from 'lucide-react'
 import { useState } from 'react'
-
-import { useProjectContext } from 'components/layouts/ProjectLayout/ProjectContext'
-import { useSchemasQuery } from 'data/database/schemas-query'
 import {
-  AlertDescription_Shadcn_,
-  AlertTitle_Shadcn_,
-  Alert_Shadcn_,
+  Alert,
+  AlertDescription,
+  AlertTitle,
   Button,
+  Command_Shadcn_,
   CommandEmpty_Shadcn_,
   CommandGroup_Shadcn_,
   CommandInput_Shadcn_,
   CommandItem_Shadcn_,
   CommandList_Shadcn_,
-  Command_Shadcn_,
-  PopoverContent_Shadcn_,
-  PopoverTrigger_Shadcn_,
-  Popover_Shadcn_,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   ScrollArea,
 } from 'ui'
-import { useSelectedProject } from 'hooks/misc/useSelectedProject'
+
+import { useSchemasQuery } from '@/data/database/schemas-query'
+import { useSelectedProjectQuery } from '@/hooks/misc/useSelectedProject'
 
 interface SchemaComboBoxProps {
   className?: string
@@ -45,10 +44,10 @@ export const SchemaComboBox = ({
 }: SchemaComboBoxProps) => {
   const [open, setOpen] = useState(false)
 
-  const project = useSelectedProject()
+  const { data: project } = useSelectedProjectQuery()
   const {
     data,
-    isLoading: isSchemasLoading,
+    isPending: isSchemasLoading,
     isSuccess: isSchemasSuccess,
     isError: isSchemasError,
     error: schemasError,
@@ -80,22 +79,20 @@ export const SchemaComboBox = ({
       )}
 
       {showError && isSchemasError && (
-        <Alert_Shadcn_ variant="warning" className="!px-3 !py-3">
-          <AlertTitle_Shadcn_ className="text-xs text-amber-900">
-            Failed to load schemas
-          </AlertTitle_Shadcn_>
-          <AlertDescription_Shadcn_ className="text-xs mb-2 break-words">
+        <Alert variant="warning" className="px-3! py-3!">
+          <AlertTitle className="text-xs text-amber-900">Failed to load schemas</AlertTitle>
+          <AlertDescription className="text-xs mb-2 wrap-break-word">
             Error: {(schemasError as any)?.message}
-          </AlertDescription_Shadcn_>
+          </AlertDescription>
           <Button type="default" size="tiny" onClick={() => refetchSchemas()}>
             Reload schemas
           </Button>
-        </Alert_Shadcn_>
+        </Alert>
       )}
 
       {isSchemasSuccess && (
-        <Popover_Shadcn_ open={open} onOpenChange={setOpen} modal={false}>
-          <PopoverTrigger_Shadcn_ asChild>
+        <Popover open={open} onOpenChange={setOpen} modal={false}>
+          <PopoverTrigger asChild>
             <Button
               size={size}
               disabled={disabled}
@@ -109,8 +106,8 @@ export const SchemaComboBox = ({
                 <p className="text-foreground">{label}</p>
               </div>
             </Button>
-          </PopoverTrigger_Shadcn_>
-          <PopoverContent_Shadcn_ className="p-0 w-56" side="bottom" align="start">
+          </PopoverTrigger>
+          <PopoverContent className="p-0 w-56" side="bottom" align="start">
             <Command_Shadcn_>
               <CommandInput_Shadcn_ placeholder="Find schema..." />
               <CommandList_Shadcn_>
@@ -134,8 +131,8 @@ export const SchemaComboBox = ({
                 </CommandGroup_Shadcn_>
               </CommandList_Shadcn_>
             </Command_Shadcn_>
-          </PopoverContent_Shadcn_>
-        </Popover_Shadcn_>
+          </PopoverContent>
+        </Popover>
       )}
     </div>
   )

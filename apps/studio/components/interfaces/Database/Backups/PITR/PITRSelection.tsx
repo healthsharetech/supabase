@@ -1,37 +1,30 @@
-import { useQueryClient } from '@tanstack/react-query'
+import { useParams } from 'common'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useState } from 'react'
+import { Alert, AlertDescription, AlertTitle, Button, Modal, WarningIcon } from 'ui'
 
-import { useParams } from 'common'
-import { FormHeader } from 'components/ui/Forms/FormHeader'
-import { useBackupsQuery } from 'data/database/backups-query'
-import { usePitrRestoreMutation } from 'data/database/pitr-restore-mutation'
-import { setProjectStatus } from 'data/projects/projects-query'
-import { useReadReplicasQuery } from 'data/read-replicas/replicas-query'
-import { PROJECT_STATUS } from 'lib/constants'
-import {
-  AlertDescription_Shadcn_,
-  AlertTitle_Shadcn_,
-  Alert_Shadcn_,
-  Button,
-  Modal,
-  WarningIcon,
-} from 'ui'
-import BackupsEmpty from '../BackupsEmpty'
-import BackupsStorageAlert from '../BackupsStorageAlert'
+import { BackupsEmpty } from '../BackupsEmpty'
+import { BackupsStorageAlert } from '../BackupsStorageAlert'
 import type { Timezone } from './PITR.types'
 import { getClientTimezone } from './PITR.utils'
+import { PITRForm } from './PITRForm'
 import PITRStatus from './PITRStatus'
-import { PITRForm } from './pitr-form'
+import { FormHeader } from '@/components/ui/Forms/FormHeader'
+import { useBackupsQuery } from '@/data/database/backups-query'
+import { usePitrRestoreMutation } from '@/data/database/pitr-restore-mutation'
+import { useSetProjectStatus } from '@/data/projects/project-detail-query'
+import { useReadReplicasQuery } from '@/data/read-replicas/replicas-query'
+import { PROJECT_STATUS } from '@/lib/constants'
 
-const PITRSelection = () => {
+export const PITRSelection = () => {
   const router = useRouter()
   const { ref } = useParams()
-  const queryClient = useQueryClient()
 
   const { data: backups } = useBackupsQuery({ projectRef: ref })
   const { data: databases } = useReadReplicasQuery({ projectRef: ref })
+  const { setProjectStatus } = useSetProjectStatus()
+
   const [showConfiguration, setShowConfiguration] = useState(false)
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [selectedTimezone, setSelectedTimezone] = useState<Timezone>(getClientTimezone())
@@ -45,13 +38,13 @@ const PITRSelection = () => {
 
   const {
     mutate: restoreFromPitr,
-    isLoading: isRestoring,
+    isPending: isRestoring,
     isSuccess: isSuccessPITR,
   } = usePitrRestoreMutation({
-    onSuccess: (res, variables) => {
+    onSuccess: (_, variables) => {
       setTimeout(() => {
         setShowConfirmation(false)
-        setProjectStatus(queryClient, variables.ref, PROJECT_STATUS.RESTORING)
+        setProjectStatus({ ref: variables.ref, status: PROJECT_STATUS.RESTORING })
         router.push(`/project/${variables.ref}`)
       }, 3000)
     },
@@ -84,15 +77,15 @@ const PITRSelection = () => {
       ) : (
         <>
           {hasReadReplicas && (
-            <Alert_Shadcn_ variant="warning">
+            <Alert variant="warning">
               <WarningIcon />
-              <AlertTitle_Shadcn_>
+              <AlertTitle>
                 Unable to restore from PITR as project has read replicas enabled
-              </AlertTitle_Shadcn_>
-              <AlertDescription_Shadcn_>
+              </AlertTitle>
+              <AlertDescription>
                 You will need to remove all read replicas first from your project's infrastructure
                 settings prior to starting a PITR restore.
-              </AlertDescription_Shadcn_>
+              </AlertDescription>
               <div className="flex items-center gap-x-2 mt-2">
                 {/* [Joshen] Ideally we have some links to a docs to explain why so */}
                 <Button type="default">
@@ -101,7 +94,7 @@ const PITRSelection = () => {
                   </Link>
                 </Button>
               </div>
-            </Alert_Shadcn_>
+            </Alert>
           )}
           {!showConfiguration ? (
             <PITRStatus
@@ -164,16 +157,14 @@ const PITRSelection = () => {
         </Modal.Content>
         <Modal.Separator />
         <Modal.Content>
-          <Alert_Shadcn_ variant="warning">
+          <Alert variant="warning">
             <WarningIcon />
-            <AlertTitle_Shadcn_>
-              This action cannot be undone, not canceled once started
-            </AlertTitle_Shadcn_>
-            <AlertDescription_Shadcn_>
+            <AlertTitle>This action cannot be undone, not canceled once started</AlertTitle>
+            <AlertDescription>
               Any changes made to your database after this point in time will be lost. This includes
               any changes to your project's storage and authentication.
-            </AlertDescription_Shadcn_>
-          </Alert_Shadcn_>
+            </AlertDescription>
+          </Alert>
         </Modal.Content>
         <Modal.Separator />
         <Modal.Content>
@@ -187,5 +178,3 @@ const PITRSelection = () => {
     </>
   )
 }
-
-export default PITRSelection

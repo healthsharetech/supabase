@@ -1,4 +1,4 @@
-'use client'
+import { useState } from 'react'
 
 import { cn } from '@/lib/utils'
 import { createClient } from '@/registry/default/clients/react/lib/supabase/client'
@@ -12,7 +12,6 @@ import {
 } from '@/registry/default/components/ui/card'
 import { Input } from '@/registry/default/components/ui/input'
 import { Label } from '@/registry/default/components/ui/label'
-import { useState } from 'react'
 
 export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<'div'>) {
   const [email, setEmail] = useState('')
@@ -32,8 +31,8 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
         password,
       })
       if (error) throw error
-
       // Update this route to redirect to an authenticated route. The user already has an active session.
+      location.href = '/protected'
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'An error occurred')
     } finally {

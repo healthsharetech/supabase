@@ -1,6 +1,7 @@
-import { CalculatedColumn } from 'react-data-grid'
+import { CalculatedColumn, RenderCellProps } from 'react-data-grid'
 
-import { COLUMN_MIN_WIDTH } from 'components/grid/constants'
+import { DefaultValue } from '../components/common/DefaultValue'
+import { NullValue } from '../components/common/NullValue'
 import { BooleanEditor } from '../components/editor/BooleanEditor'
 import { DateTimeEditor } from '../components/editor/DateTimeEditor'
 import { JsonEditor } from '../components/editor/JsonEditor'
@@ -16,7 +17,13 @@ import { JsonFormatter } from '../components/formatter/JsonFormatter'
 import { AddColumn } from '../components/grid/AddColumn'
 import { ColumnHeader } from '../components/grid/ColumnHeader'
 import { SelectColumn } from '../components/grid/SelectColumn'
-import type { ColumnType, SupaColumn, SupaRow, SupaTable } from '../types'
+import {
+  isPendingAddRow,
+  type ColumnType,
+  type SupaColumn,
+  type SupaRow,
+  type SupaTable,
+} from '../types'
 import {
   isArrayColumn,
   isBinaryColumn,
@@ -31,14 +38,14 @@ import {
   isTextColumn,
   isTimeColumn,
 } from './types'
+import { COLUMN_MIN_WIDTH } from '@/components/grid/constants'
 
 export const ESTIMATED_CHARACTER_PIXEL_WIDTH = 9
 
 export function getGridColumns(
   table: SupaTable,
   options?: {
-    projectRef?: string
-    tableId?: string
+    tableId?: number
     editable?: boolean
     defaultWidth?: string | number
     onAddColumn?: () => void
@@ -65,8 +72,7 @@ export function getGridColumns(
       sortable: true,
       width: columnWidth,
       minWidth: COLUMN_MIN_WIDTH,
-      frozen: x.isPrimaryKey || false,
-      isLastFrozenColumn: false,
+      frozen: false,
       renderHeaderCell: (props) => (
         <ColumnHeader
           {...props}
@@ -75,6 +81,7 @@ export function getGridColumns(
           isEncrypted={x.isEncrypted}
           format={x.format}
           foreignKey={x.foreignKey}
+          comment={x.comment}
         />
       ),
       renderEditCell: options
@@ -87,7 +94,6 @@ export function getGridColumns(
           )
         : undefined,
       renderCell: getCellRenderer(x, columnType, {
-        projectRef: options?.projectRef,
         tableId: options?.tableId,
       }),
 
@@ -186,38 +192,65 @@ function getCellEditor(
   }
 }
 
-function getCellRenderer(
-  columnDef: SupaColumn,
-  columnType: ColumnType,
-  metadata: { projectRef?: string; tableId?: string }
+function withPendingAddPlaceholders(
+  Formatter: React.ComponentType<RenderCellProps<SupaRow, unknown>>,
+  columnDef: SupaColumn
 ) {
-  switch (columnType) {
-    case 'boolean': {
-      return BooleanFormatter
-    }
-    case 'foreign_key': {
-      if (!columnDef.isUpdatable) {
-        return DefaultFormatter
-      } else {
-        // eslint-disable-next-line react/display-name
-        return (p: any) => (
-          <ForeignKeyFormatter {...p} projectRef={metadata.projectRef} tableId={metadata.tableId} />
-        )
+  return function PendingAwareFormatter(props: RenderCellProps<SupaRow, unknown>) {
+    const value = props.row[props.column.key]
+
+    if (isPendingAddRow(props.row) && (value === undefined || value === null || value === '')) {
+      if (value === null) {
+        return <NullValue />
+      }
+      if (columnDef.defaultValue !== undefined || columnDef.isIdentity || columnDef.isGeneratable) {
+        return <DefaultValue />
       }
     }
-    case 'binary': {
-      return BinaryFormatter
-    }
-    case 'json': {
-      return JsonFormatter
-    }
-    default: {
-      return DefaultFormatter
-    }
+
+    return <Formatter {...props} />
   }
 }
 
-function getColumnType(columnDef: SupaColumn): ColumnType {
+function getCellRenderer(
+  columnDef: SupaColumn,
+  columnType: ColumnType,
+  metadata: { tableId?: number }
+) {
+  let formatter: React.ComponentType<RenderCellProps<SupaRow, unknown>>
+
+  switch (columnType) {
+    case 'boolean': {
+      formatter = BooleanFormatter
+      break
+    }
+    case 'foreign_key': {
+      if (!columnDef.isUpdatable) {
+        formatter = DefaultFormatter
+      } else {
+        // eslint-disable-next-line react/display-name
+        formatter = (p: any) => <ForeignKeyFormatter {...p} tableId={metadata.tableId} />
+      }
+      break
+    }
+    case 'binary': {
+      formatter = BinaryFormatter
+      break
+    }
+    case 'json': {
+      formatter = JsonFormatter
+      break
+    }
+    default: {
+      formatter = DefaultFormatter
+    }
+  }
+
+  // Wrap all formatters to handle pending add row placeholders
+  return withPendingAddPlaceholders(formatter, columnDef)
+}
+
+export function getColumnType(columnDef: SupaColumn): ColumnType {
   if (isForeignKeyColumn(columnDef)) {
     return 'foreign_key'
   } else if (isNumericalColumn(columnDef.dataType)) {

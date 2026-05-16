@@ -1,18 +1,18 @@
 import { CheckIcon, ChevronsUpDown, Globe } from 'lucide-react'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import {
   Button,
+  cn,
+  Command_Shadcn_,
   CommandEmpty_Shadcn_,
   CommandGroup_Shadcn_,
   CommandInput_Shadcn_,
   CommandItem_Shadcn_,
   CommandList_Shadcn_,
-  Command_Shadcn_,
-  PopoverContent_Shadcn_,
-  PopoverTrigger_Shadcn_,
-  Popover_Shadcn_,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   ScrollArea,
-  cn,
 } from 'ui'
 
 import { ALL_TIMEZONES } from './PITR.constants'
@@ -28,16 +28,18 @@ export const TimezoneSelection = ({
   onSelectTimezone,
 }: TimezoneSelectionProps) => {
   const [open, setOpen] = useState(false)
+  const listboxId = useId()
 
   const timezoneOptions = ALL_TIMEZONES.map((option) => option.text)
 
   return (
     <div className="w-full">
-      <Popover_Shadcn_ open={open} onOpenChange={setOpen}>
-        <PopoverTrigger_Shadcn_ asChild>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
           <Button
             role="combobox"
             aria-expanded={open}
+            aria-controls={listboxId}
             className="w-[350px] justify-between"
             size="small"
             icon={<Globe />}
@@ -47,8 +49,8 @@ export const TimezoneSelection = ({
               ? timezoneOptions.find((option) => option === selectedTimezone.text)
               : 'Select timezone...'}
           </Button>
-        </PopoverTrigger_Shadcn_>
-        <PopoverContent_Shadcn_ className="w-[350px] p-0">
+        </PopoverTrigger>
+        <PopoverContent id={listboxId} className="w-[350px] p-0">
           <Command_Shadcn_>
             <CommandInput_Shadcn_ placeholder="Search timezone..." className="h-9" />
             <CommandList_Shadcn_>
@@ -82,8 +84,8 @@ export const TimezoneSelection = ({
               </CommandGroup_Shadcn_>
             </CommandList_Shadcn_>
           </Command_Shadcn_>
-        </PopoverContent_Shadcn_>
-      </Popover_Shadcn_>
+        </PopoverContent>
+      </Popover>
     </div>
   )
 }
