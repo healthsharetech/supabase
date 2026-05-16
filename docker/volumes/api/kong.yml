@@ -298,18 +298,20 @@ services:
                 kong.service.request.clear_header("authorization")
               end
 
-  ## Edge Functions routes
-  - name: functions-v1
-    _comment: 'Edge Functions: /functions/v1/* -> http://functions:9000/*'
-    url: http://functions:9000/
-    read_timeout: 150000
-    routes:
-      - name: functions-v1-all
-        strip_path: true
-        paths:
-          - /functions/v1/
-    plugins:
-      - name: cors
+  ## Edge Functions routes — DISABLED. The edge-functions service is not run
+  ## (all edge functions were removed in reimbursement-tracker-web#330); this
+  ## route is commented out so /functions/v1/* is not exposed.
+  # - name: functions-v1
+  #   _comment: 'Edge Functions: /functions/v1/* -> http://functions:9000/*'
+  #   url: http://functions:9000/
+  #   read_timeout: 150000
+  #   routes:
+  #     - name: functions-v1-all
+  #       strip_path: true
+  #       paths:
+  #         - /functions/v1/
+  #   plugins:
+  #     - name: cors
 
   ## OAuth 2.0 Authorization Server Metadata (RFC 8414)
   - name: well-known-oauth

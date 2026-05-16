@@ -502,42 +502,45 @@ services:
       PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
       CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
 
-  functions:
-    container_name: supabase-edge-functions
-    image: supabase/edge-runtime:v1.71.2
-    restart: unless-stopped
-    volumes:
-      - ./volumes/functions:/home/deno/functions:Z
-      - deno-cache:/root/.cache/deno
-    depends_on:
-      kong:
-        condition: service_healthy
-    logging:
-      driver: awslogs
-      options:
-        awslogs-region: ${AWS_REGION}
-        awslogs-group: supabase
-        tag: "{{.Name}}/{{.ID}}"
-    environment:
-      # Legacy symmetric HS256 key
-      JWT_SECRET: ${JWT_SECRET}
-      SUPABASE_URL: http://kong:8000
-      SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
-      # Legacy API keys (HS256-signed JWTs)
-      SUPABASE_ANON_KEY: ${ANON_KEY}
-      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
-      # New opaque API keys
-      SUPABASE_PUBLISHABLE_KEYS: "{\"default\":\"${SUPABASE_PUBLISHABLE_KEY:-}\"}"
-      SUPABASE_SECRET_KEYS: "{\"default\":\"${SUPABASE_SECRET_KEY:-}\"}"
-      SUPABASE_DB_URL: postgresql://postgres:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
-      # TODO: Allow configuring VERIFY_JWT per function.
-      VERIFY_JWT: "${FUNCTIONS_VERIFY_JWT}"
-    command:
-      [
-        "start",
-        "--main-service",
-        "/home/deno/functions/main"
-      ]
+  ## Edge Functions are not run on the production server. All Supabase edge
+  ## functions were removed from the app (reimbursement-tracker-web#330), so the
+  ## service is disabled to reduce attack surface.
+  # functions:
+  #   container_name: supabase-edge-functions
+  #   image: supabase/edge-runtime:v1.71.2
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./volumes/functions:/home/deno/functions:Z
+  #     - deno-cache:/root/.cache/deno
+  #   depends_on:
+  #     kong:
+  #       condition: service_healthy
+  #   logging:
+  #     driver: awslogs
+  #     options:
+  #       awslogs-region: ${AWS_REGION}
+  #       awslogs-group: supabase
+  #       tag: "{{.Name}}/{{.ID}}"
+  #   environment:
+  #     # Legacy symmetric HS256 key
+  #     JWT_SECRET: ${JWT_SECRET}
+  #     SUPABASE_URL: http://kong:8000
+  #     SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
+  #     # Legacy API keys (HS256-signed JWTs)
+  #     SUPABASE_ANON_KEY: ${ANON_KEY}
+  #     SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+  #     # New opaque API keys
+  #     SUPABASE_PUBLISHABLE_KEYS: "{\"default\":\"${SUPABASE_PUBLISHABLE_KEY:-}\"}"
+  #     SUPABASE_SECRET_KEYS: "{\"default\":\"${SUPABASE_SECRET_KEY:-}\"}"
+  #     SUPABASE_DB_URL: postgresql://postgres:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+  #     # TODO: Allow configuring VERIFY_JWT per function.
+  #     VERIFY_JWT: "${FUNCTIONS_VERIFY_JWT}"
+  #   command:
+  #     [
+  #       "start",
+  #       "--main-service",
+  #       "/home/deno/functions/main"
+  #     ]
 
   ## Analytics (logflare) is not run on the production server. The admin
   ## (reimbursement-tracker-admin Laravel) container runs in its place.
@@ -824,4 +827,3 @@ services:
 
 volumes:
   db-config:
-  deno-cache:
