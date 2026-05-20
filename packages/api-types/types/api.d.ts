@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-  '/v1/branches/{branch_id}': {
+  '/v1/branches/{branch_id_or_ref}': {
     parameters: {
       query?: never
       header?: never
@@ -20,7 +20,7 @@ export interface paths {
     post?: never
     /**
      * Delete a database branch
-     * @description Deletes the specified database branch
+     * @description Deletes the specified database branch. By default, deletes immediately. Use force=false to schedule deletion with 1-hour grace period (only when soft deletion is enabled).
      */
     delete: operations['v1-delete-a-branch']
     options?: never
@@ -32,7 +32,27 @@ export interface paths {
     patch: operations['v1-update-a-branch-config']
     trace?: never
   }
-  '/v1/branches/{branch_id}/merge': {
+  '/v1/branches/{branch_id_or_ref}/diff': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * [Beta] Diffs a database branch
+     * @description Diffs the specified database branch
+     */
+    get: operations['v1-diff-a-branch']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/branches/{branch_id_or_ref}/merge': {
     parameters: {
       query?: never
       header?: never
@@ -52,7 +72,7 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  '/v1/branches/{branch_id}/push': {
+  '/v1/branches/{branch_id_or_ref}/push': {
     parameters: {
       query?: never
       header?: never
@@ -72,7 +92,7 @@ export interface paths {
     patch?: never
     trace?: never
   }
-  '/v1/branches/{branch_id}/reset': {
+  '/v1/branches/{branch_id_or_ref}/reset': {
     parameters: {
       query?: never
       header?: never
@@ -92,6 +112,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/branches/{branch_id_or_ref}/restore': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * Restore a scheduled branch deletion
+     * @description Cancels scheduled deletion and restores the branch to active state
+     */
+    post: operations['v1-restore-a-branch']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/oauth/authorize': {
     parameters: {
       query?: never
@@ -101,6 +141,26 @@ export interface paths {
     }
     /** [Beta] Authorize user through oauth */
     get: operations['v1-authorize-user']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/oauth/authorize/project-claim': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Authorize user through oauth and claim a project
+     * @description Initiates the OAuth authorization flow for the specified provider. After successful authentication, the user can claim ownership of the specified project.
+     */
+    get: operations['v1-oauth-authorize-project-claim']
     put?: never
     post?: never
     delete?: never
@@ -181,6 +241,26 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/organizations/{slug}/entitlements': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get entitlements for an organization
+     * @description Returns the entitlements available to the organization based on their plan and any overrides.
+     */
+    get: operations['v1-get-organization-entitlements']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/organizations/{slug}/members': {
     parameters: {
       query?: never
@@ -190,6 +270,63 @@ export interface paths {
     }
     /** List members of an organization */
     get: operations['v1-list-organization-members']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/organizations/{slug}/project-claim/{token}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Gets project details for the specified organization and claim token */
+    get: operations['v1-get-organization-project-claim']
+    put?: never
+    /** Claims project for the specified organization */
+    post: operations['v1-claim-project-for-organization']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/organizations/{slug}/projects': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Gets all projects for the given organization
+     * @description Returns a paginated list of projects for the specified organization.
+     *
+     *     This endpoint uses offset-based pagination. Use the `offset` parameter to skip a number of projects and the `limit` parameter to control the number of projects returned per page.
+     */
+    get: operations['v1-get-all-projects-for-organization']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/profile': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Gets the user's profile */
+    get: operations['v1-get-profile']
     put?: never
     post?: never
     delete?: never
@@ -234,6 +371,150 @@ export interface paths {
     delete: operations['v1-delete-a-project']
     options?: never
     head?: never
+    /** Updates the given project */
+    patch: operations['v1-update-a-project']
+    trace?: never
+  }
+  '/v1/projects/{ref}/actions': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List all action runs
+     * @description Returns a paginated list of action runs of the specified project.
+     */
+    get: operations['v1-list-action-runs']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    /**
+     * Count the number of action runs
+     * @description Returns the total number of action runs of the specified project.
+     */
+    head: operations['v1-count-action-runs']
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/actions/{run_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get the status of an action run
+     * @description Returns the current status of the specified action run.
+     */
+    get: operations['v1-get-action-run']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/actions/{run_id}/logs': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get the logs of an action run
+     * @description Returns the logs from the specified action run.
+     */
+    get: operations['v1-get-action-run-logs']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/actions/{run_id}/status': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    /**
+     * Update the status of an action run
+     * @description Updates the status of an ongoing action run.
+     */
+    patch: operations['v1-update-action-run-status']
+    trace?: never
+  }
+  '/v1/projects/{ref}/advisors/performance': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Gets project performance advisors.
+     * @deprecated
+     * @description This is an **experimental** endpoint. It is subject to change or removal in future versions. Use it with caution, as it may not remain supported or stable.
+     */
+    get: operations['v1-get-performance-advisors']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/advisors/security': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Gets project security advisors.
+     * @deprecated
+     * @description This is an **experimental** endpoint. It is subject to change or removal in future versions. Use it with caution, as it may not remain supported or stable.
+     */
+    get: operations['v1-get-security-advisors']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/analytics/endpoints/functions.combined-stats': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Gets a project's function combined statistics */
+    get: operations['v1-get-project-function-combined-stats']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
     patch?: never
     trace?: never
   }
@@ -244,8 +525,52 @@ export interface paths {
       path?: never
       cookie?: never
     }
-    /** Gets project's logs */
-    get: operations['getLogs']
+    /**
+     * Gets project's logs
+     * @description Executes a SQL query on the project's logs.
+     *
+     *     Either the `iso_timestamp_start` and `iso_timestamp_end` parameters must be provided.
+     *     If both are not provided, only the last 1 minute of logs will be queried.
+     *     The timestamp range must be no more than 24 hours and is rounded to the nearest minute. If the range is more than 24 hours, a validation error will be thrown.
+     *
+     *     Note: Unless the `sql` parameter is provided, only edge_logs will be queried. See the [log query docs](/docs/guides/telemetry/logs?queryGroups=product&product=postgres&queryGroups=source&source=edge_logs#querying-with-the-logs-explorer:~:text=logs%20from%20the-,Sources,-drop%2Ddown%3A) for all available sources.
+     *
+     */
+    get: operations['v1-get-project-logs']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/analytics/endpoints/usage.api-counts': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Gets project's usage api counts */
+    get: operations['v1-get-project-usage-api-count']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/analytics/endpoints/usage.api-requests-count': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Gets project's usage api requests count */
+    get: operations['v1-get-project-usage-request-count']
     put?: never
     post?: never
     delete?: never
@@ -264,8 +589,8 @@ export interface paths {
     /** Get project api keys */
     get: operations['v1-get-project-api-keys']
     put?: never
-    /** [Alpha] Creates a new API key for the project */
-    post: operations['createApiKey']
+    /** Creates a new API key for the project */
+    post: operations['v1-create-project-api-key']
     delete?: never
     options?: never
     head?: never
@@ -279,16 +604,34 @@ export interface paths {
       path?: never
       cookie?: never
     }
-    /** [Alpha] Get API key */
-    get: operations['getApiKey']
+    /** Get API key */
+    get: operations['v1-get-project-api-key']
     put?: never
     post?: never
-    /** [Alpha] Deletes an API key for the project */
-    delete: operations['deleteApiKey']
+    /** Deletes an API key for the project */
+    delete: operations['v1-delete-project-api-key']
     options?: never
     head?: never
-    /** [Alpha] Updates an API key for the project */
-    patch: operations['updateApiKey']
+    /** Updates an API key for the project */
+    patch: operations['v1-update-project-api-key']
+    trace?: never
+  }
+  '/v1/projects/{ref}/api-keys/legacy': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Check whether JWT based legacy (anon, service_role) API keys are enabled. This API endpoint will be removed in the future, check for HTTP 404 Not Found. */
+    get: operations['v1-get-project-legacy-api-keys']
+    /** Disable or re-enable JWT based legacy (anon, service_role) API keys. This API endpoint will be removed in the future, check for HTTP 404 Not Found. */
+    put: operations['v1-update-project-legacy-api-keys']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
     trace?: never
   }
   '/v1/projects/{ref}/billing/addons': {
@@ -298,14 +641,20 @@ export interface paths {
       path?: never
       cookie?: never
     }
-    /** Lists project addons */
+    /**
+     * List billing addons and compute instance selections
+     * @description Returns the billing addons that are currently applied, including the active compute instance size, and lists every addon option that can be provisioned with pricing metadata.
+     */
     get: operations['v1-list-project-addons']
     put?: never
     post?: never
     delete?: never
     options?: never
     head?: never
-    /** Applies project addon */
+    /**
+     * Apply or update billing addons, including compute instance size
+     * @description Selects an addon variant, for example scaling the project’s compute instance up or down, and applies it to the project.
+     */
     patch: operations['v1-apply-project-addon']
     trace?: never
   }
@@ -319,7 +668,10 @@ export interface paths {
     get?: never
     put?: never
     post?: never
-    /** Removes project addon */
+    /**
+     * Remove billing addons or revert compute instance sizing
+     * @description Disables the selected addon variant, including rolling the compute instance back to its previous size.
+     */
     delete: operations['v1-remove-project-addon']
     options?: never
     head?: never
@@ -354,6 +706,63 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/projects/{ref}/branches/{name}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get a database branch
+     * @description Fetches the specified database branch by its name.
+     */
+    get: operations['v1-get-a-branch']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/claim-token': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Gets project claim token */
+    get: operations['v1-get-project-claim-token']
+    put?: never
+    /** Creates project claim token */
+    post: operations['v1-create-project-claim-token']
+    /** Revokes project claim token */
+    delete: operations['v1-delete-project-claim-token']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/cli/login-role': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** [Beta] Create a login role for CLI with temporary password */
+    post: operations['v1-create-login-role']
+    /** [Beta] Delete existing login roles used by CLI */
+    delete: operations['v1-delete-login-roles']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/projects/{ref}/config/auth': {
     parameters: {
       query?: never
@@ -379,11 +788,11 @@ export interface paths {
       path?: never
       cookie?: never
     }
-    /** [Alpha] List all signing keys for the project */
-    get: operations['listSigningKeysForProject']
+    /** List all signing keys for the project */
+    get: operations['v1-get-project-signing-keys']
     put?: never
-    /** [Alpha] Create a new signing key for the project in standby status */
-    post: operations['createSigningKeyForProject']
+    /** Create a new signing key for the project in standby status */
+    post: operations['v1-create-project-signing-key']
     delete?: never
     options?: never
     head?: never
@@ -397,16 +806,34 @@ export interface paths {
       path?: never
       cookie?: never
     }
-    /** [Alpha] Get information about a signing key */
-    get: operations['getSigningKeyForProject']
+    /** Get information about a signing key */
+    get: operations['v1-get-project-signing-key']
     put?: never
     post?: never
-    /** [Alpha] Remove a signing key from a project, where the status is previously_used */
-    delete: operations['deleteSigningKey']
+    /** Remove a signing key from a project. Only possible if the key has been in revoked status for a while. */
+    delete: operations['v1-remove-project-signing-key']
     options?: never
     head?: never
-    /** [Alpha] Update a signing key, mainly its status */
-    patch: operations['patchSigningKey']
+    /** Update a signing key, mainly its status */
+    patch: operations['v1-update-project-signing-key']
+    trace?: never
+  }
+  '/v1/projects/{ref}/config/auth/signing-keys/legacy': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get the signing key information for the JWT secret imported as signing key for this project. This endpoint will be removed in the future, check for HTTP 404 Not Found. */
+    get: operations['v1-get-legacy-signing-key']
+    put?: never
+    /** Set up the project's existing JWT secret as an in_use JWT signing key. This endpoint will be removed in the future always check for HTTP 404 Not Found. */
+    post: operations['v1-create-legacy-signing-key']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
     trace?: never
   }
   '/v1/projects/{ref}/config/auth/sso/providers': {
@@ -454,10 +881,10 @@ export interface paths {
       cookie?: never
     }
     /** Lists all third-party auth integrations */
-    get: operations['listTPAForProject']
+    get: operations['v1-list-project-tpa-integrations']
     put?: never
     /** Creates a new third-party auth integration */
-    post: operations['createTPAForProject']
+    post: operations['v1-create-project-tpa-integration']
     delete?: never
     options?: never
     head?: never
@@ -472,11 +899,11 @@ export interface paths {
       cookie?: never
     }
     /** Get a third-party integration */
-    get: operations['getTPAForProject']
+    get: operations['v1-get-project-tpa-integration']
     put?: never
     post?: never
     /** Removes a third-party auth integration */
-    delete: operations['deleteTPAForProject']
+    delete: operations['v1-delete-project-tpa-integration']
     options?: never
     head?: never
     patch?: never
@@ -507,14 +934,14 @@ export interface paths {
       cookie?: never
     }
     /** Gets project's supavisor config */
-    get: operations['getSupavisorConfig']
+    get: operations['v1-get-pooler-config']
     put?: never
     post?: never
     delete?: never
     options?: never
     head?: never
     /** Updates project's supavisor config */
-    patch: operations['updateSupavisorConfig']
+    patch: operations['v1-update-pooler-config']
     trace?: never
   }
   '/v1/projects/{ref}/config/database/postgres': {
@@ -529,6 +956,93 @@ export interface paths {
     /** Updates project's Postgres config */
     put: operations['v1-update-postgres-config']
     post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/config/disk': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get database disk attributes */
+    get: operations['v1-get-database-disk']
+    put?: never
+    /** Modify database disk */
+    post: operations['v1-modify-database-disk']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/config/disk/autoscale': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Gets project disk autoscale config */
+    get: operations['v1-get-project-disk-autoscale-config']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/config/disk/util': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get disk utilization */
+    get: operations['v1-get-disk-utilization']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/config/realtime': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Gets realtime configuration */
+    get: operations['v1-get-realtime-config']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    /** Updates realtime configuration */
+    patch: operations['v1-update-realtime-config']
+    trace?: never
+  }
+  '/v1/projects/{ref}/config/realtime/shutdown': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Shutdowns realtime connections for a project */
+    post: operations['v1-shutdown-realtime']
     delete?: never
     options?: never
     head?: never
@@ -639,6 +1153,23 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/projects/{ref}/database/backups/restore': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Restores a physical backup for a database */
+    post: operations['v1-restore-physical-backup']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/projects/{ref}/database/backups/restore-pitr': {
     parameters: {
       query?: never
@@ -650,6 +1181,41 @@ export interface paths {
     put?: never
     /** Restores a PITR backup for a database */
     post: operations['v1-restore-pitr-backup']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/database/backups/restore-point': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** Get restore points for project */
+    get: operations['v1-get-restore-point']
+    put?: never
+    /** Initiates a creation of a restore point for a database */
+    post: operations['v1-create-restore-point']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/database/backups/undo': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** Initiates an undo to a given restore point */
+    post: operations['v1-undo']
     delete?: never
     options?: never
     head?: never
@@ -668,13 +1234,174 @@ export interface paths {
      * @deprecated
      * @description This is an **experimental** endpoint. It is subject to change or removal in future versions. Use it with caution, as it may not remain supported or stable.
      */
-    get: operations['getDatabaseMetadata']
+    get: operations['v1-get-database-metadata']
     put?: never
     post?: never
     delete?: never
     options?: never
     head?: never
     patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/database/jit': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get user-id to role mappings for JIT access
+     * @description Mappings of roles a user can assume in the project database
+     */
+    get: operations['v1-get-jit-access']
+    /**
+     * Updates a user mapping for JIT access
+     * @description Modifies the roles that can be assumed and for how long
+     */
+    put: operations['v1-update-jit-access']
+    /**
+     * Authorize user-id to role mappings for JIT access
+     * @description Authorizes the request to assume a role in the project database
+     */
+    post: operations['v1-authorize-jit-access']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/database/jit/{user_id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    /**
+     * Delete JIT access by user-id
+     * @description Remove JIT mappings of a user, revoking all JIT database access
+     */
+    delete: operations['v1-delete-jit-access']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/database/jit/list': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List all user-id to role mappings for JIT access
+     * @description Mappings of roles a user can assume in the project database
+     */
+    get: operations['v1-list-jit-access']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/database/migrations': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * List applied migration versions
+     * @description Only available to selected partner OAuth apps
+     */
+    get: operations['v1-list-migration-history']
+    /**
+     * Upsert a database migration without applying
+     * @description Only available to selected partner OAuth apps
+     */
+    put: operations['v1-upsert-a-migration']
+    /**
+     * Apply a database migration
+     * @description Only available to selected partner OAuth apps
+     */
+    post: operations['v1-apply-a-migration']
+    /**
+     * Rollback database migrations and remove them from history table
+     * @description Only available to selected partner OAuth apps
+     */
+    delete: operations['v1-rollback-migrations']
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/database/migrations/{version}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Fetch an existing entry from migration history
+     * @description Only available to selected partner OAuth apps
+     */
+    get: operations['v1-get-a-migration']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    /**
+     * Patch an existing entry in migration history
+     * @description Only available to selected partner OAuth apps
+     */
+    patch: operations['v1-patch-a-migration']
+    trace?: never
+  }
+  '/v1/projects/{ref}/database/openapi': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /**
+     * Get PostgREST OpenAPI spec
+     * @description Returns the PostgREST OpenAPI specification for the project. This is the replacement for querying `/rest/v1/` directly with the anon key.
+     */
+    get: operations['v1-get-database-openapi']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/database/password': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    /** Updates the database password */
+    patch: operations['v1-update-database-password']
     trace?: never
   }
   '/v1/projects/{ref}/database/query': {
@@ -688,6 +1415,26 @@ export interface paths {
     put?: never
     /** [Beta] Run sql query */
     post: operations['v1-run-a-query']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/v1/projects/{ref}/database/query/read-only': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /**
+     * [Beta] Run a sql query as supabase_read_only_user
+     * @description All entity references must be schema qualified.
+     */
+    post: operations['v1-read-only-query']
     delete?: never
     options?: never
     head?: never
@@ -825,6 +1572,24 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/projects/{ref}/jit-access': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** [Beta] Get project's temporary access configuration. */
+    get: operations['v1-get-jit-access-config']
+    /** [Beta] Update project's temporary access configuration. */
+    put: operations['v1-update-jit-access-config']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/projects/{ref}/network-bans': {
     parameters: {
       query?: never
@@ -859,6 +1624,23 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/projects/{ref}/network-bans/retrieve/enriched': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    /** [Beta] Gets project's network bans with additional information about which databases they affect */
+    post: operations['v1-list-all-network-bans-enriched']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/projects/{ref}/network-restrictions': {
     parameters: {
       query?: never
@@ -873,7 +1655,8 @@ export interface paths {
     delete?: never
     options?: never
     head?: never
-    patch?: never
+    /** [Alpha] Updates project's network restrictions by adding or removing CIDRs */
+    patch: operations['v1-patch-network-restrictions']
     trace?: never
   }
   '/v1/projects/{ref}/network-restrictions/apply': {
@@ -1235,6 +2018,23 @@ export interface paths {
     patch?: never
     trace?: never
   }
+  '/v1/projects/available-regions': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    /** [Beta] Gets the list of available regions that can be used for a new project */
+    get: operations['v1-get-available-regions']
+    put?: never
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
   '/v1/snippets': {
     parameters: {
       query?: never
@@ -1273,11 +2073,45 @@ export interface paths {
 export type webhooks = Record<string, never>
 export interface components {
   schemas: {
+    ActionRunResponse: {
+      branch_id: string
+      check_run_id: number | null
+      created_at: string
+      git_config?: unknown
+      id: string
+      run_steps: {
+        created_at: string
+        /** @enum {string} */
+        name: 'clone' | 'pull' | 'health' | 'configure' | 'migrate' | 'seed' | 'deploy'
+        /** @enum {string} */
+        status: 'CREATED' | 'DEAD' | 'EXITED' | 'PAUSED' | 'REMOVING' | 'RESTARTING' | 'RUNNING'
+        updated_at: string
+      }[]
+      updated_at: string
+      workdir: string | null
+    }
     ActivateVanitySubdomainResponse: {
       custom_domain: string
     }
+    AnalyticsResponse: {
+      error?:
+        | string
+        | {
+            code: number
+            errors: {
+              domain: string
+              location: string
+              locationType: string
+              message: string
+              reason: string
+            }[]
+            message: string
+            status: string
+          }
+      result?: unknown[]
+    }
     ApiKeyResponse: {
-      api_key: string
+      api_key?: string | null
       description?: string | null
       hash?: string | null
       id?: string | null
@@ -1286,14 +2120,18 @@ export interface components {
       name: string
       prefix?: string | null
       secret_jwt_template?: {
-        role: string
+        [key: string]: unknown
       } | null
       /** @enum {string|null} */
-      type?: 'publishable' | 'secret' | 'legacy' | null
+      type?: 'legacy' | 'publishable' | 'secret' | null
       /** Format: date-time */
       updated_at?: string | null
     }
-    ApplyProjectAddonBodyDto: {
+    /** @example {
+     *       "addon_variant": "pitr_7",
+     *       "addon_type": "pitr"
+     *     } */
+    ApplyProjectAddonBody: {
       /** @enum {string} */
       addon_type:
         | 'custom_domain'
@@ -1315,96 +2153,128 @@ export interface components {
             | 'ci_8xlarge'
             | 'ci_12xlarge'
             | 'ci_16xlarge'
+            | 'ci_24xlarge'
+            | 'ci_24xlarge_optimized_cpu'
+            | 'ci_24xlarge_optimized_memory'
+            | 'ci_24xlarge_high_memory'
+            | 'ci_48xlarge'
+            | 'ci_48xlarge_optimized_cpu'
+            | 'ci_48xlarge_optimized_memory'
+            | 'ci_48xlarge_high_memory'
           )
         | 'cd_default'
         | ('pitr_7' | 'pitr_14' | 'pitr_28')
         | 'ipv4_default'
     }
-    AttributeMapping: {
-      keys: {
-        [key: string]: components['schemas']['AttributeValue']
-      }
-    }
-    AttributeValue: {
-      array?: boolean
-      default?: Record<string, never> | number | string | boolean
-      name?: string
-      names?: string[]
-    }
     AuthConfigResponse: {
       api_max_request_duration: number | null
+      custom_oauth_enabled: boolean
+      custom_oauth_max_providers: number
       db_max_pool_size: number | null
+      /** @enum {string|null} */
+      db_max_pool_size_unit: 'connections' | 'percent' | null
       disable_signup: boolean | null
       external_anonymous_users_enabled: boolean | null
       external_apple_additional_client_ids: string | null
       external_apple_client_id: string | null
+      external_apple_email_optional: boolean | null
       external_apple_enabled: boolean | null
       external_apple_secret: string | null
       external_azure_client_id: string | null
+      external_azure_email_optional: boolean | null
       external_azure_enabled: boolean | null
       external_azure_secret: string | null
       external_azure_url: string | null
       external_bitbucket_client_id: string | null
+      external_bitbucket_email_optional: boolean | null
       external_bitbucket_enabled: boolean | null
       external_bitbucket_secret: string | null
       external_discord_client_id: string | null
+      external_discord_email_optional: boolean | null
       external_discord_enabled: boolean | null
       external_discord_secret: string | null
       external_email_enabled: boolean | null
       external_facebook_client_id: string | null
+      external_facebook_email_optional: boolean | null
       external_facebook_enabled: boolean | null
       external_facebook_secret: string | null
       external_figma_client_id: string | null
+      external_figma_email_optional: boolean | null
       external_figma_enabled: boolean | null
       external_figma_secret: string | null
       external_github_client_id: string | null
+      external_github_email_optional: boolean | null
       external_github_enabled: boolean | null
       external_github_secret: string | null
       external_gitlab_client_id: string | null
+      external_gitlab_email_optional: boolean | null
       external_gitlab_enabled: boolean | null
       external_gitlab_secret: string | null
       external_gitlab_url: string | null
       external_google_additional_client_ids: string | null
       external_google_client_id: string | null
+      external_google_email_optional: boolean | null
       external_google_enabled: boolean | null
       external_google_secret: string | null
       external_google_skip_nonce_check: boolean | null
       external_kakao_client_id: string | null
+      external_kakao_email_optional: boolean | null
       external_kakao_enabled: boolean | null
       external_kakao_secret: string | null
       external_keycloak_client_id: string | null
+      external_keycloak_email_optional: boolean | null
       external_keycloak_enabled: boolean | null
       external_keycloak_secret: string | null
       external_keycloak_url: string | null
       external_linkedin_oidc_client_id: string | null
+      external_linkedin_oidc_email_optional: boolean | null
       external_linkedin_oidc_enabled: boolean | null
       external_linkedin_oidc_secret: string | null
       external_notion_client_id: string | null
+      external_notion_email_optional: boolean | null
       external_notion_enabled: boolean | null
       external_notion_secret: string | null
       external_phone_enabled: boolean | null
       external_slack_client_id: string | null
+      external_slack_email_optional: boolean | null
       external_slack_enabled: boolean | null
       external_slack_oidc_client_id: string | null
+      external_slack_oidc_email_optional: boolean | null
       external_slack_oidc_enabled: boolean | null
       external_slack_oidc_secret: string | null
       external_slack_secret: string | null
       external_spotify_client_id: string | null
+      external_spotify_email_optional: boolean | null
       external_spotify_enabled: boolean | null
       external_spotify_secret: string | null
       external_twitch_client_id: string | null
+      external_twitch_email_optional: boolean | null
       external_twitch_enabled: boolean | null
       external_twitch_secret: string | null
       external_twitter_client_id: string | null
+      external_twitter_email_optional: boolean | null
       external_twitter_enabled: boolean | null
       external_twitter_secret: string | null
+      external_web3_ethereum_enabled: boolean | null
+      external_web3_solana_enabled: boolean | null
       external_workos_client_id: string | null
       external_workos_enabled: boolean | null
       external_workos_secret: string | null
       external_workos_url: string | null
+      external_x_client_id: string | null
+      external_x_email_optional: boolean | null
+      external_x_enabled: boolean | null
+      external_x_secret: string | null
       external_zoom_client_id: string | null
+      external_zoom_email_optional: boolean | null
       external_zoom_enabled: boolean | null
       external_zoom_secret: string | null
+      hook_after_user_created_enabled: boolean | null
+      hook_after_user_created_secrets: string | null
+      hook_after_user_created_uri: string | null
+      hook_before_user_created_enabled: boolean | null
+      hook_before_user_created_secrets: string | null
+      hook_before_user_created_uri: string | null
       hook_custom_access_token_enabled: boolean | null
       hook_custom_access_token_secrets: string | null
       hook_custom_access_token_uri: string | null
@@ -1423,19 +2293,40 @@ export interface components {
       jwt_exp: number | null
       mailer_allow_unverified_email_sign_ins: boolean | null
       mailer_autoconfirm: boolean | null
+      mailer_notifications_email_changed_enabled: boolean | null
+      mailer_notifications_identity_linked_enabled: boolean | null
+      mailer_notifications_identity_unlinked_enabled: boolean | null
+      mailer_notifications_mfa_factor_enrolled_enabled: boolean | null
+      mailer_notifications_mfa_factor_unenrolled_enabled: boolean | null
+      mailer_notifications_password_changed_enabled: boolean | null
+      mailer_notifications_phone_changed_enabled: boolean | null
       mailer_otp_exp: number
       mailer_otp_length: number | null
       mailer_secure_email_change_enabled: boolean | null
       mailer_subjects_confirmation: string | null
       mailer_subjects_email_change: string | null
+      mailer_subjects_email_changed_notification: string | null
+      mailer_subjects_identity_linked_notification: string | null
+      mailer_subjects_identity_unlinked_notification: string | null
       mailer_subjects_invite: string | null
       mailer_subjects_magic_link: string | null
+      mailer_subjects_mfa_factor_enrolled_notification: string | null
+      mailer_subjects_mfa_factor_unenrolled_notification: string | null
+      mailer_subjects_password_changed_notification: string | null
+      mailer_subjects_phone_changed_notification: string | null
       mailer_subjects_reauthentication: string | null
       mailer_subjects_recovery: string | null
       mailer_templates_confirmation_content: string | null
       mailer_templates_email_change_content: string | null
+      mailer_templates_email_changed_notification_content: string | null
+      mailer_templates_identity_linked_notification_content: string | null
+      mailer_templates_identity_unlinked_notification_content: string | null
       mailer_templates_invite_content: string | null
       mailer_templates_magic_link_content: string | null
+      mailer_templates_mfa_factor_enrolled_notification_content: string | null
+      mailer_templates_mfa_factor_unenrolled_notification_content: string | null
+      mailer_templates_password_changed_notification_content: string | null
+      mailer_templates_phone_changed_notification_content: string | null
       mailer_templates_reauthentication_content: string | null
       mailer_templates_recovery_content: string | null
       mfa_max_enrolled_factors: number | null
@@ -1448,24 +2339,40 @@ export interface components {
       mfa_totp_verify_enabled: boolean | null
       mfa_web_authn_enroll_enabled: boolean | null
       mfa_web_authn_verify_enabled: boolean | null
+      nimbus_oauth_client_id: string | null
+      nimbus_oauth_client_secret: string | null
+      nimbus_oauth_email_optional: boolean | null
+      oauth_server_allow_dynamic_registration: boolean
+      oauth_server_authorization_path: string | null
+      oauth_server_enabled: boolean
+      passkey_enabled: boolean
       password_hibp_enabled: boolean | null
       password_min_length: number | null
-      password_required_characters: string | null
+      /** @enum {string|null} */
+      password_required_characters:
+        | 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ:0123456789'
+        | 'abcdefghijklmnopqrstuvwxyz:ABCDEFGHIJKLMNOPQRSTUVWXYZ:0123456789'
+        | 'abcdefghijklmnopqrstuvwxyz:ABCDEFGHIJKLMNOPQRSTUVWXYZ:0123456789:!@#$%^&*()_+-=[]{};\'\\\\:"|<>?,./`~'
+        | ''
+        | null
       rate_limit_anonymous_users: number | null
       rate_limit_email_sent: number | null
       rate_limit_otp: number | null
       rate_limit_sms_sent: number | null
       rate_limit_token_refresh: number | null
       rate_limit_verify: number | null
+      rate_limit_web3: number | null
       refresh_token_rotation_enabled: boolean | null
       saml_allow_encrypted_assertions: boolean | null
       saml_enabled: boolean | null
       saml_external_url: string | null
       security_captcha_enabled: boolean | null
-      security_captcha_provider: string | null
+      /** @enum {string|null} */
+      security_captcha_provider: 'turnstile' | 'hcaptcha' | null
       security_captcha_secret: string | null
       security_manual_linking_enabled: boolean | null
       security_refresh_token_reuse_interval: number | null
+      security_sb_forwarded_for_enabled: boolean | null
       security_update_password_require_reauthentication: boolean | null
       sessions_inactivity_timeout: number | null
       sessions_single_per_user: boolean | null
@@ -1478,9 +2385,11 @@ export interface components {
       sms_messagebird_originator: string | null
       sms_otp_exp: number | null
       sms_otp_length: number
-      sms_provider: string | null
+      /** @enum {string|null} */
+      sms_provider: 'messagebird' | 'textlocal' | 'twilio' | 'twilio_verify' | 'vonage' | null
       sms_template: string | null
       sms_test_otp: string | null
+      /** Format: date-time */
       sms_test_otp_valid_until: string | null
       sms_textlocal_api_key: string | null
       sms_textlocal_sender: string | null
@@ -1494,6 +2403,7 @@ export interface components {
       sms_vonage_api_key: string | null
       sms_vonage_api_secret: string | null
       sms_vonage_from: string | null
+      /** Format: email */
       smtp_admin_email: string | null
       smtp_host: string | null
       smtp_max_frequency: number | null
@@ -1502,13 +2412,24 @@ export interface components {
       smtp_sender_name: string | null
       smtp_user: string | null
       uri_allow_list: string | null
+      webauthn_rp_display_name: string | null
+      webauthn_rp_id: string | null
+      webauthn_rp_origins: string | null
     }
-    AuthHealthResponse: {
-      /** @enum {string} */
-      name: 'GoTrue'
+    /** @example {
+     *       "role": "postgres",
+     *       "rhost": "203.0.113.10"
+     *     } */
+    AuthorizeJitAccessBody: {
+      rhost: string
+      role: string
     }
-    /** @enum {string} */
-    BillingPlanId: 'free' | 'pro' | 'team' | 'enterprise'
+    /** @example {
+     *       "migration_version": "20250312000000"
+     *     } */
+    BranchActionBody: {
+      migration_version?: string
+    }
     BranchDeleteResponse: {
       /** @enum {string} */
       message: 'ok'
@@ -1542,8 +2463,12 @@ export interface components {
         | 'RESIZING'
     }
     BranchResponse: {
+      /** Format: date-time */
       created_at: string
+      /** Format: date-time */
+      deletion_scheduled_at?: string
       git_branch?: string
+      /** Format: uuid */
       id: string
       is_default: boolean
       /**
@@ -1552,11 +2477,32 @@ export interface components {
        */
       latest_check_run_id?: number
       name: string
+      /** Format: uri */
+      notify_url?: string
       parent_project_ref: string
       persistent: boolean
       /** Format: int32 */
       pr_number?: number
+      /** @enum {string} */
+      preview_project_status?:
+        | 'INACTIVE'
+        | 'ACTIVE_HEALTHY'
+        | 'ACTIVE_UNHEALTHY'
+        | 'COMING_UP'
+        | 'UNKNOWN'
+        | 'GOING_DOWN'
+        | 'INIT_FAILED'
+        | 'REMOVED'
+        | 'RESTORING'
+        | 'UPGRADING'
+        | 'PAUSING'
+        | 'RESTORE_FAILED'
+        | 'RESTARTING'
+        | 'PAUSE_FAILED'
+        | 'RESIZING'
       project_ref: string
+      /** Format: date-time */
+      review_requested_at?: string
       /** @enum {string} */
       status:
         | 'CREATING_PROJECT'
@@ -1565,16 +2511,35 @@ export interface components {
         | 'MIGRATIONS_FAILED'
         | 'FUNCTIONS_DEPLOYED'
         | 'FUNCTIONS_FAILED'
+      /** Format: date-time */
       updated_at: string
+      with_data: boolean
+    }
+    BranchRestoreResponse: {
+      /** @enum {string} */
+      message: 'Branch restoration initiated'
     }
     BranchUpdateResponse: {
       /** @enum {string} */
       message: 'ok'
       workflow_run_id: string
     }
+    /** @example [
+     *       {
+     *         "id": "3c078cce-ad70-4148-9f37-4da362789053",
+     *         "slug": "hello-world",
+     *         "name": "Hello World",
+     *         "status": "ACTIVE",
+     *         "version": 2,
+     *         "verify_jwt": true,
+     *         "entrypoint_path": "index.ts"
+     *       }
+     *     ] */
     BulkUpdateFunctionBody: {
+      /** Format: int64 */
       created_at?: number
       entrypoint_path?: string
+      ezbr_sha256?: string
       id: string
       import_map?: boolean
       import_map_path?: string
@@ -1584,11 +2549,13 @@ export interface components {
       status: 'ACTIVE' | 'REMOVED' | 'THROTTLED'
       verify_jwt?: boolean
       version: number
-    }
+    }[]
     BulkUpdateFunctionResponse: {
       functions: {
+        /** Format: int64 */
         created_at: number
         entrypoint_path?: string
+        ezbr_sha256?: string
         id: string
         import_map?: boolean
         import_map_path?: string
@@ -1596,29 +2563,38 @@ export interface components {
         slug: string
         /** @enum {string} */
         status: 'ACTIVE' | 'REMOVED' | 'THROTTLED'
+        /** Format: int64 */
         updated_at: number
         verify_jwt?: boolean
         version: number
       }[]
     }
-    CfResponse: {
-      errors: Record<string, never>[]
-      messages: Record<string, never>[]
-      result: components['schemas']['CustomHostnameDetails']
-      success: boolean
-    }
+    /** @example {
+     *       "type": "secret",
+     *       "name": "ci_secret_key",
+     *       "description": "CI deploy key"
+     *     } */
     CreateApiKeyBody: {
       description?: string | null
+      name: string
       secret_jwt_template?: {
-        role: string
+        [key: string]: unknown
       } | null
       /** @enum {string} */
       type: 'publishable' | 'secret'
     }
+    /** @example {
+     *       "branch_name": "preview-login-page",
+     *       "git_branch": "feature/login-page",
+     *       "persistent": true,
+     *       "with_data": false,
+     *       "notify_url": "https://example.com/webhooks/branches"
+     *     } */
     CreateBranchBody: {
       branch_name: string
       /** @enum {string} */
       desired_instance_size?:
+        | 'pico'
         | 'nano'
         | 'micro'
         | 'small'
@@ -1630,28 +2606,92 @@ export interface components {
         | '8xlarge'
         | '12xlarge'
         | '16xlarge'
+        | '24xlarge'
+        | '24xlarge_optimized_memory'
+        | '24xlarge_optimized_cpu'
+        | '24xlarge_high_memory'
+        | '48xlarge'
+        | '48xlarge_optimized_memory'
+        | '48xlarge_optimized_cpu'
+        | '48xlarge_high_memory'
       git_branch?: string
+      is_default?: boolean
+      /**
+       * Format: uri
+       * @description HTTP endpoint to receive branch status updates.
+       */
+      notify_url?: string
       persistent?: boolean
       /**
        * @description Postgres engine version. If not provided, the latest version will be used.
        * @enum {string}
        */
-      postgres_engine?: '15' | '17-oriole'
+      postgres_engine?: '15' | '17' | '17-oriole'
       region?: string
       /**
        * @description Release channel. If not provided, GA will be used.
        * @enum {string}
        */
       release_channel?: 'internal' | 'alpha' | 'beta' | 'ga' | 'withdrawn' | 'preview'
+      secrets?: {
+        [key: string]: string
+      }
+      with_data?: boolean
     }
-    CreateOrganizationV1Dto: {
+    /** @example {
+     *       "name": "Acme"
+     *     } */
+    CreateOrganizationV1: {
       name: string
     }
+    CreateProjectClaimTokenResponse: {
+      created_at: string
+      /** Format: uuid */
+      created_by: string
+      expires_at: string
+      token: string
+      token_alias: string
+    }
+    /** @example {
+     *       "type": "saml",
+     *       "metadata_url": "https://sso.acme.com/metadata.xml",
+     *       "domains": [
+     *         "acme.com"
+     *       ],
+     *       "attribute_mapping": {
+     *         "keys": {
+     *           "email": {
+     *             "name": "email"
+     *           },
+     *           "first_name": {
+     *             "name": "first_name"
+     *           },
+     *           "last_name": {
+     *             "name": "last_name"
+     *           }
+     *         }
+     *       }
+     *     } */
     CreateProviderBody: {
-      attribute_mapping?: components['schemas']['AttributeMapping']
+      attribute_mapping?: {
+        keys: {
+          [key: string]: {
+            array?: boolean
+            default?: Record<string, never> | number | string | boolean
+            name?: string
+            names?: string[]
+          }
+        }
+      }
       domains?: string[]
       metadata_url?: string
       metadata_xml?: string
+      /** @enum {string} */
+      name_id_format?:
+        | 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified'
+        | 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient'
+        | 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress'
+        | 'urn:oasis:names:tc:SAML:2.0:nameid-format:persistent'
       /**
        * @description What type of provider will be created
        * @enum {string}
@@ -1660,38 +2700,154 @@ export interface components {
     }
     CreateProviderResponse: {
       created_at?: string
-      domains?: components['schemas']['Domain'][]
+      domains?: {
+        created_at?: string
+        domain?: string
+        id: string
+        updated_at?: string
+      }[]
       id: string
-      saml?: components['schemas']['SamlDescriptor']
+      saml?: {
+        attribute_mapping?: {
+          keys: {
+            [key: string]: {
+              array?: boolean
+              default?: Record<string, never> | number | string | boolean
+              name?: string
+              names?: string[]
+            }
+          }
+        }
+        entity_id: string
+        id: string
+        metadata_url?: string
+        metadata_xml?: string
+        /** @enum {string} */
+        name_id_format?:
+          | 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified'
+          | 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient'
+          | 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress'
+          | 'urn:oasis:names:tc:SAML:2.0:nameid-format:persistent'
+      }
       updated_at?: string
     }
+    /** @example {
+     *       "read_only": true
+     *     } */
+    CreateRoleBody: {
+      read_only: boolean
+    }
+    CreateRoleResponse: {
+      password: string
+      role: string
+      /** Format: int64 */
+      ttl_seconds: number
+    }
+    /** @example [
+     *       {
+     *         "name": "OPENAI_API_KEY",
+     *         "value": "sk-example-secret"
+     *       },
+     *       {
+     *         "name": "STRIPE_WEBHOOK_SECRET",
+     *         "value": "whsec_example"
+     *       }
+     *     ] */
     CreateSecretBody: {
-      /**
-       * @description Secret name must not start with the SUPABASE_ prefix.
-       * @example string
-       */
+      /** @description Secret name must not start with the SUPABASE_ prefix. */
       name: string
       value: string
-    }
+    }[]
+    /** @example {
+     *       "algorithm": "RS256",
+     *       "status": "standby"
+     *     } */
     CreateSigningKeyBody: {
       /** @enum {string} */
       algorithm: 'EdDSA' | 'ES256' | 'RS256' | 'HS256'
+      private_jwk?:
+        | {
+            /** @enum {string} */
+            alg?: 'RS256'
+            d: string
+            dp: string
+            dq: string
+            /** @enum {string} */
+            e: 'AQAB'
+            /** @enum {boolean} */
+            ext?: true
+            key_ops?: ('sign' | 'verify')[]
+            /** Format: uuid */
+            kid?: string
+            /** @enum {string} */
+            kty: 'RSA'
+            n: string
+            p: string
+            q: string
+            qi: string
+            /** @enum {string} */
+            use?: 'sig'
+          }
+        | {
+            /** @enum {string} */
+            alg?: 'ES256'
+            /** @enum {string} */
+            crv: 'P-256'
+            d: string
+            /** @enum {boolean} */
+            ext?: true
+            key_ops?: ('sign' | 'verify')[]
+            /** Format: uuid */
+            kid?: string
+            /** @enum {string} */
+            kty: 'EC'
+            /** @enum {string} */
+            use?: 'sig'
+            x: string
+            y: string
+          }
+        | {
+            /** @enum {string} */
+            alg?: 'EdDSA'
+            /** @enum {string} */
+            crv: 'Ed25519'
+            d: string
+            /** @enum {boolean} */
+            ext?: true
+            key_ops?: ('sign' | 'verify')[]
+            /** Format: uuid */
+            kid?: string
+            /** @enum {string} */
+            kty: 'OKP'
+            /** @enum {string} */
+            use?: 'sig'
+            x: string
+          }
+        | {
+            /** @enum {string} */
+            alg?: 'HS256'
+            /** @enum {boolean} */
+            ext?: true
+            k: string
+            key_ops?: ('sign' | 'verify')[]
+            /** Format: uuid */
+            kid?: string
+            /** @enum {string} */
+            kty: 'oct'
+            /** @enum {string} */
+            use?: 'sig'
+          }
       /** @enum {string} */
       status?: 'in_use' | 'standby'
     }
+    /** @example {
+     *       "oidc_issuer_url": "https://login.acme.com",
+     *       "jwks_url": "https://login.acme.com/.well-known/jwks.json"
+     *     } */
     CreateThirdPartyAuthBody: {
-      custom_jwks?: Record<string, never>
+      custom_jwks?: unknown
       jwks_url?: string
       oidc_issuer_url?: string
-    }
-    CustomHostnameDetails: {
-      custom_origin_server: string
-      hostname: string
-      id: string
-      ownership_verification: components['schemas']['OwnershipVerification']
-      ssl: components['schemas']['SslValidation']
-      status: string
-      verification_errors?: string[]
     }
     DatabaseUpgradeStatusResponse: {
       databaseUpgradeStatus: {
@@ -1727,14 +2883,50 @@ export interface components {
     }
     DeleteProviderResponse: {
       created_at?: string
-      domains?: components['schemas']['Domain'][]
+      domains?: {
+        created_at?: string
+        domain?: string
+        id: string
+        updated_at?: string
+      }[]
       id: string
-      saml?: components['schemas']['SamlDescriptor']
+      saml?: {
+        attribute_mapping?: {
+          keys: {
+            [key: string]: {
+              array?: boolean
+              default?: Record<string, never> | number | string | boolean
+              name?: string
+              names?: string[]
+            }
+          }
+        }
+        entity_id: string
+        id: string
+        metadata_url?: string
+        metadata_xml?: string
+        /** @enum {string} */
+        name_id_format?:
+          | 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified'
+          | 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient'
+          | 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress'
+          | 'urn:oasis:names:tc:SAML:2.0:nameid-format:persistent'
+      }
       updated_at?: string
     }
+    DeleteRolesResponse: {
+      /** @enum {string} */
+      message: 'ok'
+    }
+    /** @example [
+     *       "OPENAI_API_KEY"
+     *     ] */
+    DeleteSecretsBody: string[]
     DeployFunctionResponse: {
+      /** Format: int64 */
       created_at?: number
       entrypoint_path?: string
+      ezbr_sha256?: string
       id: string
       import_map?: boolean
       import_map_path?: string
@@ -1742,16 +2934,78 @@ export interface components {
       slug: string
       /** @enum {string} */
       status: 'ACTIVE' | 'REMOVED' | 'THROTTLED'
+      /** Format: int64 */
       updated_at?: number
       verify_jwt?: boolean
       version: number
     }
-    Domain: {
-      created_at?: string
-      domain?: string
-      id: string
-      updated_at?: string
+    DiskAutoscaleConfig: {
+      /** @description Growth percentage for disk autoscaling */
+      growth_percent: number | null
+      /** @description Maximum limit the disk size will grow to in GB */
+      max_size_gb: number | null
+      /** @description Minimum increment size for disk autoscaling in GB */
+      min_increment_gb: number | null
     }
+    /** @example {
+     *       "attributes": {
+     *         "type": "gp3",
+     *         "size_gb": 100,
+     *         "iops": 3000,
+     *         "throughput_mibps": 125
+     *       }
+     *     } */
+    DiskRequestBody: {
+      attributes:
+        | {
+            iops: number
+            size_gb: number
+            throughput_mibps?: number
+            /** @enum {string} */
+            type: 'gp3'
+          }
+        | {
+            iops: number
+            size_gb: number
+            /** @enum {string} */
+            type: 'io2'
+          }
+    }
+    DiskResponse: {
+      attributes:
+        | {
+            iops: number
+            size_gb: number
+            throughput_mibps?: number
+            /** @enum {string} */
+            type: 'gp3'
+          }
+        | {
+            iops: number
+            size_gb: number
+            /** @enum {string} */
+            type: 'io2'
+          }
+      last_modified_at?: string
+    }
+    DiskUtilMetricsResponse: {
+      metrics: {
+        fs_avail_bytes: number
+        fs_size_bytes: number
+        fs_used_bytes: number
+      }
+      timestamp: string
+    }
+    /** @example {
+     *       "file": [
+     *         "./supabase/functions/hello-world/index.ts"
+     *       ],
+     *       "metadata": {
+     *         "entrypoint_path": "index.ts",
+     *         "verify_jwt": true,
+     *         "name": "Hello World"
+     *       }
+     *     } */
     FunctionDeployBody: {
       file?: string[]
       metadata: {
@@ -1763,8 +3017,10 @@ export interface components {
       }
     }
     FunctionResponse: {
+      /** Format: int64 */
       created_at: number
       entrypoint_path?: string
+      ezbr_sha256?: string
       id: string
       import_map?: boolean
       import_map_path?: string
@@ -1772,13 +3028,16 @@ export interface components {
       slug: string
       /** @enum {string} */
       status: 'ACTIVE' | 'REMOVED' | 'THROTTLED'
+      /** Format: int64 */
       updated_at: number
       verify_jwt?: boolean
       version: number
     }
     FunctionSlugResponse: {
+      /** Format: int64 */
       created_at: number
       entrypoint_path?: string
+      ezbr_sha256?: string
       id: string
       import_map?: boolean
       import_map_path?: string
@@ -1786,14 +3045,21 @@ export interface components {
       slug: string
       /** @enum {string} */
       status: 'ACTIVE' | 'REMOVED' | 'THROTTLED'
+      /** Format: int64 */
       updated_at: number
       verify_jwt?: boolean
       version: number
     }
     GetProjectAvailableRestoreVersionsResponse: {
-      available_versions: components['schemas']['ProjectAvailableRestoreVersion'][]
+      available_versions: {
+        /** @enum {string} */
+        postgres_engine: '13' | '14' | '15' | '17' | '17-oriole'
+        /** @enum {string} */
+        release_channel: 'internal' | 'alpha' | 'beta' | 'ga' | 'withdrawn' | 'preview'
+        version: string
+      }[]
     }
-    GetProjectDbMetadataResponseDto: {
+    GetProjectDbMetadataResponse: {
       databases: ({
         name: string
         schemas: ({
@@ -1807,12 +3073,133 @@ export interface components {
     }
     GetProviderResponse: {
       created_at?: string
-      domains?: components['schemas']['Domain'][]
+      domains?: {
+        created_at?: string
+        domain?: string
+        id: string
+        updated_at?: string
+      }[]
       id: string
-      saml?: components['schemas']['SamlDescriptor']
+      saml?: {
+        attribute_mapping?: {
+          keys: {
+            [key: string]: {
+              array?: boolean
+              default?: Record<string, never> | number | string | boolean
+              name?: string
+              names?: string[]
+            }
+          }
+        }
+        entity_id: string
+        id: string
+        metadata_url?: string
+        metadata_xml?: string
+        /** @enum {string} */
+        name_id_format?:
+          | 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified'
+          | 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient'
+          | 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress'
+          | 'urn:oasis:names:tc:SAML:2.0:nameid-format:persistent'
+      }
       updated_at?: string
     }
-    ListProjectAddonsResponseDto: {
+    /** @example {
+     *       "state": "enabled"
+     *     } */
+    JitAccessRequestRequest: {
+      /** @enum {string} */
+      state: 'enabled' | 'disabled'
+    }
+    JitAccessResponse: {
+      /** Format: uuid */
+      user_id: string
+      user_roles: {
+        allowed_networks?: {
+          allowed_cidrs?: {
+            cidr: string
+          }[]
+          allowed_cidrs_v6?: {
+            cidr: string
+          }[]
+        }
+        branches_only?: boolean
+        expires_at?: number
+        role: string
+      }[]
+    }
+    JitAuthorizeAccessResponse: {
+      /** Format: uuid */
+      user_id: string
+      user_role: {
+        allowed_networks?: {
+          allowed_cidrs?: {
+            cidr: string
+          }[]
+          allowed_cidrs_v6?: {
+            cidr: string
+          }[]
+        }
+        branches_only?: boolean
+        expires_at?: number
+        role: string
+      }
+    }
+    JitListAccessResponse: {
+      items: {
+        /** Format: uuid */
+        user_id: string
+        user_roles: {
+          allowed_networks?: {
+            allowed_cidrs?: {
+              cidr: string
+            }[]
+            allowed_cidrs_v6?: {
+              cidr: string
+            }[]
+          }
+          branches_only?: boolean
+          expires_at?: number
+          role: string
+        }[]
+      }[]
+    }
+    JitStateResponse:
+      | {
+          appliedSuccessfully?: boolean
+          /** @enum {string} */
+          state: 'enabled' | 'disabled'
+        }
+      | {
+          /** @enum {string} */
+          state: 'unavailable'
+          /** @enum {string} */
+          unavailableReason:
+            | 'manual_migration_required'
+            | 'postgres_upgrade_required'
+            | 'temporarily_unavailable'
+        }
+    LegacyApiKeysResponse: {
+      enabled: boolean
+    }
+    ListActionRunResponse: {
+      branch_id: string
+      check_run_id: number | null
+      created_at: string
+      git_config?: unknown
+      id: string
+      run_steps: {
+        created_at: string
+        /** @enum {string} */
+        name: 'clone' | 'pull' | 'health' | 'configure' | 'migrate' | 'seed' | 'deploy'
+        /** @enum {string} */
+        status: 'CREATED' | 'DEAD' | 'EXITED' | 'PAUSED' | 'REMOVING' | 'RESTARTING' | 'RUNNING'
+        updated_at: string
+      }[]
+      updated_at: string
+      workdir: string | null
+    }[]
+    ListProjectAddonsResponse: {
       available_addons: {
         name: string
         /** @enum {string} */
@@ -1837,6 +3224,14 @@ export interface components {
                 | 'ci_8xlarge'
                 | 'ci_12xlarge'
                 | 'ci_16xlarge'
+                | 'ci_24xlarge'
+                | 'ci_24xlarge_optimized_cpu'
+                | 'ci_24xlarge_optimized_memory'
+                | 'ci_24xlarge_high_memory'
+                | 'ci_48xlarge'
+                | 'ci_48xlarge_optimized_cpu'
+                | 'ci_48xlarge_optimized_memory'
+                | 'ci_48xlarge_high_memory'
               )
             | 'cd_default'
             | ('pitr_7' | 'pitr_14' | 'pitr_28')
@@ -1844,9 +3239,8 @@ export interface components {
             | 'auth_mfa_phone_default'
             | 'auth_mfa_web_authn_default'
             | 'log_drain_default'
-          meta?: {
-            [key: string]: number | boolean | string | string[]
-          }
+          /** @description Any JSON-serializable value */
+          meta?: unknown
           name: string
           price: {
             amount: number
@@ -1881,6 +3275,14 @@ export interface components {
                 | 'ci_8xlarge'
                 | 'ci_12xlarge'
                 | 'ci_16xlarge'
+                | 'ci_24xlarge'
+                | 'ci_24xlarge_optimized_cpu'
+                | 'ci_24xlarge_optimized_memory'
+                | 'ci_24xlarge_high_memory'
+                | 'ci_48xlarge'
+                | 'ci_48xlarge_optimized_cpu'
+                | 'ci_48xlarge_optimized_memory'
+                | 'ci_48xlarge_high_memory'
               )
             | 'cd_default'
             | ('pitr_7' | 'pitr_14' | 'pitr_28')
@@ -1888,9 +3290,8 @@ export interface components {
             | 'auth_mfa_phone_default'
             | 'auth_mfa_web_authn_default'
             | 'log_drain_default'
-          meta?: {
-            [key: string]: number | boolean | string | string[]
-          }
+          /** @description Any JSON-serializable value */
+          meta?: unknown
           name: string
           price: {
             amount: number
@@ -1904,16 +3305,87 @@ export interface components {
       }[]
     }
     ListProvidersResponse: {
-      items: components['schemas']['Provider'][]
+      items: {
+        created_at?: string
+        domains?: {
+          created_at?: string
+          domain?: string
+          id: string
+          updated_at?: string
+        }[]
+        id: string
+        saml?: {
+          attribute_mapping?: {
+            keys: {
+              [key: string]: {
+                array?: boolean
+                default?: Record<string, never> | number | string | boolean
+                name?: string
+                names?: string[]
+              }
+            }
+          }
+          entity_id: string
+          id: string
+          metadata_url?: string
+          metadata_xml?: string
+          /** @enum {string} */
+          name_id_format?:
+            | 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified'
+            | 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient'
+            | 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress'
+            | 'urn:oasis:names:tc:SAML:2.0:nameid-format:persistent'
+        }
+        updated_at?: string
+      }[]
     }
     NetworkBanResponse: {
       banned_ipv4_addresses: string[]
     }
+    NetworkBanResponseEnriched: {
+      banned_ipv4_addresses: {
+        banned_address: string
+        identifier: string
+        type: string
+      }[]
+    }
+    /** @example {
+     *       "add": {
+     *         "dbAllowedCidrs": [
+     *           "203.0.113.0/24"
+     *         ]
+     *       },
+     *       "remove": {
+     *         "dbAllowedCidrs": [
+     *           "198.51.100.0/24"
+     *         ]
+     *       }
+     *     } */
+    NetworkRestrictionsPatchRequest: {
+      add?: {
+        dbAllowedCidrs?: string[]
+        dbAllowedCidrsV6?: string[]
+      }
+      remove?: {
+        dbAllowedCidrs?: string[]
+        dbAllowedCidrsV6?: string[]
+      }
+    }
+    /** @example {
+     *       "dbAllowedCidrs": [
+     *         "203.0.113.0/24"
+     *       ],
+     *       "dbAllowedCidrsV6": [
+     *         "2001:db8::/32"
+     *       ]
+     *     } */
     NetworkRestrictionsRequest: {
       dbAllowedCidrs?: string[]
       dbAllowedCidrsV6?: string[]
     }
     NetworkRestrictionsResponse: {
+      /** Format: date-time */
+      applied_at?: string
       /** @description At any given point in time, this is the config that the user has requested be applied to their project. The `status` field indicates if it has been applied to the project, or is pending. When an updated config is received, the applied config is moved to `old_config`. */
       config: {
         dbAllowedCidrs?: string[]
@@ -1921,20 +3393,72 @@ export interface components {
       }
       /** @enum {string} */
       entitlement: 'disallowed' | 'allowed'
-      /** @description Populated when a new config has been received, but not registered as successfully applied to a project. */
+      /**
+       * @description Populated when a new config has been received, but not registered as successfully applied to a project.
+       * @example {
+       *       "dbAllowedCidrs": [
+       *         "203.0.113.0/24"
+       *       ],
+       *       "dbAllowedCidrsV6": [
+       *         "2001:db8::/32"
+       *       ]
+       *     }
+       */
       old_config?: {
         dbAllowedCidrs?: string[]
         dbAllowedCidrsV6?: string[]
       }
       /** @enum {string} */
       status: 'stored' | 'applied'
+      /** Format: date-time */
+      updated_at?: string
     }
-    OAuthRevokeTokenBodyDto: {
+    NetworkRestrictionsV2Response: {
+      /** Format: date-time */
+      applied_at?: string
+      /** @description At any given point in time, this is the config that the user has requested be applied to their project. The `status` field indicates if it has been applied to the project, or is pending. When an updated config is received, the applied config is moved to `old_config`. */
+      config: {
+        dbAllowedCidrs?: {
+          address: string
+          /** @enum {string} */
+          type: 'v4' | 'v6'
+        }[]
+      }
+      /** @enum {string} */
+      entitlement: 'disallowed' | 'allowed'
+      /** @description Populated when a new config has been received, but not registered as successfully applied to a project. */
+      old_config?: {
+        dbAllowedCidrs?: {
+          address: string
+          /** @enum {string} */
+          type: 'v4' | 'v6'
+        }[]
+      }
+      /** @enum {string} */
+      status: 'stored' | 'applied'
+      /** Format: date-time */
+      updated_at?: string
+    }
+    /** @example {
+     *       "client_id": "66666666-6666-4666-8666-666666666666",
+     *       "client_secret": "sb_secret_live_example_9f4d3a206b2e4a7e8c91",
+     *       "refresh_token": "oauth_refresh_9f4d3a206b2e4a7e8c91"
+     *     } */
+    OAuthRevokeTokenBody: {
       /** Format: uuid */
       client_id: string
       client_secret: string
       refresh_token: string
     }
+    /** @example {
+     *       "grant_type": "authorization_code",
+     *       "client_id": "66666666-6666-4666-8666-666666666666",
+     *       "client_secret": "sb_secret_live_example_9f4d3a206b2e4a7e8c91",
+     *       "code": "oauth_code_9f4d3a206b2e4a7e8c91",
+     *       "code_verifier": "qW0Z6d9pQnW0mL1dK1q9wFq6Yz2nV5rA8jT3mP7sH4c",
+     *       "redirect_uri": "https://app.acme.com/auth/callback",
+     *       "scope": "projects:read projects:write"
+     *     } */
     OAuthTokenBody: {
       /** Format: uuid */
       client_id?: string
@@ -1942,9 +3466,15 @@ export interface components {
       code?: string
       code_verifier?: string
       /** @enum {string} */
-      grant_type: 'authorization_code' | 'refresh_token'
+      grant_type?: 'authorization_code' | 'refresh_token'
       redirect_uri?: string
       refresh_token?: string
+      /**
+       * Format: uri
+       * @description Resource indicator for MCP (Model Context Protocol) clients
+       */
+      resource?: string
+      scope?: string
     }
     OAuthTokenResponse: {
       access_token: string
@@ -1953,20 +3483,143 @@ export interface components {
       /** @enum {string} */
       token_type: 'Bearer'
     }
+    OrganizationProjectClaimResponse: {
+      created_at: string
+      /** Format: uuid */
+      created_by: string
+      expires_at: string
+      preview: {
+        errors: {
+          key: string
+          message: string
+        }[]
+        info: {
+          key: string
+          message: string
+        }[]
+        members_exceeding_free_project_limit: {
+          limit: number
+          name: string
+        }[]
+        /** @enum {string} */
+        source_subscription_plan: 'free' | 'pro' | 'team' | 'enterprise' | 'platform'
+        /** @enum {string|null} */
+        target_subscription_plan: 'free' | 'pro' | 'team' | 'enterprise' | 'platform' | null
+        valid: boolean
+        warnings: {
+          key: string
+          message: string
+        }[]
+      }
+      project: {
+        name: string
+        ref: string
+      }
+    }
+    OrganizationProjectsResponse: {
+      pagination: {
+        /** @description Total number of projects. Use this to calculate the total number of pages. */
+        count: number
+        /** @description Maximum number of projects per page */
+        limit: number
+        /** @description Number of projects skipped in this response */
+        offset: number
+      }
+      projects: {
+        cloud_provider: string
+        databases: {
+          cloud_provider: string
+          disk_last_modified_at?: string
+          disk_throughput_mbps?: number
+          /** @enum {string} */
+          disk_type?: 'gp3' | 'io2'
+          disk_volume_size_gb?: number
+          identifier: string
+          /** @enum {string} */
+          infra_compute_size?:
+            | 'pico'
+            | 'nano'
+            | 'micro'
+            | 'small'
+            | 'medium'
+            | 'large'
+            | 'xlarge'
+            | '2xlarge'
+            | '4xlarge'
+            | '8xlarge'
+            | '12xlarge'
+            | '16xlarge'
+            | '24xlarge'
+            | '24xlarge_optimized_memory'
+            | '24xlarge_optimized_cpu'
+            | '24xlarge_high_memory'
+            | '48xlarge'
+            | '48xlarge_optimized_memory'
+            | '48xlarge_optimized_cpu'
+            | '48xlarge_high_memory'
+          region: string
+          /** @enum {string} */
+          status:
+            | 'ACTIVE_HEALTHY'
+            | 'ACTIVE_UNHEALTHY'
+            | 'COMING_UP'
+            | 'GOING_DOWN'
+            | 'INIT_FAILED'
+            | 'REMOVED'
+            | 'RESTORING'
+            | 'UNKNOWN'
+            | 'INIT_READ_REPLICA'
+            | 'INIT_READ_REPLICA_FAILED'
+            | 'RESTARTING'
+            | 'RESIZING'
+          /** @enum {string} */
+          type: 'PRIMARY' | 'READ_REPLICA'
+        }[]
+        inserted_at: string
+        is_branch: boolean
+        name: string
+        ref: string
+        region: string
+        /** @enum {string} */
+        status:
+          | 'INACTIVE'
+          | 'ACTIVE_HEALTHY'
+          | 'ACTIVE_UNHEALTHY'
+          | 'COMING_UP'
+          | 'UNKNOWN'
+          | 'GOING_DOWN'
+          | 'INIT_FAILED'
+          | 'REMOVED'
+          | 'RESTORING'
+          | 'UPGRADING'
+          | 'PAUSING'
+          | 'RESTORE_FAILED'
+          | 'RESTARTING'
+          | 'PAUSE_FAILED'
+          | 'RESIZING'
+      }[]
+    }
     OrganizationResponseV1: {
+      /**
+       * @deprecated
+       * @description Deprecated: Use `slug` instead.
+       */
       id: string
       name: string
-    }
-    OwnershipVerification: {
-      name: string
-      type: string
-      value: string
+      /**
+       * @description Organization slug
+       * @example tsrqponmlkjihgfedcba
+       */
+      slug: string
     }
     PgsodiumConfigResponse: {
       root_key: string
     }
     PostgresConfigResponse: {
+      /** @description Default unit: s */
+      checkpoint_timeout?: string
       effective_cache_size?: string
+      hot_standby_feedback?: boolean
       logical_decoding_work_mem?: string
       maintenance_work_mem?: string
       max_connections?: number
@@ -1984,10 +3637,12 @@ export interface components {
       /** @enum {string} */
       session_replication_role?: 'origin' | 'replica' | 'local'
       shared_buffers?: string
+      /** @description Default unit: ms */
       statement_timeout?: string
       track_activity_query_size?: string
       track_commit_timestamp?: boolean
       wal_keep_size?: string
+      /** @description Default unit: ms */
       wal_sender_timeout?: string
       work_mem?: string
     }
@@ -1999,12 +3654,12 @@ export interface components {
       jwt_secret?: string
       max_rows: number
     }
-    ProjectAvailableRestoreVersion: {
-      /** @enum {string} */
-      postgres_engine: '13' | '14' | '15' | '17' | '17-oriole'
-      /** @enum {string} */
-      release_channel: 'internal' | 'alpha' | 'beta' | 'ga' | 'withdrawn' | 'preview'
-      version: string
+    ProjectClaimTokenResponse: {
+      created_at: string
+      /** Format: uuid */
+      created_by: string
+      expires_at: string
+      token_alias: string
     }
     ProjectUpgradeEligibilityResponse: {
       current_app_version: string
@@ -2018,61 +3673,226 @@ export interface components {
         | 'preview'
       duration_estimate_hours: number
       eligible: boolean
-      extension_dependent_objects: string[]
       latest_app_version: string
       legacy_auth_custom_roles: string[]
-      potential_breaking_changes: string[]
+      /**
+       * @deprecated
+       * @description Use validation_errors instead.
+       */
+      objects_to_be_dropped: string[]
       target_upgrade_versions: {
         app_version: string
         /** @enum {string} */
-        postgres_version: '15' | '17-oriole'
+        postgres_version: '13' | '14' | '15' | '17' | '17-oriole'
         /** @enum {string} */
         release_channel: 'internal' | 'alpha' | 'beta' | 'ga' | 'withdrawn' | 'preview'
       }[]
+      /**
+       * @deprecated
+       * @description Use validation_errors instead.
+       */
+      unsupported_extensions: string[]
+      /**
+       * @deprecated
+       * @description Use validation_errors instead.
+       */
+      user_defined_objects_in_internal_schemas: string[]
+      validation_errors: (
+        | {
+            dependents: string[]
+            /** @enum {string} */
+            type: 'objects_depending_on_pg_cron'
+          }
+        | {
+            index_name: string
+            schema_name: string
+            table_name: string
+            /** @enum {string} */
+            type: 'indexes_referencing_ll_to_earth'
+          }
+        | {
+            function_name: string
+            lang_name: string
+            schema_name: string
+            /** @enum {string} */
+            type: 'function_using_obsolete_lang'
+          }
+        | {
+            extension_name: string
+            /** @enum {string} */
+            type: 'unsupported_extension'
+          }
+        | {
+            fdw_handler_name: string
+            fdw_name: string
+            /** @enum {string} */
+            type: 'unsupported_fdw_handler'
+          }
+        | {
+            schema_name: string
+            sequence_name: string
+            table_name: string
+            /** @enum {string} */
+            type: 'unlogged_table_with_persistent_sequence'
+          }
+        | {
+            obj_name: string
+            /** @enum {string} */
+            obj_type: 'table' | 'function'
+            schema_name: string
+            /** @enum {string} */
+            type: 'user_defined_objects_in_internal_schemas'
+          }
+        | {
+            slot_name: string
+            /** @enum {string} */
+            type: 'active_replication_slot'
+          }
+      )[]
     }
     ProjectUpgradeInitiateResponse: {
       tracking_id: string
-    }
-    Provider: {
-      created_at?: string
-      domains?: components['schemas']['Domain'][]
-      id: string
-      saml?: components['schemas']['SamlDescriptor']
-      updated_at?: string
     }
     ReadOnlyStatusResponse: {
       enabled: boolean
       override_active_until: string
       override_enabled: boolean
     }
-    RealtimeHealthResponse: {
-      connected_cluster: number
+    RealtimeConfigResponse: {
+      /** @description Sets connection pool size for Realtime Authorization */
+      connection_pool: number | null
+      /** @description Sets maximum number of bytes per second rate per channel limit */
+      max_bytes_per_second: number | null
+      /** @description Sets maximum number of channels per client rate limit */
+      max_channels_per_client: number | null
+      /** @description Sets maximum number of concurrent users rate limit */
+      max_concurrent_users: number | null
+      /** @description Sets maximum number of events per second rate per channel limit */
+      max_events_per_second: number | null
+      /** @description Sets maximum number of joins per second rate limit */
+      max_joins_per_second: number | null
+      /** @description Sets maximum number of payload size in KB rate limit */
+      max_payload_size_in_kb: number | null
+      /** @description Sets maximum number of presence events per second rate limit */
+      max_presence_events_per_second: number | null
+      /** @description Whether to enable presence */
+      presence_enabled: boolean
+      /** @description Whether to only allow private channels */
+      private_only: boolean | null
+      /** @description Disables the Realtime service for this project when true. Set to false to re-enable it. */
+      suspend: boolean | null
     }
-    /** @enum {string} */
-    ReleaseChannel: 'internal' | 'alpha' | 'beta' | 'ga' | 'withdrawn' | 'preview'
+    RegionsInfo: {
+      all: {
+        smartGroup: {
+          /** @enum {string} */
+          code: 'americas' | 'emea' | 'apac'
+          name: string
+          /** @enum {string} */
+          type: 'smartGroup'
+        }[]
+        specific: {
+          /** @enum {string} */
+          code:
+            | 'us-east-1'
+            | 'us-east-2'
+            | 'us-west-1'
+            | 'us-west-2'
+            | 'ap-southeast-1'
+            | 'ap-northeast-1'
+            | 'ap-northeast-2'
+            | 'ap-east-1'
+            | 'ap-southeast-2'
+            | 'eu-west-1'
+            | 'eu-west-2'
+            | 'eu-west-3'
+            | 'eu-north-1'
+            | 'eu-central-1'
+            | 'eu-central-2'
+            | 'ca-central-1'
+            | 'ap-south-1'
+            | 'sa-east-1'
+          name: string
+          /** @enum {string} */
+          provider: 'AWS' | 'FLY' | 'AWS_K8S' | 'AWS_NIMBUS'
+          /** @enum {string} */
+          status?: 'capacity' | 'other'
+          /** @enum {string} */
+          type: 'specific'
+        }[]
+      }
+      recommendations: {
+        smartGroup: {
+          /** @enum {string} */
+          code: 'americas' | 'emea' | 'apac'
+          name: string
+          /** @enum {string} */
+          type: 'smartGroup'
+        }
+        specific: {
+          /** @enum {string} */
+          code:
+            | 'us-east-1'
+            | 'us-east-2'
+            | 'us-west-1'
+            | 'us-west-2'
+            | 'ap-southeast-1'
+            | 'ap-northeast-1'
+            | 'ap-northeast-2'
+            | 'ap-east-1'
+            | 'ap-southeast-2'
+            | 'eu-west-1'
+            | 'eu-west-2'
+            | 'eu-west-3'
+            | 'eu-north-1'
+            | 'eu-central-1'
+            | 'eu-central-2'
+            | 'ca-central-1'
+            | 'ap-south-1'
+            | 'sa-east-1'
+          name: string
+          /** @enum {string} */
+          provider: 'AWS' | 'FLY' | 'AWS_K8S' | 'AWS_NIMBUS'
+          /** @enum {string} */
+          status?: 'capacity' | 'other'
+          /** @enum {string} */
+          type: 'specific'
+        }[]
+      }
+    }
+    /** @example {
+     *       "ipv4_addresses": [
+     *         "203.0.113.10"
+     *       ],
+     *       "requester_ip": false
+     *     } */
     RemoveNetworkBanRequest: {
+      identifier?: string
+      /** @description List of IP addresses to unban. */
       ipv4_addresses: string[]
+      /**
+       * @description Include requester's public IP in the list of addresses to unban.
+       * @default false
+       */
+      requester_ip?: boolean
     }
+    /** @example {
+     *       "database_identifier": "abcdefghijklmnopqrst-rr-us-west-1-abcde"
+     *     } */
     RemoveReadReplicaBody: {
       database_identifier: string
-    }
-    RestoreProjectBodyDto: Record<string, never>
-    SamlDescriptor: {
-      attribute_mapping?: components['schemas']['AttributeMapping']
-      entity_id: string
-      id: string
-      metadata_url?: string
-      metadata_xml?: string
     }
     SecretResponse: {
       name: string
       updated_at?: string
       value: string
     }
+    /** @example {
+     *       "read_replica_region": "us-west-1"
+     *     } */
     SetUpReadReplicaBody: {
       /**
        * @description Region you want your read replica to reside in
-       * @example us-east-1
        * @enum {string}
        */
       read_replica_region:
@@ -2123,54 +3943,71 @@ export interface components {
         updated_at: string
       }[]
     }
-    SnippetContent: {
-      favorite: boolean
-      schema_version: string
-      sql: string
-    }
     SnippetList: {
       cursor?: string
-      data: components['schemas']['SnippetMeta'][]
-    }
-    SnippetMeta: {
-      description: string | null
-      id: string
-      inserted_at: string
-      name: string
-      owner: components['schemas']['SnippetUser']
-      project: components['schemas']['SnippetProject']
-      /** @enum {string} */
-      type: 'sql'
-      updated_at: string
-      updated_by: components['schemas']['SnippetUser']
-      /** @enum {string} */
-      visibility: 'user' | 'project' | 'org' | 'public'
-    }
-    SnippetProject: {
-      /** Format: int64 */
-      id: number
-      name: string
+      data: {
+        description: string | null
+        favorite: boolean
+        id: string
+        inserted_at: string
+        name: string
+        owner: {
+          id: number
+          username: string
+        }
+        project: {
+          id: number
+          name: string
+        }
+        /** @enum {string} */
+        type: 'sql'
+        updated_at: string
+        updated_by: {
+          id: number
+          username: string
+        }
+        /** @enum {string} */
+        visibility: 'user' | 'project' | 'org' | 'public'
+      }[]
     }
     SnippetResponse: {
-      content: components['schemas']['SnippetContent']
+      content: {
+        /**
+         * @deprecated
+         * @description Deprecated: Rely on root-level favorite property instead.
+         */
+        favorite?: boolean
+        schema_version: string
+        sql: string
+      }
       description: string | null
+      favorite: boolean
       id: string
       inserted_at: string
       name: string
-      owner: components['schemas']['SnippetUser']
-      project: components['schemas']['SnippetProject']
+      owner: {
+        id: number
+        username: string
+      }
+      project: {
+        id: number
+        name: string
+      }
       /** @enum {string} */
       type: 'sql'
       updated_at: string
-      updated_by: components['schemas']['SnippetUser']
+      updated_by: {
+        id: number
+        username: string
+      }
       /** @enum {string} */
       visibility: 'user' | 'project' | 'org' | 'public'
     }
-    SnippetUser: {
-      /** Format: int64 */
-      id: number
-      username: string
-    }
+    /** @example {
+     *       "requestedConfig": {
+     *         "database": true
+     *       }
+     *     } */
     SslEnforcementRequest: {
       requestedConfig: {
         database: boolean
@@ -2182,35 +4019,46 @@ export interface components {
         database: boolean
       }
     }
-    SslValidation: {
-      status: string
-      validation_errors?: components['schemas']['ValidationError'][]
-      validation_records: components['schemas']['ValidationRecord'][]
-    }
     StorageConfigResponse: {
-      features: components['schemas']['StorageFeatures']
+      capabilities: {
+        iceberg_catalog: boolean
+        list_v2: boolean
+      }
+      databasePoolMode: string
+      external: {
+        /** @enum {string} */
+        upstreamTarget: 'main' | 'canary'
+      }
+      features: {
+        icebergCatalog: {
+          enabled: boolean
+          maxCatalogs: number
+          maxNamespaces: number
+          maxTables: number
+        }
+        imageTransformation: {
+          enabled: boolean
+        }
+        s3Protocol: {
+          enabled: boolean
+        }
+        vectorBuckets: {
+          enabled: boolean
+          maxBuckets: number
+          maxIndexes: number
+        }
+      }
       /** Format: int64 */
       fileSizeLimit: number
+      migrationVersion: string
     }
-    StorageFeatureImageTransformation: {
-      enabled: boolean
-    }
-    StorageFeatures: {
-      imageTransformation: components['schemas']['StorageFeatureImageTransformation']
-      s3Protocol: components['schemas']['StorageFeatureS3Protocol']
-    }
-    StorageFeatureS3Protocol: {
-      enabled: boolean
-    }
+    StreamableFile: Record<string, never>
     SubdomainAvailabilityResponse: {
       available: boolean
     }
     SupavisorConfigResponse: {
       connection_string: string
-      /**
-       * @deprecated
-       * @description Use connection_string instead
-       */
+      /** @description Use connection_string instead */
       connectionString: string
       /** @enum {string} */
       database_type: 'PRIMARY' | 'READ_REPLICA'
@@ -2226,205 +4074,300 @@ export interface components {
       pool_mode: 'transaction' | 'session'
     }
     ThirdPartyAuth: {
-      custom_jwks?: Record<string, never> | null
+      custom_jwks?: unknown
+      /** Format: uuid */
       id: string
       inserted_at: string
       jwks_url?: string | null
       oidc_issuer_url?: string | null
       resolved_at?: string | null
-      resolved_jwks?: Record<string, never> | null
+      resolved_jwks?: unknown
       type: string
       updated_at: string
     }
     TypescriptResponse: {
       types: string
     }
+    /** @example {
+     *       "name": "ci_secret_key_rotated",
+     *       "description": "Rotated after March release"
+     *     } */
     UpdateApiKeyBody: {
       description?: string | null
+      name?: string
       secret_jwt_template?: {
-        role: string
+        [key: string]: unknown
       } | null
     }
+    /** @example {
+     *       "site_url": "https://app.example.com",
+     *       "disable_signup": false,
+     *       "jwt_exp": 3600
+     *     } */
     UpdateAuthConfigBody: {
-      api_max_request_duration?: number
-      db_max_pool_size?: number
-      disable_signup?: boolean
-      external_anonymous_users_enabled?: boolean
-      external_apple_additional_client_ids?: string
-      external_apple_client_id?: string
-      external_apple_enabled?: boolean
-      external_apple_secret?: string
-      external_azure_client_id?: string
-      external_azure_enabled?: boolean
-      external_azure_secret?: string
-      external_azure_url?: string
-      external_bitbucket_client_id?: string
-      external_bitbucket_enabled?: boolean
-      external_bitbucket_secret?: string
-      external_discord_client_id?: string
-      external_discord_enabled?: boolean
-      external_discord_secret?: string
-      external_email_enabled?: boolean
-      external_facebook_client_id?: string
-      external_facebook_enabled?: boolean
-      external_facebook_secret?: string
-      external_figma_client_id?: string
-      external_figma_enabled?: boolean
-      external_figma_secret?: string
-      external_github_client_id?: string
-      external_github_enabled?: boolean
-      external_github_secret?: string
-      external_gitlab_client_id?: string
-      external_gitlab_enabled?: boolean
-      external_gitlab_secret?: string
-      external_gitlab_url?: string
-      external_google_additional_client_ids?: string
-      external_google_client_id?: string
-      external_google_enabled?: boolean
-      external_google_secret?: string
-      external_google_skip_nonce_check?: boolean
-      external_kakao_client_id?: string
-      external_kakao_enabled?: boolean
-      external_kakao_secret?: string
-      external_keycloak_client_id?: string
-      external_keycloak_enabled?: boolean
-      external_keycloak_secret?: string
-      external_keycloak_url?: string
-      external_linkedin_oidc_client_id?: string
-      external_linkedin_oidc_enabled?: boolean
-      external_linkedin_oidc_secret?: string
-      external_notion_client_id?: string
-      external_notion_enabled?: boolean
-      external_notion_secret?: string
-      external_phone_enabled?: boolean
-      external_slack_client_id?: string
-      external_slack_enabled?: boolean
-      external_slack_oidc_client_id?: string
-      external_slack_oidc_enabled?: boolean
-      external_slack_oidc_secret?: string
-      external_slack_secret?: string
-      external_spotify_client_id?: string
-      external_spotify_enabled?: boolean
-      external_spotify_secret?: string
-      external_twitch_client_id?: string
-      external_twitch_enabled?: boolean
-      external_twitch_secret?: string
-      external_twitter_client_id?: string
-      external_twitter_enabled?: boolean
-      external_twitter_secret?: string
-      external_workos_client_id?: string
-      external_workos_enabled?: boolean
-      external_workos_secret?: string
-      external_workos_url?: string
-      external_zoom_client_id?: string
-      external_zoom_enabled?: boolean
-      external_zoom_secret?: string
-      hook_custom_access_token_enabled?: boolean
-      hook_custom_access_token_secrets?: string
-      hook_custom_access_token_uri?: string
-      hook_mfa_verification_attempt_enabled?: boolean
-      hook_mfa_verification_attempt_secrets?: string
-      hook_mfa_verification_attempt_uri?: string
-      hook_password_verification_attempt_enabled?: boolean
-      hook_password_verification_attempt_secrets?: string
-      hook_password_verification_attempt_uri?: string
-      hook_send_email_enabled?: boolean
-      hook_send_email_secrets?: string
-      hook_send_email_uri?: string
-      hook_send_sms_enabled?: boolean
-      hook_send_sms_secrets?: string
-      hook_send_sms_uri?: string
-      jwt_exp?: number
-      mailer_allow_unverified_email_sign_ins?: boolean
-      mailer_autoconfirm?: boolean
+      api_max_request_duration?: number | null
+      custom_oauth_enabled?: boolean
+      db_max_pool_size?: number | null
+      /** @enum {string|null} */
+      db_max_pool_size_unit?: 'connections' | 'percent' | null
+      disable_signup?: boolean | null
+      external_anonymous_users_enabled?: boolean | null
+      external_apple_additional_client_ids?: string | null
+      external_apple_client_id?: string | null
+      external_apple_email_optional?: boolean | null
+      external_apple_enabled?: boolean | null
+      external_apple_secret?: string | null
+      external_azure_client_id?: string | null
+      external_azure_email_optional?: boolean | null
+      external_azure_enabled?: boolean | null
+      external_azure_secret?: string | null
+      external_azure_url?: string | null
+      external_bitbucket_client_id?: string | null
+      external_bitbucket_email_optional?: boolean | null
+      external_bitbucket_enabled?: boolean | null
+      external_bitbucket_secret?: string | null
+      external_discord_client_id?: string | null
+      external_discord_email_optional?: boolean | null
+      external_discord_enabled?: boolean | null
+      external_discord_secret?: string | null
+      external_email_enabled?: boolean | null
+      external_facebook_client_id?: string | null
+      external_facebook_email_optional?: boolean | null
+      external_facebook_enabled?: boolean | null
+      external_facebook_secret?: string | null
+      external_figma_client_id?: string | null
+      external_figma_email_optional?: boolean | null
+      external_figma_enabled?: boolean | null
+      external_figma_secret?: string | null
+      external_github_client_id?: string | null
+      external_github_email_optional?: boolean | null
+      external_github_enabled?: boolean | null
+      external_github_secret?: string | null
+      external_gitlab_client_id?: string | null
+      external_gitlab_email_optional?: boolean | null
+      external_gitlab_enabled?: boolean | null
+      external_gitlab_secret?: string | null
+      external_gitlab_url?: string | null
+      external_google_additional_client_ids?: string | null
+      external_google_client_id?: string | null
+      external_google_email_optional?: boolean | null
+      external_google_enabled?: boolean | null
+      external_google_secret?: string | null
+      external_google_skip_nonce_check?: boolean | null
+      external_kakao_client_id?: string | null
+      external_kakao_email_optional?: boolean | null
+      external_kakao_enabled?: boolean | null
+      external_kakao_secret?: string | null
+      external_keycloak_client_id?: string | null
+      external_keycloak_email_optional?: boolean | null
+      external_keycloak_enabled?: boolean | null
+      external_keycloak_secret?: string | null
+      external_keycloak_url?: string | null
+      external_linkedin_oidc_client_id?: string | null
+      external_linkedin_oidc_email_optional?: boolean | null
+      external_linkedin_oidc_enabled?: boolean | null
+      external_linkedin_oidc_secret?: string | null
+      external_notion_client_id?: string | null
+      external_notion_email_optional?: boolean | null
+      external_notion_enabled?: boolean | null
+      external_notion_secret?: string | null
+      external_phone_enabled?: boolean | null
+      external_slack_client_id?: string | null
+      external_slack_email_optional?: boolean | null
+      external_slack_enabled?: boolean | null
+      external_slack_oidc_client_id?: string | null
+      external_slack_oidc_email_optional?: boolean | null
+      external_slack_oidc_enabled?: boolean | null
+      external_slack_oidc_secret?: string | null
+      external_slack_secret?: string | null
+      external_spotify_client_id?: string | null
+      external_spotify_email_optional?: boolean | null
+      external_spotify_enabled?: boolean | null
+      external_spotify_secret?: string | null
+      external_twitch_client_id?: string | null
+      external_twitch_email_optional?: boolean | null
+      external_twitch_enabled?: boolean | null
+      external_twitch_secret?: string | null
+      external_twitter_client_id?: string | null
+      external_twitter_email_optional?: boolean | null
+      external_twitter_enabled?: boolean | null
+      external_twitter_secret?: string | null
+      external_web3_ethereum_enabled?: boolean | null
+      external_web3_solana_enabled?: boolean | null
+      external_workos_client_id?: string | null
+      external_workos_enabled?: boolean | null
+      external_workos_secret?: string | null
+      external_workos_url?: string | null
+      external_x_client_id?: string | null
+      external_x_email_optional?: boolean | null
+      external_x_enabled?: boolean | null
+      external_x_secret?: string | null
+      external_zoom_client_id?: string | null
+      external_zoom_email_optional?: boolean | null
+      external_zoom_enabled?: boolean | null
+      external_zoom_secret?: string | null
+      hook_after_user_created_enabled?: boolean | null
+      hook_after_user_created_secrets?: string | null
+      hook_after_user_created_uri?: string | null
+      hook_before_user_created_enabled?: boolean | null
+      hook_before_user_created_secrets?: string | null
+      hook_before_user_created_uri?: string | null
+      hook_custom_access_token_enabled?: boolean | null
+      hook_custom_access_token_secrets?: string | null
+      hook_custom_access_token_uri?: string | null
+      hook_mfa_verification_attempt_enabled?: boolean | null
+      hook_mfa_verification_attempt_secrets?: string | null
+      hook_mfa_verification_attempt_uri?: string | null
+      hook_password_verification_attempt_enabled?: boolean | null
+      hook_password_verification_attempt_secrets?: string | null
+      hook_password_verification_attempt_uri?: string | null
+      hook_send_email_enabled?: boolean | null
+      hook_send_email_secrets?: string | null
+      hook_send_email_uri?: string | null
+      hook_send_sms_enabled?: boolean | null
+      hook_send_sms_secrets?: string | null
+      hook_send_sms_uri?: string | null
+      jwt_exp?: number | null
+      mailer_allow_unverified_email_sign_ins?: boolean | null
+      mailer_autoconfirm?: boolean | null
+      mailer_notifications_email_changed_enabled?: boolean | null
+      mailer_notifications_identity_linked_enabled?: boolean | null
+      mailer_notifications_identity_unlinked_enabled?: boolean | null
+      mailer_notifications_mfa_factor_enrolled_enabled?: boolean | null
+      mailer_notifications_mfa_factor_unenrolled_enabled?: boolean | null
+      mailer_notifications_password_changed_enabled?: boolean | null
+      mailer_notifications_phone_changed_enabled?: boolean | null
       mailer_otp_exp?: number
-      mailer_otp_length?: number
-      mailer_secure_email_change_enabled?: boolean
-      mailer_subjects_confirmation?: string
-      mailer_subjects_email_change?: string
-      mailer_subjects_invite?: string
-      mailer_subjects_magic_link?: string
-      mailer_subjects_reauthentication?: string
-      mailer_subjects_recovery?: string
-      mailer_templates_confirmation_content?: string
-      mailer_templates_email_change_content?: string
-      mailer_templates_invite_content?: string
-      mailer_templates_magic_link_content?: string
-      mailer_templates_reauthentication_content?: string
-      mailer_templates_recovery_content?: string
-      mfa_max_enrolled_factors?: number
-      mfa_phone_enroll_enabled?: boolean
-      mfa_phone_max_frequency?: number
-      mfa_phone_otp_length?: number
-      mfa_phone_template?: string
-      mfa_phone_verify_enabled?: boolean
-      mfa_totp_enroll_enabled?: boolean
-      mfa_totp_verify_enabled?: boolean
-      mfa_web_authn_enroll_enabled?: boolean
-      mfa_web_authn_verify_enabled?: boolean
-      password_hibp_enabled?: boolean
-      password_min_length?: number
-      /** @enum {string} */
+      mailer_otp_length?: number | null
+      mailer_secure_email_change_enabled?: boolean | null
+      mailer_subjects_confirmation?: string | null
+      mailer_subjects_email_change?: string | null
+      mailer_subjects_email_changed_notification?: string | null
+      mailer_subjects_identity_linked_notification?: string | null
+      mailer_subjects_identity_unlinked_notification?: string | null
+      mailer_subjects_invite?: string | null
+      mailer_subjects_magic_link?: string | null
+      mailer_subjects_mfa_factor_enrolled_notification?: string | null
+      mailer_subjects_mfa_factor_unenrolled_notification?: string | null
+      mailer_subjects_password_changed_notification?: string | null
+      mailer_subjects_phone_changed_notification?: string | null
+      mailer_subjects_reauthentication?: string | null
+      mailer_subjects_recovery?: string | null
+      mailer_templates_confirmation_content?: string | null
+      mailer_templates_email_change_content?: string | null
+      mailer_templates_email_changed_notification_content?: string | null
+      mailer_templates_identity_linked_notification_content?: string | null
+      mailer_templates_identity_unlinked_notification_content?: string | null
+      mailer_templates_invite_content?: string | null
+      mailer_templates_magic_link_content?: string | null
+      mailer_templates_mfa_factor_enrolled_notification_content?: string | null
+      mailer_templates_mfa_factor_unenrolled_notification_content?: string | null
+      mailer_templates_password_changed_notification_content?: string | null
+      mailer_templates_phone_changed_notification_content?: string | null
+      mailer_templates_reauthentication_content?: string | null
+      mailer_templates_recovery_content?: string | null
+      mfa_max_enrolled_factors?: number | null
+      mfa_phone_enroll_enabled?: boolean | null
+      mfa_phone_max_frequency?: number | null
+      mfa_phone_otp_length?: number | null
+      mfa_phone_template?: string | null
+      mfa_phone_verify_enabled?: boolean | null
+      mfa_totp_enroll_enabled?: boolean | null
+      mfa_totp_verify_enabled?: boolean | null
+      mfa_web_authn_enroll_enabled?: boolean | null
+      mfa_web_authn_verify_enabled?: boolean | null
+      nimbus_oauth_client_id?: string | null
+      nimbus_oauth_client_secret?: string | null
+      oauth_server_allow_dynamic_registration?: boolean | null
+      oauth_server_authorization_path?: string | null
+      oauth_server_enabled?: boolean | null
+      passkey_enabled?: boolean
+      password_hibp_enabled?: boolean | null
+      password_min_length?: number | null
+      /** @enum {string|null} */
       password_required_characters?:
         | 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ:0123456789'
         | 'abcdefghijklmnopqrstuvwxyz:ABCDEFGHIJKLMNOPQRSTUVWXYZ:0123456789'
         | 'abcdefghijklmnopqrstuvwxyz:ABCDEFGHIJKLMNOPQRSTUVWXYZ:0123456789:!@#$%^&*()_+-=[]{};\'\\\\:"|<>?,./`~'
         | ''
-      rate_limit_anonymous_users?: number
-      rate_limit_email_sent?: number
-      rate_limit_otp?: number
-      rate_limit_sms_sent?: number
-      rate_limit_token_refresh?: number
-      rate_limit_verify?: number
-      refresh_token_rotation_enabled?: boolean
-      saml_enabled?: boolean
-      saml_external_url?: string
-      security_captcha_enabled?: boolean
-      security_captcha_provider?: string
-      security_captcha_secret?: string
-      security_manual_linking_enabled?: boolean
-      security_refresh_token_reuse_interval?: number
-      security_update_password_require_reauthentication?: boolean
-      sessions_inactivity_timeout?: number
-      sessions_single_per_user?: boolean
-      sessions_tags?: string
-      sessions_timebox?: number
-      site_url?: string
-      sms_autoconfirm?: boolean
-      sms_max_frequency?: number
-      sms_messagebird_access_key?: string
-      sms_messagebird_originator?: string
-      sms_otp_exp?: number
+        | null
+      rate_limit_anonymous_users?: number | null
+      rate_limit_email_sent?: number | null
+      rate_limit_otp?: number | null
+      rate_limit_sms_sent?: number | null
+      rate_limit_token_refresh?: number | null
+      rate_limit_verify?: number | null
+      rate_limit_web3?: number | null
+      refresh_token_rotation_enabled?: boolean | null
+      saml_enabled?: boolean | null
+      saml_external_url?: string | null
+      security_captcha_enabled?: boolean | null
+      /** @enum {string|null} */
+      security_captcha_provider?: 'turnstile' | 'hcaptcha' | null
+      security_captcha_secret?: string | null
+      security_manual_linking_enabled?: boolean | null
+      security_refresh_token_reuse_interval?: number | null
+      security_sb_forwarded_for_enabled?: boolean | null
+      security_update_password_require_reauthentication?: boolean | null
+      sessions_inactivity_timeout?: number | null
+      sessions_single_per_user?: boolean | null
+      sessions_tags?: string | null
+      sessions_timebox?: number | null
+      site_url?: string | null
+      sms_autoconfirm?: boolean | null
+      sms_max_frequency?: number | null
+      sms_messagebird_access_key?: string | null
+      sms_messagebird_originator?: string | null
+      sms_otp_exp?: number | null
       sms_otp_length?: number
-      sms_provider?: string
-      sms_template?: string
-      sms_test_otp?: string
-      sms_test_otp_valid_until?: string
-      sms_textlocal_api_key?: string
-      sms_textlocal_sender?: string
-      sms_twilio_account_sid?: string
-      sms_twilio_auth_token?: string
-      sms_twilio_content_sid?: string
-      sms_twilio_message_service_sid?: string
-      sms_twilio_verify_account_sid?: string
-      sms_twilio_verify_auth_token?: string
-      sms_twilio_verify_message_service_sid?: string
-      sms_vonage_api_key?: string
-      sms_vonage_api_secret?: string
-      sms_vonage_from?: string
-      smtp_admin_email?: string
-      smtp_host?: string
-      smtp_max_frequency?: number
-      smtp_pass?: string
-      smtp_port?: string
-      smtp_sender_name?: string
-      smtp_user?: string
-      uri_allow_list?: string
+      /** @enum {string|null} */
+      sms_provider?: 'messagebird' | 'textlocal' | 'twilio' | 'twilio_verify' | 'vonage' | null
+      sms_template?: string | null
+      sms_test_otp?: string | null
+      /** Format: date-time */
+      sms_test_otp_valid_until?: string | null
+      sms_textlocal_api_key?: string | null
+      sms_textlocal_sender?: string | null
+      sms_twilio_account_sid?: string | null
+      sms_twilio_auth_token?: string | null
+      sms_twilio_content_sid?: string | null
+      sms_twilio_message_service_sid?: string | null
+      sms_twilio_verify_account_sid?: string | null
+      sms_twilio_verify_auth_token?: string | null
+      sms_twilio_verify_message_service_sid?: string | null
+      sms_vonage_api_key?: string | null
+      sms_vonage_api_secret?: string | null
+      sms_vonage_from?: string | null
+      /** Format: email */
+      smtp_admin_email?: string | null
+      smtp_host?: string | null
+      smtp_max_frequency?: number | null
+      smtp_pass?: string | null
+      smtp_port?: string | null
+      smtp_sender_name?: string | null
+      smtp_user?: string | null
+      uri_allow_list?: string | null
+      webauthn_rp_display_name?: string | null
+      webauthn_rp_id?: string | null
+      webauthn_rp_origins?: string | null
     }
+    /** @example {
+     *       "branch_name": "preview-login-page",
+     *       "git_branch": "feature/login-page",
+     *       "persistent": true,
+     *       "request_review": true,
+     *       "notify_url": "https://example.com/webhooks/branches"
+     *     } */
     UpdateBranchBody: {
       branch_name?: string
       git_branch?: string
+      /**
+       * Format: uri
+       * @description HTTP endpoint to receive branch status updates.
+       */
+      notify_url?: string
       persistent?: boolean
+      request_review?: boolean
       /**
        * @deprecated
        * @description This field is deprecated and will be ignored. Use v1-reset-a-branch endpoint directly instead.
@@ -2439,12 +4382,41 @@ export interface components {
         | 'FUNCTIONS_DEPLOYED'
         | 'FUNCTIONS_FAILED'
     }
+    /** @example {
+     *       "custom_hostname": "docs.example.com"
+     *     } */
     UpdateCustomHostnameBody: {
       custom_hostname: string
     }
     UpdateCustomHostnameResponse: {
       custom_hostname: string
-      data: components['schemas']['CfResponse']
+      data: {
+        errors: unknown[]
+        messages: unknown[]
+        result: {
+          custom_origin_server: string
+          hostname: string
+          id: string
+          ownership_verification: {
+            name: string
+            type: string
+            value: string
+          }
+          ssl: {
+            status: string
+            validation_errors?: {
+              message: string
+            }[]
+            validation_records: {
+              txt_name: string
+              txt_value: string
+            }[]
+          }
+          status: string
+          verification_errors?: string[]
+        }
+        success: boolean
+      }
       /** @enum {string} */
       status:
         | '1_not_started'
@@ -2453,11 +4425,57 @@ export interface components {
         | '4_origin_setup_completed'
         | '5_services_reconfigured'
     }
+    /** @example {
+     *       "user_id": "55555555-5555-4555-8555-555555555555",
+     *       "roles": [
+     *         {
+     *           "role": "postgres",
+     *           "expires_at": 1740787200,
+     *           "allowed_networks": {
+     *             "allowed_cidrs": [
+     *               {
+     *                 "cidr": "203.0.113.0/24"
+     *               }
+     *             ]
+     *           },
+     *           "branches_only": false
+     *         }
+     *       ]
+     *     } */
+    UpdateJitAccessBody: {
+      roles: {
+        allowed_networks?: {
+          allowed_cidrs?: {
+            cidr: string
+          }[]
+          allowed_cidrs_v6?: {
+            cidr: string
+          }[]
+        }
+        branches_only?: boolean
+        expires_at?: number
+        role: string
+      }[]
+      /** Format: uuid */
+      user_id: string
+    }
+    /** @example {
+     *       "root_key": "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="
+     *     } */
     UpdatePgsodiumConfigBody: {
       root_key: string
     }
+    /** @example {
+     *       "max_connections": 120,
+     *       "shared_buffers": "256MB",
+     *       "work_mem": "4MB",
+     *       "statement_timeout": "60000ms"
+     *     } */
     UpdatePostgresConfigBody: {
+      /** @description Default unit: s */
+      checkpoint_timeout?: string
       effective_cache_size?: string
+      hot_standby_feedback?: boolean
       logical_decoding_work_mem?: string
       maintenance_work_mem?: string
       max_connections?: number
@@ -2476,39 +4494,180 @@ export interface components {
       /** @enum {string} */
       session_replication_role?: 'origin' | 'replica' | 'local'
       shared_buffers?: string
+      /** @description Default unit: ms */
       statement_timeout?: string
       track_activity_query_size?: string
       track_commit_timestamp?: boolean
       wal_keep_size?: string
+      /** @description Default unit: ms */
       wal_sender_timeout?: string
       work_mem?: string
     }
+    /** @example {
+     *       "metadata_url": "https://sso.acme.com/metadata.xml",
+     *       "domains": [
+     *         "acme.com",
+     *         "contractors.acme.com"
+     *       ]
+     *     } */
     UpdateProviderBody: {
-      attribute_mapping?: components['schemas']['AttributeMapping']
+      attribute_mapping?: {
+        keys: {
+          [key: string]: {
+            array?: boolean
+            default?: Record<string, never> | number | string | boolean
+            name?: string
+            names?: string[]
+          }
+        }
+      }
       domains?: string[]
       metadata_url?: string
       metadata_xml?: string
+      /** @enum {string} */
+      name_id_format?:
+        | 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified'
+        | 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient'
+        | 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress'
+        | 'urn:oasis:names:tc:SAML:2.0:nameid-format:persistent'
     }
     UpdateProviderResponse: {
       created_at?: string
-      domains?: components['schemas']['Domain'][]
+      domains?: {
+        created_at?: string
+        domain?: string
+        id: string
+        updated_at?: string
+      }[]
       id: string
-      saml?: components['schemas']['SamlDescriptor']
+      saml?: {
+        attribute_mapping?: {
+          keys: {
+            [key: string]: {
+              array?: boolean
+              default?: Record<string, never> | number | string | boolean
+              name?: string
+              names?: string[]
+            }
+          }
+        }
+        entity_id: string
+        id: string
+        metadata_url?: string
+        metadata_xml?: string
+        /** @enum {string} */
+        name_id_format?:
+          | 'urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified'
+          | 'urn:oasis:names:tc:SAML:2.0:nameid-format:transient'
+          | 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress'
+          | 'urn:oasis:names:tc:SAML:2.0:nameid-format:persistent'
+      }
       updated_at?: string
     }
+    /** @example {
+     *       "private_only": false,
+     *       "max_concurrent_users": 1000,
+     *       "max_channels_per_client": 100
+     *     } */
+    UpdateRealtimeConfigBody: {
+      /** @description Sets connection pool size for Realtime Authorization */
+      connection_pool?: number
+      /** @description Sets maximum number of bytes per second rate per channel limit */
+      max_bytes_per_second?: number
+      /** @description Sets maximum number of channels per client rate limit */
+      max_channels_per_client?: number
+      /** @description Sets maximum number of concurrent users rate limit */
+      max_concurrent_users?: number
+      /** @description Sets maximum number of events per second rate per channel limit */
+      max_events_per_second?: number
+      /** @description Sets maximum number of joins per second rate limit */
+      max_joins_per_second?: number
+      /** @description Sets maximum number of payload size in KB rate limit */
+      max_payload_size_in_kb?: number
+      /** @description Sets maximum number of presence events per second rate limit */
+      max_presence_events_per_second?: number
+      /** @description Whether to enable presence */
+      presence_enabled?: boolean
+      /** @description Whether to only allow private channels */
+      private_only?: boolean
+      /** @description Disables the Realtime service for this project when true. Set to false to re-enable it. */
+      suspend?: boolean
+    }
+    /** @example {
+     *       "clone": "RUNNING",
+     *       "configure": "RUNNING",
+     *       "migrate": "RUNNING",
+     *       "deploy": "CREATED"
+     *     } */
+    UpdateRunStatusBody: {
+      /** @enum {string} */
+      clone?: 'CREATED' | 'DEAD' | 'EXITED' | 'PAUSED' | 'REMOVING' | 'RESTARTING' | 'RUNNING'
+      /** @enum {string} */
+      configure?: 'CREATED' | 'DEAD' | 'EXITED' | 'PAUSED' | 'REMOVING' | 'RESTARTING' | 'RUNNING'
+      /** @enum {string} */
+      deploy?: 'CREATED' | 'DEAD' | 'EXITED' | 'PAUSED' | 'REMOVING' | 'RESTARTING' | 'RUNNING'
+      /** @enum {string} */
+      health?: 'CREATED' | 'DEAD' | 'EXITED' | 'PAUSED' | 'REMOVING' | 'RESTARTING' | 'RUNNING'
+      /** @enum {string} */
+      migrate?: 'CREATED' | 'DEAD' | 'EXITED' | 'PAUSED' | 'REMOVING' | 'RESTARTING' | 'RUNNING'
+      /** @enum {string} */
+      pull?: 'CREATED' | 'DEAD' | 'EXITED' | 'PAUSED' | 'REMOVING' | 'RESTARTING' | 'RUNNING'
+      /** @enum {string} */
+      seed?: 'CREATED' | 'DEAD' | 'EXITED' | 'PAUSED' | 'REMOVING' | 'RESTARTING' | 'RUNNING'
+    }
+    UpdateRunStatusResponse: {
+      /** @enum {string} */
+      message: 'ok'
+    }
+    /** @example {
+     *       "status": "standby"
+     *     } */
     UpdateSigningKeyBody: {
       /** @enum {string} */
       status: 'in_use' | 'previously_used' | 'revoked' | 'standby'
     }
+    /** @example {
+     *       "fileSizeLimit": 10485760,
+     *       "features": {
+     *         "imageTransformation": {
+     *           "enabled": true
+     *         }
+     *       }
+     *     } */
     UpdateStorageConfigBody: {
-      features?: components['schemas']['StorageFeatures']
+      external?: {
+        /** @enum {string} */
+        upstreamTarget: 'main' | 'canary'
+      }
+      features?: {
+        icebergCatalog?: {
+          enabled: boolean
+          maxCatalogs: number
+          maxNamespaces: number
+          maxTables: number
+        }
+        imageTransformation?: {
+          enabled: boolean
+        }
+        s3Protocol?: {
+          enabled: boolean
+        }
+        vectorBuckets?: {
+          enabled: boolean
+          maxBuckets: number
+          maxIndexes: number
+        }
+      }
       /** Format: int64 */
       fileSizeLimit?: number
     }
+    /** @example {
+     *       "default_pool_size": 25,
+     *       "pool_mode": "transaction"
+     *     } */
     UpdateSupavisorConfigBody: {
       default_pool_size?: number | null
       /**
-       * @deprecated
        * @description Dedicated pooler mode for the project
        * @enum {string}
        */
@@ -2518,52 +4677,68 @@ export interface components {
       default_pool_size: number | null
       pool_mode: string
     }
+    /** @example {
+     *       "target_version": "17",
+     *       "release_channel": "ga"
+     *     } */
     UpgradeDatabaseBody: {
       /** @enum {string} */
       release_channel?: 'internal' | 'alpha' | 'beta' | 'ga' | 'withdrawn' | 'preview'
       target_version: string
     }
-    V1AnalyticsResponse: {
-      error?:
-        | {
-            code?: number
-            errors?: {
-              domain?: string
-              location?: string
-              locationType?: string
-              message?: string
-              reason?: string
-            }[]
-            message?: string
-            status?: string
-          }
-        | string
-      result?: Record<string, never>[]
-    }
-    V1Backup: {
-      inserted_at: string
-      is_physical_backup: boolean
-      /** @enum {string} */
-      status: 'COMPLETED' | 'FAILED' | 'PENDING' | 'REMOVED' | 'ARCHIVED' | 'CANCELLED'
-    }
     V1BackupsResponse: {
-      backups: components['schemas']['V1Backup'][]
-      physical_backup_data: components['schemas']['V1PhysicalBackup']
+      backups: {
+        id: number
+        inserted_at: string
+        is_physical_backup: boolean
+        /** @enum {string} */
+        status: 'COMPLETED' | 'FAILED' | 'PENDING' | 'REMOVED' | 'ARCHIVED' | 'CANCELLED'
+      }[]
+      physical_backup_data: {
+        earliest_physical_backup_date_unix?: number
+        latest_physical_backup_date_unix?: number
+      }
       pitr_enabled: boolean
       region: string
       walg_enabled: boolean
     }
+    /** @example {
+     *       "slug": "hello-world",
+     *       "name": "Hello World",
+     *       "body": "Deno.serve(() => new Response('Hello, world!'))",
+     *       "verify_jwt": true
+     *     } */
     V1CreateFunctionBody: {
       body: string
       name: string
       slug: string
       verify_jwt?: boolean
     }
-    V1CreateProjectBodyDto: {
+    /** @example {
+     *       "query": "create table public.widgets(id bigint primary key);",
+     *       "name": "create_widgets_table",
+     *       "rollback": "drop table if exists public.widgets;"
+     *     } */
+    V1CreateMigrationBody: {
+      name?: string
+      query: string
+      rollback?: string
+    }
+    /** @example {
+     *       "db_pass": "correct-horse-battery-staple",
+     *       "name": "acme-prod",
+     *       "organization_slug": "tsrqponmlkjihgfedcba",
+     *       "region": "us-east-1"
+     *     } */
+    V1CreateProjectBody: {
       /** @description Database password */
       db_pass: string
-      /** @enum {string} */
+      /**
+       * @description Desired instance size. Omit this field to always default to the smallest possible size.
+       * @enum {string}
+       */
       desired_instance_size?:
+        | 'nano'
         | 'micro'
         | 'small'
         | 'medium'
@@ -2574,6 +4749,14 @@ export interface components {
         | '8xlarge'
         | '12xlarge'
         | '16xlarge'
+        | '24xlarge'
+        | '24xlarge_optimized_memory'
+        | '24xlarge_optimized_cpu'
+        | '24xlarge_high_memory'
+        | '48xlarge'
+        | '48xlarge_optimized_memory'
+        | '48xlarge_optimized_cpu'
+        | '48xlarge_high_memory'
       /**
        * @deprecated
        * @description This field is deprecated and is ignored in this request
@@ -2581,8 +4764,16 @@ export interface components {
       kps_enabled?: boolean
       /** @description Name of your project */
       name: string
-      /** @description Slug of your organization */
-      organization_id: string
+      /**
+       * @deprecated
+       * @description Deprecated: Use `organization_slug` instead.
+       */
+      organization_id?: string
+      /**
+       * @description Organization slug
+       * @example tsrqponmlkjihgfedcba
+       */
+      organization_slug: string
       /**
        * @deprecated
        * @description Subscription Plan is now set on organization level and is ignored in this request
@@ -2590,10 +4781,11 @@ export interface components {
        */
       plan?: 'free' | 'pro'
       /**
-       * @description Region you want your server to reside in
+       * @deprecated
+       * @description Region you want your server to reside in. Use region_selection instead.
        * @enum {string}
        */
-      region:
+      region?:
         | 'us-east-1'
         | 'us-east-2'
         | 'us-west-1'
@@ -2612,23 +4804,190 @@ export interface components {
         | 'ca-central-1'
         | 'ap-south-1'
         | 'sa-east-1'
+      /** @description Region selection. Only one of region or region_selection can be specified. */
+      region_selection?:
+        | {
+            /**
+             * @description Specific region code. The codes supported are not a stable API, and should be retrieved from the /available-regions endpoint.
+             * @enum {string}
+             */
+            code:
+              | 'us-east-1'
+              | 'us-east-2'
+              | 'us-west-1'
+              | 'us-west-2'
+              | 'ap-east-1'
+              | 'ap-southeast-1'
+              | 'ap-northeast-1'
+              | 'ap-northeast-2'
+              | 'ap-southeast-2'
+              | 'eu-west-1'
+              | 'eu-west-2'
+              | 'eu-west-3'
+              | 'eu-north-1'
+              | 'eu-central-1'
+              | 'eu-central-2'
+              | 'ca-central-1'
+              | 'ap-south-1'
+              | 'sa-east-1'
+            /** @enum {string} */
+            type: 'specific'
+          }
+        | {
+            /**
+             * @description The Smart Region Group's code. The codes supported are not a stable API, and should be retrieved from the /available-regions endpoint.
+             * @enum {string}
+             */
+            code: 'americas' | 'emea' | 'apac'
+            /** @enum {string} */
+            type: 'smartGroup'
+          }
       /**
        * Format: uri
        * @description Template URL used to create the project from the CLI.
-       * @example https://github.com/supabase/supabase/tree/master/examples/slack-clone/nextjs-slack-clone
        */
       template_url?: string
     }
-    V1DatabaseResponse: {
-      /** @description Database host */
-      host: string
-      /** @description Database engine */
-      postgres_engine: string
-      /** @description Release channel */
-      release_channel: string
-      /** @description Database version */
+    V1GetMigrationResponse: {
+      created_by?: string
+      idempotency_key?: string
+      name?: string
+      rollback?: string[]
+      statements?: string[]
       version: string
     }
+    V1GetUsageApiCountResponse: {
+      error?:
+        | string
+        | {
+            code: number
+            errors: {
+              domain: string
+              location: string
+              locationType: string
+              message: string
+              reason: string
+            }[]
+            message: string
+            status: string
+          }
+      result?: {
+        /** Format: date-time */
+        timestamp: string
+        total_auth_requests: number
+        total_realtime_requests: number
+        total_rest_requests: number
+        total_storage_requests: number
+      }[]
+    }
+    V1GetUsageApiRequestsCountResponse: {
+      error?:
+        | string
+        | {
+            code: number
+            errors: {
+              domain: string
+              location: string
+              locationType: string
+              message: string
+              reason: string
+            }[]
+            message: string
+            status: string
+          }
+      result?: {
+        count: number
+      }[]
+    }
+    V1ListEntitlementsResponse: {
+      entitlements: {
+        config:
+          | {
+              enabled: boolean
+            }
+          | {
+              enabled: boolean
+              unit: string
+              unlimited: boolean
+              value: number
+            }
+          | {
+              enabled: boolean
+              set: string[]
+            }
+        feature: {
+          /** @enum {string} */
+          key:
+            | 'instances.compute_update_available_sizes'
+            | 'instances.read_replicas'
+            | 'instances.disk_modifications'
+            | 'instances.high_availability'
+            | 'instances.orioledb'
+            | 'replication.etl'
+            | 'storage.max_file_size'
+            | 'storage.max_file_size.configurable'
+            | 'storage.image_transformations'
+            | 'storage.vector_buckets'
+            | 'storage.iceberg_catalog'
+            | 'security.audit_logs_days'
+            | 'security.questionnaire'
+            | 'security.soc2_report'
+            | 'security.iso27001_certificate'
+            | 'security.private_link'
+            | 'security.enforce_mfa'
+            | 'log.retention_days'
+            | 'custom_domain'
+            | 'vanity_subdomain'
+            | 'ipv4'
+            | 'pitr.available_variants'
+            | 'log_drains'
+            | 'branching_limit'
+            | 'branching_persistent'
+            | 'auth.mfa_phone'
+            | 'auth.mfa_web_authn'
+            | 'auth.mfa_enhanced_security'
+            | 'auth.hooks'
+            | 'auth.platform.sso'
+            | 'auth.custom_jwt_template'
+            | 'auth.saml_2'
+            | 'auth.user_sessions'
+            | 'auth.leaked_password_protection'
+            | 'auth.advanced_auth_settings'
+            | 'auth.performance_settings'
+            | 'auth.password_hibp'
+            | 'auth.custom_oauth.max_providers'
+            | 'backup.retention_days'
+            | 'backup.restore_to_new_project'
+            | 'function.max_count'
+            | 'function.size_limit_mb'
+            | 'realtime.max_concurrent_users'
+            | 'realtime.max_events_per_second'
+            | 'realtime.max_joins_per_second'
+            | 'realtime.max_channels_per_client'
+            | 'realtime.max_bytes_per_second'
+            | 'realtime.max_presence_events_per_second'
+            | 'realtime.max_payload_size_in_kb'
+            | 'project_scoped_roles'
+            | 'security.member_roles'
+            | 'project_pausing'
+            | 'project_cloning'
+            | 'project_restore_after_expiry'
+            | 'assistant.advance_model'
+            | 'integrations.github_connections'
+            | 'dedicated_pooler'
+            | 'observability.dashboard_advanced_metrics'
+          /** @enum {string} */
+          type: 'boolean' | 'numeric' | 'set'
+        }
+        hasAccess: boolean
+        /** @enum {string} */
+        type: 'boolean' | 'numeric' | 'set'
+      }[]
+    }
+    V1ListMigrationsResponse: {
+      name?: string
+      version: string
+    }[]
     V1OrganizationMemberResponse: {
       email?: string
       mfa_enabled: boolean
@@ -2637,11 +4996,24 @@ export interface components {
       user_name: string
     }
     V1OrganizationSlugResponse: {
-      allowed_release_channels: components['schemas']['ReleaseChannel'][]
+      allowed_release_channels: ('internal' | 'alpha' | 'beta' | 'ga' | 'withdrawn' | 'preview')[]
       id: string
       name: string
-      opt_in_tags: 'AI_SQL_GENERATOR_OPT_IN'[]
-      plan?: components['schemas']['BillingPlanId']
+      opt_in_tags: (
+        | 'AI_SQL_GENERATOR_OPT_IN'
+        | 'AI_DATA_GENERATOR_OPT_IN'
+        | 'AI_LOG_GENERATOR_OPT_IN'
+      )[]
+      /** @enum {string} */
+      plan?: 'free' | 'pro' | 'team' | 'enterprise' | 'platform'
+    }
+    /** @example {
+     *       "name": "create_widgets_table",
+     *       "rollback": "drop table if exists public.widgets;"
+     *     } */
+    V1PatchMigrationBody: {
+      name?: string
+      rollback?: string
     }
     V1PgbouncerConfigResponse: {
       connection_string?: string
@@ -2650,12 +5022,10 @@ export interface components {
       max_client_conn?: number
       /** @enum {string} */
       pool_mode?: 'transaction' | 'session' | 'statement'
-    }
-    V1PhysicalBackup: {
-      /** Format: int64 */
-      earliest_physical_backup_date_unix?: number
-      /** Format: int64 */
-      latest_physical_backup_date_unix?: number
+      query_wait_timeout?: number
+      reserve_pool_size?: number
+      server_idle_timeout?: number
+      server_lifetime?: number
     }
     V1PostgrestConfigResponse: {
       db_extra_search_path: string
@@ -2664,28 +5034,96 @@ export interface components {
       db_schema: string
       max_rows: number
     }
+    V1ProfileResponse: {
+      gotrue_id: string
+      primary_email: string
+      username: string
+    }
+    V1ProjectAdvisorsResponse: {
+      lints: {
+        cache_key: string
+        categories: ('PERFORMANCE' | 'SECURITY')[]
+        description: string
+        detail: string
+        /** @enum {string} */
+        facing: 'EXTERNAL'
+        /** @enum {string} */
+        level: 'ERROR' | 'WARN' | 'INFO'
+        metadata?: {
+          entity?: string
+          fkey_columns?: number[]
+          fkey_name?: string
+          name?: string
+          schema?: string
+          /** @enum {string} */
+          type?: 'table' | 'view' | 'auth' | 'function' | 'extension' | 'compliance'
+        }
+        /** @enum {string} */
+        name:
+          | 'unindexed_foreign_keys'
+          | 'auth_users_exposed'
+          | 'auth_rls_initplan'
+          | 'no_primary_key'
+          | 'unused_index'
+          | 'multiple_permissive_policies'
+          | 'policy_exists_rls_disabled'
+          | 'rls_enabled_no_policy'
+          | 'duplicate_index'
+          | 'security_definer_view'
+          | 'function_search_path_mutable'
+          | 'rls_disabled_in_public'
+          | 'extension_in_public'
+          | 'rls_references_user_metadata'
+          | 'materialized_view_in_api'
+          | 'foreign_table_in_api'
+          | 'unsupported_reg_types'
+          | 'auth_otp_long_expiry'
+          | 'auth_otp_short_length'
+          | 'ssl_not_enforced'
+          | 'network_restrictions_not_set'
+          | 'password_requirements_min_length'
+          | 'pitr_not_enabled'
+          | 'auth_leaked_password_protection'
+          | 'auth_insufficient_mfa_options'
+          | 'auth_password_policy_missing'
+          | 'leaked_service_key'
+          | 'no_backup_admin'
+          | 'vulnerable_postgres_version'
+        remediation: string
+        title: string
+      }[]
+    }
     V1ProjectRefResponse: {
-      /** Format: int64 */
       id: number
       name: string
       ref: string
     }
     V1ProjectResponse: {
-      /**
-       * @description Creation timestamp
-       * @example 2023-03-29T16:32:59Z
-       */
+      /** @description Creation timestamp */
       created_at: string
-      /** @description Id of your project */
+      /**
+       * @deprecated
+       * @description Deprecated: Use `ref` instead.
+       */
       id: string
       /** @description Name of your project */
       name: string
-      /** @description Slug of your organization */
+      /**
+       * @deprecated
+       * @description Deprecated: Use `organization_slug` instead.
+       */
       organization_id: string
       /**
-       * @description Region of your project
-       * @example us-east-1
+       * @description Organization slug
+       * @example tsrqponmlkjihgfedcba
        */
+      organization_slug: string
+      /**
+       * @description Project ref
+       * @example abcdefghijklmnopqrst
+       */
+      ref: string
+      /** @description Region of your project */
       region: string
       /** @enum {string} */
       status:
@@ -2706,22 +5144,41 @@ export interface components {
         | 'RESIZING'
     }
     V1ProjectWithDatabaseResponse: {
-      /**
-       * @description Creation timestamp
-       * @example 2023-03-29T16:32:59Z
-       */
+      /** @description Creation timestamp */
       created_at: string
-      database: components['schemas']['V1DatabaseResponse']
-      /** @description Id of your project */
+      database: {
+        /** @description Database host */
+        host: string
+        /** @description Database engine */
+        postgres_engine: string
+        /** @description Release channel */
+        release_channel: string
+        /** @description Database version */
+        version: string
+      }
+      /**
+       * @deprecated
+       * @description Deprecated: Use `ref` instead.
+       */
       id: string
       /** @description Name of your project */
       name: string
-      /** @description Slug of your organization */
+      /**
+       * @deprecated
+       * @description Deprecated: Use `organization_slug` instead.
+       */
       organization_id: string
       /**
-       * @description Region of your project
-       * @example us-east-1
+       * @description Organization slug
+       * @example tsrqponmlkjihgfedcba
        */
+      organization_slug: string
+      /**
+       * @description Project ref
+       * @example abcdefghijklmnopqrst
+       */
+      ref: string
+      /** @description Region of your project */
       region: string
       /** @enum {string} */
       status:
@@ -2741,21 +5198,85 @@ export interface components {
         | 'PAUSE_FAILED'
         | 'RESIZING'
     }
+    /** @example {
+     *       "query": "select * from pg_stat_activity limit 1;"
+     *     } */
+    V1ReadOnlyQueryBody: {
+      parameters?: unknown[]
+      query: string
+    }
+    /** @example {
+     *       "id": 12345
+     *     } */
+    V1RestoreBackupBody: {
+      id: number
+    }
+    /** @example {
+     *       "recovery_time_target_unix": 1740787200
+     *     } */
     V1RestorePitrBody: {
       /** Format: int64 */
       recovery_time_target_unix: number
     }
+    /** @example {
+     *       "name": "before-upgrade"
+     *     } */
+    V1RestorePointPostBody: {
+      name: string
+    }
+    V1RestorePointResponse: {
+      /** Format: date-time */
+      completed_on: string | null
+      name: string
+      /** @enum {string} */
+      status: 'AVAILABLE' | 'PENDING' | 'REMOVED' | 'FAILED'
+    }
+    /** @example {
+     *       "query": "select * from pg_stat_activity limit 1;",
+     *       "read_only": true
+     *     } */
     V1RunQueryBody: {
+      parameters?: unknown[]
       query: string
+      read_only?: boolean
     }
     V1ServiceHealthResponse: {
       error?: string
+      /**
+       * @deprecated
+       * @description Deprecated. Use `status` instead.
+       */
       healthy: boolean
       info?:
-        | components['schemas']['AuthHealthResponse']
-        | components['schemas']['RealtimeHealthResponse']
+        | {
+            description: string
+            /** @enum {string} */
+            name: 'GoTrue'
+            version: string
+          }
+        | {
+            connected_cluster: number
+            db_connected: boolean
+            /**
+             * @deprecated
+             * @description Deprecated. Use `status` instead.
+             */
+            healthy: boolean
+            replication_connected: boolean
+          }
+        | {
+            db_schema: string
+          }
       /** @enum {string} */
-      name: 'auth' | 'db' | 'pooler' | 'realtime' | 'rest' | 'storage'
+      name:
+        | 'auth'
+        | 'db'
+        | 'db_postgres_user'
+        | 'pooler'
+        | 'realtime'
+        | 'rest'
+        | 'storage'
+        | 'pg_bouncer'
       /** @enum {string} */
       status: 'COMING_UP' | 'ACTIVE_HEALTHY' | 'UNHEALTHY'
     }
@@ -2767,24 +5288,61 @@ export interface components {
       public: boolean
       updated_at: string
     }
+    /** @example {
+     *       "name": "before-upgrade"
+     *     } */
+    V1UndoBody: {
+      name: string
+    }
+    /** @example {
+     *       "name": "Hello World",
+     *       "body": "Deno.serve(() => new Response('Hello again!'))",
+     *       "verify_jwt": true
+     *     } */
     V1UpdateFunctionBody: {
       body?: string
       name?: string
       verify_jwt?: boolean
     }
+    /** @example {
+     *       "password": "correct-horse-battery-staple"
+     *     } */
+    V1UpdatePasswordBody: {
+      password: string
+    }
+    V1UpdatePasswordResponse: {
+      message: string
+    }
+    /** @example {
+     *       "db_schema": "public,storage",
+     *       "db_pool": 20,
+     *       "max_rows": 1000
+     *     } */
     V1UpdatePostgrestConfigBody: {
       db_extra_search_path?: string
       db_pool?: number
       db_schema?: string
       max_rows?: number
     }
-    ValidationError: {
-      message: string
+    /** @example {
+     *       "name": "Acme Platform"
+     *     } */
+    V1UpdateProjectBody: {
+      name: string
     }
-    ValidationRecord: {
-      txt_name: string
-      txt_value: string
+    /** @example {
+     *       "query": "create table public.widgets(id bigint primary key);",
+     *       "name": "create_widgets_table",
+     *       "rollback": "drop table if exists public.widgets;"
+     *     } */
+    V1UpsertMigrationBody: {
+      name?: string
+      query: string
+      rollback?: string
     }
+    /** @example {
+     *       "vanity_subdomain": "acme-prod"
+     *     } */
     VanitySubdomainBody: {
       vanity_subdomain: string
     }
@@ -2807,7 +5365,8 @@ export interface operations {
       query?: never
       header?: never
       path: {
-        branch_id: string
+        /** @description Branch ref or deprecated branch ID */
+        branch_id_or_ref: string
       }
       cookie?: never
     }
@@ -2832,10 +5391,14 @@ export interface operations {
   }
   'v1-delete-a-branch': {
     parameters: {
-      query?: never
+      query?: {
+        /** @description If set to false, schedule deletion with 1-hour grace period (only when soft deletion is enabled). */
+        force?: boolean
+      }
       header?: never
       path: {
-        branch_id: string
+        /** @description Branch ref or deprecated branch ID */
+        branch_id_or_ref: string
       }
       cookie?: never
     }
@@ -2863,7 +5426,8 @@ export interface operations {
       query?: never
       header?: never
       path: {
-        branch_id: string
+        /** @description Branch ref or deprecated branch ID */
+        branch_id_or_ref: string
       }
       cookie?: never
     }
@@ -2890,16 +5454,54 @@ export interface operations {
       }
     }
   }
+  'v1-diff-a-branch': {
+    parameters: {
+      query?: {
+        included_schemas?: string
+        /** @description Use pg-delta instead of Migra for diffing when true */
+        pgdelta?: boolean
+      }
+      header?: never
+      path: {
+        /** @description Branch ref or deprecated branch ID */
+        branch_id_or_ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'text/plain': string
+        }
+      }
+      /** @description Failed to diff database branch */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
   'v1-merge-a-branch': {
     parameters: {
       query?: never
       header?: never
       path: {
-        branch_id: string
+        /** @description Branch ref or deprecated branch ID */
+        branch_id_or_ref: string
       }
       cookie?: never
     }
-    requestBody?: never
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BranchActionBody']
+      }
+    }
     responses: {
       201: {
         headers: {
@@ -2923,11 +5525,16 @@ export interface operations {
       query?: never
       header?: never
       path: {
-        branch_id: string
+        /** @description Branch ref or deprecated branch ID */
+        branch_id_or_ref: string
       }
       cookie?: never
     }
-    requestBody?: never
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BranchActionBody']
+      }
+    }
     responses: {
       201: {
         headers: {
@@ -2951,11 +5558,16 @@ export interface operations {
       query?: never
       header?: never
       path: {
-        branch_id: string
+        /** @description Branch ref or deprecated branch ID */
+        branch_id_or_ref: string
       }
       cookie?: never
     }
-    requestBody?: never
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['BranchActionBody']
+      }
+    }
     responses: {
       201: {
         headers: {
@@ -2974,14 +5586,49 @@ export interface operations {
       }
     }
   }
+  'v1-restore-a-branch': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Branch ref or deprecated branch ID */
+        branch_id_or_ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['BranchRestoreResponse']
+        }
+      }
+      /** @description Failed to restore database branch */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
   'v1-authorize-user': {
     parameters: {
       query: {
         client_id: string
         code_challenge?: string
         code_challenge_method?: 'plain' | 'sha256' | 'S256'
+        /** @description Organization slug */
+        organization_slug?: string
         redirect_uri: string
-        response_type: string
+        /** @description Resource indicator for MCP (Model Context Protocol) clients */
+        resource?: string
+        response_mode?: string
+        response_type: 'code' | 'token' | 'id_token token'
+        scope?: string
         state?: string
       }
       header?: never
@@ -2990,7 +5637,55 @@ export interface operations {
     }
     requestBody?: never
     responses: {
-      303: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-oauth-authorize-project-claim': {
+    parameters: {
+      query: {
+        client_id: string
+        code_challenge?: string
+        code_challenge_method?: 'plain' | 'sha256' | 'S256'
+        /** @description Project ref */
+        project_ref: string
+        redirect_uri: string
+        response_mode?: string
+        response_type: 'code' | 'token' | 'id_token token'
+        state?: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3007,7 +5702,7 @@ export interface operations {
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['OAuthRevokeTokenBodyDto']
+        'application/json': components['schemas']['OAuthRevokeTokenBody']
       }
     }
     responses: {
@@ -3059,6 +5754,27 @@ export interface operations {
           'application/json': components['schemas']['OrganizationResponseV1'][]
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
       /** @description Unexpected error listing organizations */
       500: {
         headers: {
@@ -3077,7 +5793,7 @@ export interface operations {
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['CreateOrganizationV1Dto']
+        'application/json': components['schemas']['CreateOrganizationV1']
       }
     }
     responses: {
@@ -3088,6 +5804,27 @@ export interface operations {
         content: {
           'application/json': components['schemas']['OrganizationResponseV1']
         }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
       /** @description Unexpected error creating an organization */
       500: {
@@ -3103,6 +5840,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Organization slug */
         slug: string
       }
       cookie?: never
@@ -3117,7 +5855,65 @@ export interface operations {
           'application/json': components['schemas']['V1OrganizationSlugResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-organization-entitlements': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Organization slug */
+        slug: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['V1ListEntitlementsResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3130,6 +5926,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Organization slug */
         slug: string
       }
       cookie?: never
@@ -3144,11 +5941,173 @@ export interface operations {
           'application/json': components['schemas']['V1OrganizationMemberResponse'][]
         }
       }
+    }
+  }
+  'v1-get-organization-project-claim': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Organization slug */
+        slug: string
+        token: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['OrganizationProjectClaimResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
         headers: {
           [name: string]: unknown
         }
         content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-claim-project-for-organization': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Organization slug */
+        slug: string
+        token: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-all-projects-for-organization': {
+    parameters: {
+      query?: {
+        /** @description Number of projects to return per page */
+        limit?: number
+        /** @description Number of projects to skip */
+        offset?: number
+        /** @description Search projects by name */
+        search?: string
+        /** @description Sort order for projects */
+        sort?: 'name_asc' | 'name_desc' | 'created_asc' | 'created_desc'
+        /** @description A comma-separated list of project statuses to filter by.
+         *
+         *     The following values are supported: `ACTIVE_HEALTHY`, `INACTIVE`. */
+        statuses?: string
+      }
+      header?: never
+      path: {
+        /** @description Organization slug */
+        slug: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['OrganizationProjectsResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to retrieve projects */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-profile': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['V1ProfileResponse']
+        }
       }
     }
   }
@@ -3169,6 +6128,27 @@ export interface operations {
           'application/json': components['schemas']['V1ProjectWithDatabaseResponse'][]
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
     }
   }
   'v1-create-a-project': {
@@ -3180,7 +6160,7 @@ export interface operations {
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['V1CreateProjectBodyDto']
+        'application/json': components['schemas']['V1CreateProjectBody']
       }
     }
     responses: {
@@ -3191,6 +6171,27 @@ export interface operations {
         content: {
           'application/json': components['schemas']['V1ProjectResponse']
         }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
     }
   }
@@ -3214,7 +6215,22 @@ export interface operations {
           'application/json': components['schemas']['V1ProjectWithDatabaseResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3249,7 +6265,22 @@ export interface operations {
           'application/json': components['schemas']['V1ProjectRefResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3257,15 +6288,69 @@ export interface operations {
       }
     }
   }
-  getLogs: {
+  'v1-update-a-project': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['V1UpdateProjectBody']
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['V1ProjectRefResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to update project */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-list-action-runs': {
     parameters: {
       query?: {
-        iso_timestamp_end?: string
-        iso_timestamp_start?: string
-        sql?: string
+        limit?: number
+        offset?: number
       }
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -3277,10 +6362,533 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['V1AnalyticsResponse']
+          'application/json': components['schemas']['ListActionRunResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to list action runs */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-count-action-runs': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          /** @description total count value */
+          'X-Total-Count'?: number
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to count action runs */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-action-run': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+        /** @description Action Run ID */
+        run_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ActionRunResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to get action run status */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-action-run-logs': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+        /** @description Action Run ID */
+        run_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'text/plain': string
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to get action run logs */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-update-action-run-status': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+        /** @description Action Run ID */
+        run_id: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateRunStatusBody']
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['UpdateRunStatusResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to update action run status */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-performance-advisors': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['V1ProjectAdvisorsResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-security-advisors': {
+    parameters: {
+      query?: {
+        lint_type?: 'sql'
+      }
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['V1ProjectAdvisorsResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-project-function-combined-stats': {
+    parameters: {
+      query: {
+        function_id: string
+        interval: '15min' | '1hr' | '3hr' | '1day'
+      }
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AnalyticsResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to get project's function combined statistics */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-project-logs': {
+    parameters: {
+      query?: {
+        iso_timestamp_end?: string
+        iso_timestamp_start?: string
+        /** @description Custom SQL query to execute on the logs. See [querying logs](/docs/guides/telemetry/logs?queryGroups=product&product=postgres&queryGroups=source&source=edge_logs#querying-with-the-logs-explorer) for more details. */
+        sql?: string
+      }
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['AnalyticsResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-project-usage-api-count': {
+    parameters: {
+      query?: {
+        interval?: '15min' | '30min' | '1hr' | '3hr' | '1day' | '3day' | '7day'
+      }
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['V1GetUsageApiCountResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to get project's usage api counts */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-project-usage-request-count': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['V1GetUsageApiRequestsCountResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to get project's usage api requests count */
+      500: {
         headers: {
           [name: string]: unknown
         }
@@ -3291,10 +6899,12 @@ export interface operations {
   'v1-get-project-api-keys': {
     parameters: {
       query?: {
+        /** @description Boolean string, true or false */
         reveal?: boolean
       }
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -3309,7 +6919,22 @@ export interface operations {
           'application/json': components['schemas']['ApiKeyResponse'][]
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3317,13 +6942,15 @@ export interface operations {
       }
     }
   }
-  createApiKey: {
+  'v1-create-project-api-key': {
     parameters: {
       query?: {
+        /** @description Boolean string, true or false */
         reveal?: boolean
       }
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -3342,7 +6969,22 @@ export interface operations {
           'application/json': components['schemas']['ApiKeyResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3350,14 +6992,16 @@ export interface operations {
       }
     }
   }
-  getApiKey: {
+  'v1-get-project-api-key': {
     parameters: {
       query?: {
+        /** @description Boolean string, true or false */
         reveal?: boolean
       }
       header?: never
       path: {
         id: string
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -3372,7 +7016,22 @@ export interface operations {
           'application/json': components['schemas']['ApiKeyResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3380,14 +7039,19 @@ export interface operations {
       }
     }
   }
-  deleteApiKey: {
+  'v1-delete-project-api-key': {
     parameters: {
       query?: {
+        reason?: string
+        /** @description Boolean string, true or false */
         reveal?: boolean
+        /** @description Boolean string, true or false */
+        was_compromised?: boolean
       }
       header?: never
       path: {
         id: string
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -3402,7 +7066,22 @@ export interface operations {
           'application/json': components['schemas']['ApiKeyResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3410,14 +7089,16 @@ export interface operations {
       }
     }
   }
-  updateApiKey: {
+  'v1-update-project-api-key': {
     parameters: {
       query?: {
+        /** @description Boolean string, true or false */
         reveal?: boolean
       }
       header?: never
       path: {
         id: string
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -3436,7 +7117,111 @@ export interface operations {
           'application/json': components['schemas']['ApiKeyResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-project-legacy-api-keys': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['LegacyApiKeysResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-update-project-legacy-api-keys': {
+    parameters: {
+      query: {
+        /** @description Boolean string, true or false */
+        enabled: boolean
+      }
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['LegacyApiKeysResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3449,6 +7234,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -3460,10 +7246,25 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['ListProjectAddonsResponseDto']
+          'application/json': components['schemas']['ListProjectAddonsResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3483,13 +7284,14 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['ApplyProjectAddonBodyDto']
+        'application/json': components['schemas']['ApplyProjectAddonBody']
       }
     }
     responses: {
@@ -3499,7 +7301,22 @@ export interface operations {
         }
         content?: never
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3520,21 +7337,30 @@ export interface operations {
       header?: never
       path: {
         addon_variant:
-          | 'ci_micro'
-          | 'ci_small'
-          | 'ci_medium'
-          | 'ci_large'
-          | 'ci_xlarge'
-          | 'ci_2xlarge'
-          | 'ci_4xlarge'
-          | 'ci_8xlarge'
-          | 'ci_12xlarge'
-          | 'ci_16xlarge'
+          | (
+              | 'ci_micro'
+              | 'ci_small'
+              | 'ci_medium'
+              | 'ci_large'
+              | 'ci_xlarge'
+              | 'ci_2xlarge'
+              | 'ci_4xlarge'
+              | 'ci_8xlarge'
+              | 'ci_12xlarge'
+              | 'ci_16xlarge'
+              | 'ci_24xlarge'
+              | 'ci_24xlarge_optimized_cpu'
+              | 'ci_24xlarge_optimized_memory'
+              | 'ci_24xlarge_high_memory'
+              | 'ci_48xlarge'
+              | 'ci_48xlarge_optimized_cpu'
+              | 'ci_48xlarge_optimized_memory'
+              | 'ci_48xlarge_high_memory'
+            )
           | 'cd_default'
-          | 'pitr_7'
-          | 'pitr_14'
-          | 'pitr_28'
+          | ('pitr_7' | 'pitr_14' | 'pitr_28')
           | 'ipv4_default'
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -3547,7 +7373,22 @@ export interface operations {
         }
         content?: never
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3567,6 +7408,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -3580,12 +7422,6 @@ export interface operations {
         content: {
           'application/json': components['schemas']['BranchResponse'][]
         }
-      }
-      403: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
       }
       /** @description Failed to retrieve database branches */
       500: {
@@ -3601,6 +7437,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -3619,12 +7456,6 @@ export interface operations {
           'application/json': components['schemas']['BranchResponse']
         }
       }
-      403: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
       /** @description Failed to create database branch */
       500: {
         headers: {
@@ -3639,6 +7470,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -3651,13 +7483,289 @@ export interface operations {
         }
         content?: never
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
         headers: {
           [name: string]: unknown
         }
         content?: never
       }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
       /** @description Failed to disable preview branching */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-a-branch': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        name: string
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['BranchResponse']
+        }
+      }
+      /** @description Failed to fetch database branch */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-project-claim-token': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['ProjectClaimTokenResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-create-project-claim-token': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CreateProjectClaimTokenResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-delete-project-claim-token': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-create-login-role': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['CreateRoleBody']
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['CreateRoleResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to create login role */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-delete-login-roles': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['DeleteRolesResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to delete login roles */
       500: {
         headers: {
           [name: string]: unknown
@@ -3686,7 +7794,22 @@ export interface operations {
           'application/json': components['schemas']['AuthConfigResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3725,7 +7848,22 @@ export interface operations {
           'application/json': components['schemas']['AuthConfigResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3740,11 +7878,12 @@ export interface operations {
       }
     }
   }
-  listSigningKeysForProject: {
+  'v1-get-project-signing-keys': {
     parameters: {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -3759,7 +7898,22 @@ export interface operations {
           'application/json': components['schemas']['SigningKeysResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3767,11 +7921,12 @@ export interface operations {
       }
     }
   }
-  createSigningKeyForProject: {
+  'v1-create-project-signing-key': {
     parameters: {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -3782,16 +7937,30 @@ export interface operations {
       }
     }
     responses: {
-      /** @description [Alpha] Create a new signing key for the project in standby status */
       201: {
         headers: {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['CreateSigningKeyBody']
+          'application/json': components['schemas']['SigningKeyResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3799,12 +7968,13 @@ export interface operations {
       }
     }
   }
-  getSigningKeyForProject: {
+  'v1-get-project-signing-key': {
     parameters: {
       query?: never
       header?: never
       path: {
         id: string
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -3819,7 +7989,22 @@ export interface operations {
           'application/json': components['schemas']['SigningKeyResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3827,12 +8012,13 @@ export interface operations {
       }
     }
   }
-  deleteSigningKey: {
+  'v1-remove-project-signing-key': {
     parameters: {
       query?: never
       header?: never
       path: {
         id: string
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -3847,7 +8033,22 @@ export interface operations {
           'application/json': components['schemas']['SigningKeyResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3855,12 +8056,13 @@ export interface operations {
       }
     }
   }
-  patchSigningKey: {
+  'v1-update-project-signing-key': {
     parameters: {
       query?: never
       header?: never
       path: {
         id: string
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -3879,7 +8081,108 @@ export interface operations {
           'application/json': components['schemas']['SigningKeyResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-legacy-signing-key': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SigningKeyResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-create-legacy-signing-key': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['SigningKeyResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3907,6 +8210,14 @@ export interface operations {
           'application/json': components['schemas']['ListProvidersResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
         headers: {
           [name: string]: unknown
@@ -3915,6 +8226,13 @@ export interface operations {
       }
       /** @description SAML 2.0 support is not enabled for this project */
       404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3946,6 +8264,14 @@ export interface operations {
           'application/json': components['schemas']['CreateProviderResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
         headers: {
           [name: string]: unknown
@@ -3954,6 +8280,13 @@ export interface operations {
       }
       /** @description SAML 2.0 support is not enabled for this project */
       404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -3982,6 +8315,14 @@ export interface operations {
           'application/json': components['schemas']['GetProviderResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
         headers: {
           [name: string]: unknown
@@ -3990,6 +8331,13 @@ export interface operations {
       }
       /** @description Either SAML 2.0 was not enabled for this project, or the provider does not exist */
       404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4022,6 +8370,14 @@ export interface operations {
           'application/json': components['schemas']['UpdateProviderResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
         headers: {
           [name: string]: unknown
@@ -4030,6 +8386,13 @@ export interface operations {
       }
       /** @description Either SAML 2.0 was not enabled for this project, or the provider does not exist */
       404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4058,6 +8421,14 @@ export interface operations {
           'application/json': components['schemas']['DeleteProviderResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
         headers: {
           [name: string]: unknown
@@ -4071,9 +8442,16 @@ export interface operations {
         }
         content?: never
       }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
     }
   }
-  listTPAForProject: {
+  'v1-list-project-tpa-integrations': {
     parameters: {
       query?: never
       header?: never
@@ -4093,7 +8471,22 @@ export interface operations {
           'application/json': components['schemas']['ThirdPartyAuth'][]
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4101,7 +8494,7 @@ export interface operations {
       }
     }
   }
-  createTPAForProject: {
+  'v1-create-project-tpa-integration': {
     parameters: {
       query?: never
       header?: never
@@ -4125,7 +8518,22 @@ export interface operations {
           'application/json': components['schemas']['ThirdPartyAuth']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4133,7 +8541,7 @@ export interface operations {
       }
     }
   }
-  getTPAForProject: {
+  'v1-get-project-tpa-integration': {
     parameters: {
       query?: never
       header?: never
@@ -4154,7 +8562,22 @@ export interface operations {
           'application/json': components['schemas']['ThirdPartyAuth']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4162,7 +8585,7 @@ export interface operations {
       }
     }
   }
-  deleteTPAForProject: {
+  'v1-delete-project-tpa-integration': {
     parameters: {
       query?: never
       header?: never
@@ -4183,7 +8606,22 @@ export interface operations {
           'application/json': components['schemas']['ThirdPartyAuth']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4211,7 +8649,22 @@ export interface operations {
           'application/json': components['schemas']['V1PgbouncerConfigResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4226,7 +8679,7 @@ export interface operations {
       }
     }
   }
-  getSupavisorConfig: {
+  'v1-get-pooler-config': {
     parameters: {
       query?: never
       header?: never
@@ -4246,6 +8699,27 @@ export interface operations {
           'application/json': components['schemas']['SupavisorConfigResponse'][]
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
       /** @description Failed to retrieve project's supavisor config */
       500: {
         headers: {
@@ -4255,7 +8729,7 @@ export interface operations {
       }
     }
   }
-  updateSupavisorConfig: {
+  'v1-update-pooler-config': {
     parameters: {
       query?: never
       header?: never
@@ -4279,7 +8753,22 @@ export interface operations {
           'application/json': components['schemas']['UpdateSupavisorConfigResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4314,7 +8803,22 @@ export interface operations {
           'application/json': components['schemas']['PostgresConfigResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4353,7 +8857,22 @@ export interface operations {
           'application/json': components['schemas']['PostgresConfigResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4361,6 +8880,346 @@ export interface operations {
       }
       /** @description Failed to update project's Postgres config */
       500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-database-disk': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['DiskResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to get database disk attributes */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-modify-database-disk': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['DiskRequestBody']
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to modify database disk */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-project-disk-autoscale-config': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['DiskAutoscaleConfig']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to get project disk autoscale config */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-disk-utilization': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['DiskUtilMetricsResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to get disk utilization */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-realtime-config': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Gets project's realtime configuration */
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['RealtimeConfigResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-update-realtime-config': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateRealtimeConfigBody']
+      }
+    }
+    responses: {
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-shutdown-realtime': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      /** @description Realtime connections shutdown successfully */
+      204: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Tenant not found */
+      404: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4388,7 +9247,22 @@ export interface operations {
           'application/json': components['schemas']['StorageConfigResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4425,7 +9299,22 @@ export interface operations {
         }
         content?: never
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4460,7 +9349,22 @@ export interface operations {
           'application/json': components['schemas']['UpdateCustomHostnameResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4477,7 +9381,10 @@ export interface operations {
   }
   'v1-Delete hostname config': {
     parameters: {
-      query?: never
+      query?: {
+        /** @description If true, also removes the custom domain add-on from the project subscription. */
+        remove_addon?: boolean
+      }
       header?: never
       path: {
         /** @description Project ref */
@@ -4493,7 +9400,22 @@ export interface operations {
         }
         content?: never
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4528,7 +9450,22 @@ export interface operations {
           'application/json': components['schemas']['UpdateCustomHostnameResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4567,7 +9504,22 @@ export interface operations {
           'application/json': components['schemas']['UpdateCustomHostnameResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4602,7 +9554,22 @@ export interface operations {
           'application/json': components['schemas']['UpdateCustomHostnameResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4637,7 +9604,22 @@ export interface operations {
           'application/json': components['schemas']['V1BackupsResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4652,11 +9634,57 @@ export interface operations {
       }
     }
   }
+  'v1-restore-physical-backup': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['V1RestoreBackupBody']
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
   'v1-restore-pitr-backup': {
     parameters: {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -4673,7 +9701,22 @@ export interface operations {
         }
         content?: never
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4681,11 +9724,14 @@ export interface operations {
       }
     }
   }
-  getDatabaseMetadata: {
+  'v1-get-restore-point': {
     parameters: {
-      query?: never
+      query?: {
+        name?: string
+      }
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -4697,10 +9743,846 @@ export interface operations {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['GetProjectDbMetadataResponseDto']
+          'application/json': components['schemas']['V1RestorePointResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to get requested restore points */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-create-restore-point': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['V1RestorePointPostBody']
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['V1RestorePointResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-undo': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['V1UndoBody']
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-database-metadata': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['GetProjectDbMetadataResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-jit-access': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['JitAccessResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to list database jit access */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-update-jit-access': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UpdateJitAccessBody']
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['JitAccessResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to upsert database migration */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-authorize-jit-access': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AuthorizeJitAccessBody']
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['JitAuthorizeAccessResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to authorize database jit access */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-delete-jit-access': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+        user_id: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to remove JIT access */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-list-jit-access': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['JitListAccessResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to list database jit access */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-list-migration-history': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['V1ListMigrationsResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to list database migrations */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-upsert-a-migration': {
+    parameters: {
+      query?: never
+      header?: {
+        /** @description A unique key to ensure the same migration is tracked only once. */
+        'Idempotency-Key'?: string
+      }
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['V1UpsertMigrationBody']
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to upsert database migration */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-apply-a-migration': {
+    parameters: {
+      query?: never
+      header?: {
+        /** @description A unique key to ensure the same migration is tracked only once. */
+        'Idempotency-Key'?: string
+      }
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['V1CreateMigrationBody']
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to apply database migration */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-rollback-migrations': {
+    parameters: {
+      query: {
+        /** @description Rollback migrations greater or equal to this version */
+        gte: string
+      }
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to rollback database migration */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-a-migration': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+        version: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['V1GetMigrationResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to get database migration */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-patch-a-migration': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+        version: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['V1PatchMigrationBody']
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to patch database migration */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-get-database-openapi': {
+    parameters: {
+      query?: {
+        /** @description The database schema to generate the OpenAPI spec for */
+        schema?: string
+      }
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': Record<string, never>
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to fetch PostgREST OpenAPI spec */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-update-database-password': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['V1UpdatePasswordBody']
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['V1UpdatePasswordResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to update database password */
+      500: {
         headers: {
           [name: string]: unknown
         }
@@ -4713,6 +10595,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -4727,17 +10610,82 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content: {
-          'application/json': Record<string, never>
-        }
+        content?: never
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
         headers: {
           [name: string]: unknown
         }
         content?: never
       }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
       /** @description Failed to run sql query */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-read-only-query': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['V1ReadOnlyQueryBody']
+      }
+    }
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to run read-only sql query */
       500: {
         headers: {
           [name: string]: unknown
@@ -4764,7 +10712,22 @@ export interface operations {
         }
         content?: never
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4784,6 +10747,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -4798,7 +10762,22 @@ export interface operations {
           'application/json': components['schemas']['FunctionResponse'][]
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4818,13 +10797,14 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['BulkUpdateFunctionBody'][]
+        'application/json': components['schemas']['BulkUpdateFunctionBody']
       }
     }
     responses: {
@@ -4836,7 +10816,29 @@ export interface operations {
           'application/json': components['schemas']['BulkUpdateFunctionResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Maximum number of functions reached for Plan */
+      402: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4855,14 +10857,18 @@ export interface operations {
     parameters: {
       query?: {
         entrypoint_path?: string
+        ezbr_sha256?: string
+        /** @description Boolean string, true or false */
         import_map?: boolean
         import_map_path?: string
         name?: string
         slug?: string
+        /** @description Boolean string, true or false */
         verify_jwt?: boolean
       }
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -4870,7 +10876,7 @@ export interface operations {
     requestBody: {
       content: {
         'application/json': components['schemas']['V1CreateFunctionBody']
-        'application/vnd.denoland.eszip': components['schemas']['V1CreateFunctionBody']
+        'application/vnd.denoland.eszip': string
       }
     }
     responses: {
@@ -4882,7 +10888,29 @@ export interface operations {
           'application/json': components['schemas']['FunctionResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Maximum number of functions reached for Plan */
+      402: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4902,7 +10930,9 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Function slug */
         function_slug: string
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -4917,7 +10947,22 @@ export interface operations {
           'application/json': components['schemas']['FunctionSlugResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4937,7 +10982,9 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Function slug */
         function_slug: string
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -4950,7 +10997,22 @@ export interface operations {
         }
         content?: never
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -4969,14 +11031,20 @@ export interface operations {
     parameters: {
       query?: {
         entrypoint_path?: string
+        ezbr_sha256?: string
+        /** @description Boolean string, true or false */
         import_map?: boolean
         import_map_path?: string
         name?: string
+        slug?: string
+        /** @description Boolean string, true or false */
         verify_jwt?: boolean
       }
       header?: never
       path: {
+        /** @description Function slug */
         function_slug: string
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -4984,7 +11052,7 @@ export interface operations {
     requestBody: {
       content: {
         'application/json': components['schemas']['V1UpdateFunctionBody']
-        'application/vnd.denoland.eszip': components['schemas']['V1UpdateFunctionBody']
+        'application/vnd.denoland.eszip': string
       }
     }
     responses: {
@@ -4996,7 +11064,22 @@ export interface operations {
           'application/json': components['schemas']['FunctionResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5016,7 +11099,9 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Function slug */
         function_slug: string
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -5027,9 +11112,26 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
+        content: {
+          'application/json': components['schemas']['StreamableFile']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
         content?: never
       }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5047,11 +11149,13 @@ export interface operations {
   'v1-deploy-a-function': {
     parameters: {
       query?: {
+        /** @description Boolean string, true or false */
         bundleOnly?: boolean
         slug?: string
       }
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -5070,7 +11174,29 @@ export interface operations {
           'application/json': components['schemas']['DeployFunctionResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Maximum number of functions reached for Plan */
+      402: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5088,7 +11214,16 @@ export interface operations {
   'v1-get-services-health': {
     parameters: {
       query: {
-        services: ('auth' | 'db' | 'pooler' | 'realtime' | 'rest' | 'storage')[]
+        services: (
+          | 'auth'
+          | 'db'
+          | 'db_postgres_user'
+          | 'pooler'
+          | 'realtime'
+          | 'rest'
+          | 'storage'
+          | 'pg_bouncer'
+        )[]
         timeout_ms?: number
       }
       header?: never
@@ -5108,7 +11243,22 @@ export interface operations {
           'application/json': components['schemas']['V1ServiceHealthResponse'][]
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5123,11 +11273,116 @@ export interface operations {
       }
     }
   }
+  'v1-get-jit-access-config': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['JitStateResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to retrieve project's temporary access configuration. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-update-jit-access-config': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['JitAccessRequestRequest']
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['JitStateResponse']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to update project's temporary access configuration. */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
   'v1-delete-network-bans': {
     parameters: {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -5144,7 +11399,22 @@ export interface operations {
         }
         content?: never
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5164,6 +11434,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -5178,7 +11449,22 @@ export interface operations {
           'application/json': components['schemas']['NetworkBanResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5193,11 +11479,62 @@ export interface operations {
       }
     }
   }
+  'v1-list-all-network-bans-enriched': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      201: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['NetworkBanResponseEnriched']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to retrieve project's enriched network bans */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
   'v1-get-network-restrictions': {
     parameters: {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -5212,7 +11549,22 @@ export interface operations {
           'application/json': components['schemas']['NetworkRestrictionsResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5227,11 +11579,66 @@ export interface operations {
       }
     }
   }
+  'v1-patch-network-restrictions': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['NetworkRestrictionsPatchRequest']
+      }
+    }
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['NetworkRestrictionsV2Response']
+        }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Failed to update project network restrictions */
+      500: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
   'v1-update-network-restrictions': {
     parameters: {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -5250,7 +11657,22 @@ export interface operations {
           'application/json': components['schemas']['NetworkRestrictionsResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5283,7 +11705,22 @@ export interface operations {
         }
         content?: never
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5296,6 +11733,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -5310,7 +11748,22 @@ export interface operations {
           'application/json': components['schemas']['PgsodiumConfigResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5330,6 +11783,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -5348,7 +11802,22 @@ export interface operations {
           'application/json': components['schemas']['PgsodiumConfigResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5383,7 +11852,22 @@ export interface operations {
           'application/json': components['schemas']['PostgrestConfigWithJWTSecretResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5422,7 +11906,22 @@ export interface operations {
           'application/json': components['schemas']['V1PostgrestConfigResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5442,6 +11941,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -5458,7 +11958,22 @@ export interface operations {
         }
         content?: never
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5478,6 +11993,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -5494,7 +12010,22 @@ export interface operations {
         }
         content?: never
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5529,7 +12060,22 @@ export interface operations {
           'application/json': components['schemas']['ReadOnlyStatusResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5562,7 +12108,22 @@ export interface operations {
         }
         content?: never
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5582,6 +12143,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -5596,7 +12158,22 @@ export interface operations {
           'application/json': components['schemas']['GetProjectAvailableRestoreVersionsResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5609,35 +12186,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
-        ref: string
-      }
-      cookie?: never
-    }
-    requestBody: {
-      content: {
-        'application/json': components['schemas']['RestoreProjectBodyDto']
-      }
-    }
-    responses: {
-      200: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-      403: {
-        headers: {
-          [name: string]: unknown
-        }
-        content?: never
-      }
-    }
-  }
-  'v1-cancel-a-project-restoration': {
-    parameters: {
-      query?: never
-      header?: never
-      path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -5650,7 +12199,63 @@ export interface operations {
         }
         content?: never
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+    }
+  }
+  'v1-cancel-a-project-restoration': {
+    parameters: {
+      query?: never
+      header?: never
+      path: {
+        /** @description Project ref */
+        ref: string
+      }
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5663,6 +12268,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -5677,7 +12283,22 @@ export interface operations {
           'application/json': components['schemas']['SecretResponse'][]
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5697,13 +12318,14 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
     }
     requestBody: {
       content: {
-        'application/json': components['schemas']['CreateSecretBody'][]
+        'application/json': components['schemas']['CreateSecretBody']
       }
     }
     responses: {
@@ -5713,7 +12335,22 @@ export interface operations {
         }
         content?: never
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5733,13 +12370,14 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
     }
     requestBody: {
       content: {
-        'application/json': string[]
+        'application/json': components['schemas']['DeleteSecretsBody']
       }
     }
     responses: {
@@ -5747,11 +12385,24 @@ export interface operations {
         headers: {
           [name: string]: unknown
         }
-        content: {
-          'application/json': Record<string, never>
-        }
+        content?: never
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5771,6 +12422,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -5785,7 +12437,22 @@ export interface operations {
           'application/json': components['schemas']['SslEnforcementResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5805,6 +12472,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -5823,7 +12491,22 @@ export interface operations {
           'application/json': components['schemas']['SslEnforcementResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5858,7 +12541,22 @@ export interface operations {
           'application/json': components['schemas']['V1StorageBucketResponse'][]
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5880,6 +12578,7 @@ export interface operations {
       }
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -5894,7 +12593,22 @@ export interface operations {
           'application/json': components['schemas']['TypescriptResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5914,6 +12628,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -5932,7 +12647,22 @@ export interface operations {
           'application/json': components['schemas']['ProjectUpgradeInitiateResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5952,6 +12682,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -5966,7 +12697,22 @@ export interface operations {
           'application/json': components['schemas']['ProjectUpgradeEligibilityResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -5988,6 +12734,7 @@ export interface operations {
       }
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -6002,7 +12749,22 @@ export interface operations {
           'application/json': components['schemas']['DatabaseUpgradeStatusResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -6022,6 +12784,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -6036,7 +12799,22 @@ export interface operations {
           'application/json': components['schemas']['VanitySubdomainConfigResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -6056,6 +12834,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -6068,7 +12847,22 @@ export interface operations {
         }
         content?: never
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -6088,6 +12882,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -6106,7 +12901,22 @@ export interface operations {
           'application/json': components['schemas']['ActivateVanitySubdomainResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -6126,6 +12936,7 @@ export interface operations {
       query?: never
       header?: never
       path: {
+        /** @description Project ref */
         ref: string
       }
       cookie?: never
@@ -6144,7 +12955,22 @@ export interface operations {
           'application/json': components['schemas']['SubdomainAvailabilityResponse']
         }
       }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
       403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
         headers: {
           [name: string]: unknown
         }
@@ -6159,11 +12985,57 @@ export interface operations {
       }
     }
   }
+  'v1-get-available-regions': {
+    parameters: {
+      query: {
+        /** @description Continent code to determine regional recommendations: NA (North America), SA (South America), EU (Europe), AF (Africa), AS (Asia), OC (Oceania), AN (Antarctica) */
+        continent?: 'NA' | 'SA' | 'EU' | 'AF' | 'AS' | 'OC' | 'AN'
+        /** @description Desired instance size. Omit this field to always default to the smallest possible size. */
+        desired_instance_size?:
+          | 'nano'
+          | 'micro'
+          | 'small'
+          | 'medium'
+          | 'large'
+          | 'xlarge'
+          | '2xlarge'
+          | '4xlarge'
+          | '8xlarge'
+          | '12xlarge'
+          | '16xlarge'
+          | '24xlarge'
+          | '24xlarge_optimized_memory'
+          | '24xlarge_optimized_cpu'
+          | '24xlarge_high_memory'
+          | '48xlarge'
+          | '48xlarge_optimized_memory'
+          | '48xlarge_optimized_cpu'
+          | '48xlarge_high_memory'
+        /** @description Slug of your organization */
+        organization_slug: string
+      }
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    requestBody?: never
+    responses: {
+      200: {
+        headers: {
+          [name: string]: unknown
+        }
+        content: {
+          'application/json': components['schemas']['RegionsInfo']
+        }
+      }
+    }
+  }
   'v1-list-all-snippets': {
     parameters: {
       query?: {
         cursor?: string
         limit?: string
+        /** @description Project ref */
         project_ref?: string
         sort_by?: 'name' | 'inserted_at'
         sort_order?: 'asc' | 'desc'
@@ -6181,6 +13053,27 @@ export interface operations {
         content: {
           'application/json': components['schemas']['SnippetList']
         }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
       /** @description Failed to list user's SQL snippets */
       500: {
@@ -6209,6 +13102,27 @@ export interface operations {
         content: {
           'application/json': components['schemas']['SnippetResponse']
         }
+      }
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Forbidden action */
+      403: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
+      }
+      /** @description Rate limit exceeded */
+      429: {
+        headers: {
+          [name: string]: unknown
+        }
+        content?: never
       }
       /** @description Failed to retrieve SQL snippet */
       500: {

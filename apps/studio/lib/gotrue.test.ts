@@ -1,8 +1,9 @@
-import { validateReturnTo } from './gotrue'
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
+
+import { DEFAULT_FALLBACK_PATH, validateReturnTo } from './gotrue'
 
 describe('validateReturnTo', () => {
-  const fallback = '/projects'
+  const fallback = DEFAULT_FALLBACK_PATH
 
   it('should return the path if it is a valid internal path', () => {
     expect(validateReturnTo('/dashboard')).toBe('/dashboard')

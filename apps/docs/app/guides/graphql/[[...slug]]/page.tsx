@@ -1,17 +1,16 @@
-import { type SerializeOptions } from 'next-mdx-remote/dist/types'
-import { notFound } from 'next/navigation'
 import { isAbsolute, relative } from 'path'
-import rehypeSlug from 'rehype-slug'
-
-import { genGuideMeta } from '~/features/docs/GuidesMdx.utils'
 import { GuideTemplate, newEditLink } from '~/features/docs/GuidesMdx.template'
-import { fetchRevalidatePerDay_TEMP_TESTING } from '~/features/helpers.fetch'
-import { UrlTransformFunction, linkTransform } from '~/lib/mdx/plugins/rehypeLinkTransform'
+import { genGuideMeta } from '~/features/docs/GuidesMdx.utils'
+import { getEmptyArray } from '~/features/helpers.fn'
+import { IS_DEV } from '~/lib/constants'
+import { linkTransform, UrlTransformFunction } from '~/lib/mdx/plugins/rehypeLinkTransform'
 import remarkMkDocsAdmonition from '~/lib/mdx/plugins/remarkAdmonition'
 import { removeTitle } from '~/lib/mdx/plugins/remarkRemoveTitle'
 import remarkPyMdownTabs from '~/lib/mdx/plugins/remarkTabs'
-
-export const dynamicParams = false
+import { getGitHubFileContents } from '~/lib/octokit'
+import { SerializeOptions } from '~/types/next-mdx-remote-serialize'
+import { notFound } from 'next/navigation'
+import rehypeSlug from 'rehype-slug'
 
 // We fetch these docs at build time from an external repo
 const org = 'supabase'
@@ -64,7 +63,7 @@ const pageMap = [
       title: 'Computed Fields',
       subtitle: 'Using Postgres Computed Fields with GraphQL.',
     },
-    remoteFile: 'computed-fields.md',
+    remoteFile: 'computed_fields.md',
   },
   {
     slug: 'configuration',
@@ -108,7 +107,8 @@ interface Params {
   slug?: string[]
 }
 
-const PGGraphQLDocs = async ({ params }: { params: Params }) => {
+const PGGraphQLDocs = async (props: { params: Promise<Params> }) => {
+  const params = await props.params
   const { meta, ...data } = await getContent(params)
 
   const options = {
@@ -135,11 +135,12 @@ const getContent = async ({ slug }: Params) => {
 
   const editLink = newEditLink(`${org}/${repo}/blob/${branch}/${docsDir}/${remoteFile}`)
 
-  const response = await fetchRevalidatePerDay_TEMP_TESTING(
-    `https://raw.githubusercontent.com/${org}/${repo}/${branch}/${docsDir}/${remoteFile}`
-  )
-
-  const content = await response.text()
+  const content = await getGitHubFileContents({
+    org,
+    repo,
+    path: `${docsDir}/${remoteFile}`,
+    branch,
+  })
 
   return {
     pathname: `/guides/graphql${slug?.length ? `/${slug.join('/')}` : ''}` satisfies `/${string}`,
@@ -177,7 +178,7 @@ const urlTransform: UrlTransformFunction = (url) => {
 
     // If we have a mapping for this page, use the mapped path
     if (page) {
-      return 'graphql/' + page.slug + hash
+      return '/docs/guides/graphql/' + page.slug + hash
     }
 
     // If we don't have this page in our docs, link to original docs
@@ -188,8 +189,10 @@ const urlTransform: UrlTransformFunction = (url) => {
   }
 }
 
-const generateStaticParams = async () => pageMap.map(({ slug }) => ({ slug: slug ? [slug] : [] }))
+const generateStaticParams = !IS_DEV
+  ? async () => pageMap.map(({ slug }) => ({ slug: slug ? [slug] : [] }))
+  : getEmptyArray
 const generateMetadata = genGuideMeta(getContent)
 
 export default PGGraphQLDocs
-export { generateStaticParams, generateMetadata }
+export { generateMetadata, generateStaticParams }

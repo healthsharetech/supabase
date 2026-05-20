@@ -18,7 +18,7 @@ import { Button, cn } from 'ui'
 import { IS_PLATFORM } from '~/lib/constants'
 import { useSendFeedbackMutation } from '~/lib/fetch/feedback'
 import { useSendTelemetryEvent } from '~/lib/telemetry'
-import { getNotionTeam, getSanitizedTabParams } from './Feedback.utils'
+import { getLinearTeam, getSanitizedTabParams } from './Feedback.utils'
 import { type FeedbackFields, FeedbackModal } from './FeedbackModal'
 
 const FeedbackButton = forwardRef<
@@ -96,6 +96,8 @@ function Feedback({ className }: { className?: string }) {
   const showNo = unanswered || isNo
 
   async function sendFeedbackVote(response: Response) {
+    if (!supabase) return
+
     const { error } = await supabase.from('feedback').insert({
       vote: response,
       page: pathname,
@@ -134,7 +136,7 @@ function Feedback({ className }: { className?: string }) {
       title,
       // @ts-expect-error -- can't click this button without having a state.response
       isHelpful: state.response === 'yes',
-      team: getNotionTeam(pathname),
+      team: getLinearTeam(pathname),
     })
     setModalOpen(false)
     refocusButton()
@@ -159,8 +161,8 @@ function Feedback({ className }: { className?: string }) {
               '[transition-property:opacity,transform,color] [transition-duration:150ms,250ms,250ms]',
               'motion-reduce:[transition-duration:150ms,1ms,300ms]',
               '[transition-timing-function:cubic-bezier(.76,0,.23,1)]',
-              !isNo && 'hover:text-warning-600 hover:border-warning-500',
-              isNo && `bg-warning text-warning-200 !border-warning disabled:opacity-100`,
+              !isNo && 'hover:text-warning hover:border-warning-500',
+              isNo && `bg-warning text-warning-200 border-warning! disabled:opacity-100`,
               !showNo && 'opacity-0 invisible'
             )}
             onClick={() => handleVote('no')}
@@ -180,7 +182,7 @@ function Feedback({ className }: { className?: string }) {
               '[transition-timing-function:cubic-bezier(.76,0,.23,1)]',
               !isYes && 'hover:text-brand-600 hover:border-brand-500',
               isYes &&
-                'bg-brand text-brand-200 !border-brand disabled:opacity-100 -translate-x-[calc(100%+var(--container-inline-flex-gap,0.5rem))]',
+                'bg-brand text-brand-200 border-brand! disabled:opacity-100 -translate-x-[calc(100%+var(--container-inline-flex-gap,0.5rem))]',
               !showYes && 'opacity-0 invisible'
             )}
             onClick={() => handleVote('yes')}
@@ -203,8 +205,8 @@ function Feedback({ className }: { className?: string }) {
             '[transition-delay:200ms,0ms]',
             '[transition-timing-function:cubic-bezier(.76,0,.23,1)]',
             'motion-reduce:[transition-duration:150ms,1ms]',
-            '!ease-out',
-            state.type === StateType.Followup && 'opacity-100 visible -translate-x-0'
+            'ease-out!',
+            state.type === StateType.Followup && 'opacity-100 visible translate-x-0'
           )}
         >
           {state.type === StateType.Followup && (

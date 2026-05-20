@@ -5,14 +5,18 @@ import {
   RenderCellProps,
   RenderGroupCellProps,
   RenderHeaderCellProps,
+  useHeaderRowSelection,
   useRowSelection,
 } from 'react-data-grid'
 
-import { ButtonTooltip } from 'components/ui/ButtonTooltip'
-import { useTableEditorTableStateSnapshot } from 'state/table-editor-table'
 import { SELECT_COLUMN_KEY } from '../../constants'
-import { useTrackedState } from '../../store/Store'
 import type { SupaRow } from '../../types'
+import { ButtonTooltip } from '@/components/ui/ButtonTooltip'
+import { Shortcut } from '@/components/ui/Shortcut'
+import { ShortcutTooltip } from '@/components/ui/ShortcutTooltip'
+import { SHORTCUT_IDS } from '@/state/shortcuts/registry'
+import { useTableEditorStateSnapshot } from '@/state/table-editor'
+import { useTableEditorTableStateSnapshot } from '@/state/table-editor-table'
 
 export const SelectColumn: CalculatedColumn<any, any> = {
   key: SELECT_COLUMN_KEY,
@@ -23,25 +27,24 @@ export const SelectColumn: CalculatedColumn<any, any> = {
   resizable: false,
   sortable: false,
   frozen: true,
-  isLastFrozenColumn: false,
   renderHeaderCell: (props: RenderHeaderCellProps<unknown>) => {
     // [Joshen] formatter is actually a valid React component, so we can use hooks here
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [isRowSelected, onRowSelectionChange] = useRowSelection()
+    const { isRowSelected, onRowSelectionChange } = useHeaderRowSelection()
 
     return (
       <SelectCellHeader
         aria-label="Select All"
         tabIndex={props.tabIndex}
         value={isRowSelected}
-        onChange={(checked) => onRowSelectionChange({ type: 'HEADER', checked })}
+        onChange={(checked) => onRowSelectionChange({ checked })}
       />
     )
   },
   renderCell: (props: RenderCellProps<SupaRow>) => {
     // [Alaister] formatter is actually a valid React component, so we can use hooks here
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [isRowSelected, onRowSelectionChange] = useRowSelection()
+    const { isRowSelected, onRowSelectionChange } = useRowSelection()
     return (
       <SelectCellFormatter
         aria-label="Select"
@@ -49,7 +52,7 @@ export const SelectColumn: CalculatedColumn<any, any> = {
         value={isRowSelected}
         row={props.row}
         onChange={(checked, isShiftClick) => {
-          onRowSelectionChange({ type: 'ROW', row: props.row, checked, isShiftClick })
+          onRowSelectionChange({ row: props.row, checked, isShiftClick })
         }}
         // Stop propagation to prevent row selection
         onClick={stopPropagation}
@@ -59,7 +62,7 @@ export const SelectColumn: CalculatedColumn<any, any> = {
   renderGroupCell: (props: RenderGroupCellProps<SupaRow>) => {
     // [Alaister] groupFormatter is actually a valid React component, so we can use hooks here
     // eslint-disable-next-line react-hooks/rules-of-hooks
-    const [isRowSelected, onRowSelectionChange] = useRowSelection()
+    const { isRowSelected, onRowSelectionChange } = useRowSelection()
     return (
       <SelectCellFormatter
         aria-label="Select Group"
@@ -67,7 +70,6 @@ export const SelectColumn: CalculatedColumn<any, any> = {
         value={isRowSelected}
         onChange={(checked) => {
           onRowSelectionChange({
-            type: 'ROW',
             row: props.row,
             checked,
             isShiftClick: false,
@@ -111,8 +113,7 @@ function SelectCellFormatter({
   'aria-label': ariaLabel,
   'aria-labelledby': ariaLabelledBy,
 }: SelectCellFormatterProps) {
-  const state = useTrackedState()
-  const { onEditRow } = state
+  const snap = useTableEditorStateSnapshot()
 
   function handleChange(e: ChangeEvent<HTMLInputElement>) {
     onChange(e.target.checked, (e.nativeEvent as MouseEvent).shiftKey)
@@ -120,25 +121,31 @@ function SelectCellFormatter({
 
   function onEditClick(e: any) {
     e.stopPropagation()
-    if (onEditRow && row) {
-      onEditRow(row)
+    if (row) {
+      snap.onEditRow(row)
     }
   }
 
   return (
     <div className="sb-grid-select-cell__formatter">
-      <input
-        aria-label={ariaLabel}
-        aria-labelledby={ariaLabelledBy}
-        tabIndex={tabIndex}
-        type="checkbox"
-        className="rdg-row__select-column__select-action"
-        disabled={disabled}
-        checked={value}
-        onChange={handleChange}
-        onClick={onClick}
-      />
-      {onEditRow && row && (
+      <ShortcutTooltip
+        shortcutId={SHORTCUT_IDS.TABLE_EDITOR_TOGGLE_ROW_SELECTION}
+        delayDuration={1000}
+        side="left"
+      >
+        <input
+          aria-label={ariaLabel}
+          aria-labelledby={ariaLabelledBy}
+          tabIndex={tabIndex}
+          type="checkbox"
+          className="rdg-row__select-column__select-action"
+          disabled={disabled}
+          checked={value}
+          onChange={handleChange}
+          onClick={onClick}
+        />
+      </ShortcutTooltip>
+      {row && (
         <ButtonTooltip
           type="text"
           size="tiny"
@@ -189,18 +196,26 @@ function SelectCellHeader({
 
   return (
     <div className="sb-grid-select-cell__header">
-      <input
-        ref={inputRef}
-        aria-label={ariaLabel}
-        aria-labelledby={ariaLabelledBy}
-        tabIndex={tabIndex}
-        type="checkbox"
-        className="sb-grid-select-cell__header__input"
-        disabled={disabled}
-        checked={value}
-        onChange={handleChange}
-        onClick={onClick}
-      />
+      <Shortcut
+        id={SHORTCUT_IDS.TABLE_EDITOR_TOGGLE_ALL_ROW_SELECTION}
+        onTrigger={() => onChange(!value, false)}
+        options={{
+          registerInCommandMenu: true,
+        }}
+      >
+        <input
+          ref={inputRef}
+          aria-label={ariaLabel}
+          aria-labelledby={ariaLabelledBy}
+          tabIndex={tabIndex}
+          type="checkbox"
+          className="sb-grid-select-cell__header__input"
+          disabled={disabled}
+          checked={value}
+          onChange={handleChange}
+          onClick={onClick}
+        />
+      </Shortcut>
     </div>
   )
 }

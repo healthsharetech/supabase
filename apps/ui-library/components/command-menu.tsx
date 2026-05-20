@@ -4,9 +4,6 @@ import { CircleIcon, LaptopIcon, MoonIcon, SunIcon } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useRouter } from 'next/navigation'
 import * as React from 'react'
-
-import { COMMAND_ITEMS } from '@/config/docs'
-import { cn } from '@/lib/utils'
 import {
   Button,
   CommandDialog,
@@ -18,6 +15,9 @@ import {
   CommandSeparator_Shadcn_,
   DialogProps,
 } from 'ui'
+
+import { COMMAND_ITEMS } from '@/config/docs'
+import { cn } from '@/lib/utils'
 
 export function CommandMenu({ ...props }: DialogProps) {
   const router = useRouter()
@@ -55,7 +55,7 @@ export function CommandMenu({ ...props }: DialogProps) {
       <Button
         type="outline"
         className={cn(
-          `relative h-8 w-full justify-start rounded-[0.5rem] bg-background text-sm font-normal text-foreground-muted shadow-none sm:pr-12 md:w-40 lg:w-64
+          `relative h-8 w-full justify-start rounded-[0.5rem] bg-background text-sm font-normal text-foreground-muted shadow-none sm:pr-12
             hover:border-foreground-muted hover:bg-surface-100 hover:text-foreground-lighter
           `
         )}
@@ -64,7 +64,7 @@ export function CommandMenu({ ...props }: DialogProps) {
       >
         <span className="hidden lg:inline-flex">Search UI Library...</span>
         <span className="inline-flex lg:hidden">Search...</span>
-        <kbd className="pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-5 select-none items-center gap-1 rounded border bg-surface-200 px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex text-foreground-light">
+        <kbd className="pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-5 select-none items-center gap-1 rounded-sm border bg-surface-200 px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex text-foreground-light">
           <span className="text-sm">⌘</span>K
         </kbd>
       </Button>
@@ -72,30 +72,12 @@ export function CommandMenu({ ...props }: DialogProps) {
         <CommandInput_Shadcn_ placeholder="Type a command or search..." />
         <CommandList_Shadcn_>
           <CommandEmpty_Shadcn_>No results found.</CommandEmpty_Shadcn_>
-          {/* <CommandGroup_Shadcn_ heading="Links">
-            {docsConfig.mainNav
-              .filter((navitem) => !navitem.external)
-              .map((navItem) => (
-                <CommandItem_Shadcn_
-                  key={navItem.href}
-                  value={navItem.title}
-                  onSelect={() => {
-                    runCommand(() => router.push(navItem.href as string))
-                  }}
-                >
-                  <FileIcon className="mr-2 h-4 w-4" strokeWidth={1} />
-                  {navItem.title}
-                </CommandItem_Shadcn_>
-              ))}
-          </CommandGroup_Shadcn_> */}
           <CommandGroup_Shadcn_ key="pages" heading="Pages">
             {COMMAND_ITEMS.map((navItem) => (
               <CommandItem_Shadcn_
                 key={navItem.href}
                 value={navItem.label}
-                onSelect={() => {
-                  runCommand(() => router.push(navItem.href as string))
-                }}
+                onSelect={() => runCommand(() => router.push(navItem.href as string))}
               >
                 <div className="mr-2 flex h-4 w-4 items-center justify-center">
                   <CircleIcon className="h-3 w-3" strokeWidth={1} />

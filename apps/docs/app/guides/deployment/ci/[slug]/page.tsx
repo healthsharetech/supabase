@@ -1,15 +1,15 @@
-import { type SerializeOptions } from 'next-mdx-remote/dist/types'
 import { notFound } from 'next/navigation'
 import { relative } from 'node:path'
 import rehypeSlug from 'rehype-slug'
 
-import { genGuideMeta, removeRedundantH1 } from '~/features/docs/GuidesMdx.utils'
 import { GuideTemplate, newEditLink } from '~/features/docs/GuidesMdx.template'
-import { fetchRevalidatePerDay } from '~/features/helpers.fetch'
+import { genGuideMeta, removeRedundantH1 } from '~/features/docs/GuidesMdx.utils'
+import { getGitHubFileContents } from '~/lib/octokit'
 import { UrlTransformFunction, linkTransform } from '~/lib/mdx/plugins/rehypeLinkTransform'
 import remarkMkDocsAdmonition from '~/lib/mdx/plugins/remarkAdmonition'
 import { removeTitle } from '~/lib/mdx/plugins/remarkRemoveTitle'
 import remarkPyMdownTabs from '~/lib/mdx/plugins/remarkTabs'
+import { SerializeOptions } from '~/types/next-mdx-remote-serialize'
 
 export const dynamicParams = false
 
@@ -54,7 +54,8 @@ const pageMap = [
 
 type Params = { slug: string }
 
-const ActionDocs = async ({ params }: { params: Params }) => {
+const ActionDocs = async (props: { params: Promise<Params> }) => {
+  const params = await props.params
   const { meta, ...data } = await getContent(params)
 
   const options = {
@@ -81,11 +82,9 @@ const getContent = async ({ slug }: Params) => {
 
   const editLink = newEditLink(`${org}/${repo}/blob/${branch}/${docsDir}/${remoteFile}`)
 
-  const response = await fetchRevalidatePerDay(
-    `https://raw.githubusercontent.com/${org}/${repo}/${branch}/${docsDir}/${remoteFile}`
+  const content = removeRedundantH1(
+    await getGitHubFileContents({ org, repo, path: `${docsDir}/${remoteFile}`, branch })
   )
-
-  const content = removeRedundantH1(await response.text())
 
   return {
     pathname: `/guides/cli/github-action/${slug}` satisfies `/${string}`,
@@ -132,4 +131,4 @@ const generateStaticParams = () => pageMap.map(({ slug }) => ({ slug }))
 const generateMetadata = genGuideMeta(getContent)
 
 export default ActionDocs
-export { generateStaticParams, generateMetadata }
+export { generateMetadata, generateStaticParams }

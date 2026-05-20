@@ -1,14 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { SupportCategories } from '@supabase/shared-types/out/constants'
-import { LOCAL_STORAGE_KEYS } from 'lib/constants'
+import { LOCAL_STORAGE_KEYS } from 'common'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
-import * as z from 'zod'
-
-import { useSendSupportTicketMutation } from 'data/feedback/support-ticket-send'
-import { useOrganizationsQuery } from 'data/organizations/organizations-query'
-import { useProfile } from 'lib/profile'
 import {
   Button,
   Dialog,
@@ -19,13 +14,20 @@ import {
   DialogSection,
   DialogTitle,
   DialogTrigger,
-  FormControl_Shadcn_,
-  FormField_Shadcn_,
-  FormItem_Shadcn_,
-  FormLabel_Shadcn_,
-  Form_Shadcn_,
-  Input_Shadcn_,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  Input,
+  Separator,
 } from 'ui'
+import * as z from 'zod'
+
+import { NO_PROJECT_MARKER } from '@/components/interfaces/Support/SupportForm.utils'
+import { useSendSupportTicketMutation } from '@/data/feedback/support-ticket-send'
+import { useOrganizationsQuery } from '@/data/organizations/organizations-query'
+import { useProfile } from '@/lib/profile'
 
 const setDeletionRequestFlag = () => {
   const expiryDate = new Date()
@@ -63,7 +65,7 @@ export const DeleteAccountButton = () => {
   })
   const { account } = form.watch()
 
-  const { mutate: submitSupportTicket, isLoading } = useSendSupportTicketMutation({
+  const { mutate: submitSupportTicket, isPending } = useSendSupportTicketMutation({
     onSuccess: () => {
       setIsOpen(false)
       setDeletionRequestFlag()
@@ -91,7 +93,7 @@ export const DeleteAccountButton = () => {
       severity: 'Low',
       allowSupportAccess: false,
       verified: true,
-      projectRef: 'no-project',
+      projectRef: NO_PROJECT_MARKER,
     }
 
     submitSupportTicket(payload)
@@ -108,8 +110,8 @@ export const DeleteAccountButton = () => {
           Request to delete account
         </Button>
       </DialogTrigger>
-      <DialogContent className="!w-[450px]">
-        <DialogHeader className="border-b">
+      <DialogContent className="w-[500px]!">
+        <DialogHeader>
           {(organizations ?? []).length > 0 ? (
             <>
               <DialogTitle>Leave all organizations before requesting account deletion</DialogTitle>
@@ -128,52 +130,52 @@ export const DeleteAccountButton = () => {
           )}
         </DialogHeader>
 
+        <Separator />
+
         {isSuccess && (
           <>
             {organizations.length > 0 ? (
-              <DialogSection className="!pt-0">
-                <span className="text-sm text-foreground flex flex-col gap-y-2">
-                  Before submitting an account deletion request, please ensure that your account is
-                  not part of any organization. This can be done by leaving or deleting the
-                  organizations that you are a part of.
-                </span>
-                <Button
-                  block
-                  type="primary"
-                  size="medium"
-                  className="mt-6"
-                  onClick={() => setIsOpen(false)}
-                >
-                  Understood
-                </Button>
-              </DialogSection>
+              <>
+                <DialogSection>
+                  <span className="text-sm text-foreground flex flex-col gap-y-2">
+                    Before submitting an account deletion request, please ensure that your account
+                    is not part of any organization. This can be done by leaving or deleting the
+                    organizations that you are a part of.
+                  </span>
+                </DialogSection>
+                <DialogFooter>
+                  <Button block type="primary" size="medium" onClick={() => setIsOpen(false)}>
+                    Understood
+                  </Button>
+                </DialogFooter>
+              </>
             ) : (
-              <Form_Shadcn_ {...form}>
+              <Form {...form}>
                 <form
                   id="account-deletion-request"
                   onSubmit={form.handleSubmit(() => onConfirmDelete())}
                 >
                   <DialogSection>
-                    <FormField_Shadcn_
+                    <FormField
                       name="account"
                       control={form.control}
                       render={({ field }) => (
-                        <FormItem_Shadcn_>
-                          <FormLabel_Shadcn_>
+                        <FormItem>
+                          <FormLabel>
                             Please type{' '}
                             <span className="font-bold">{profile?.primary_email ?? ''}</span> to
                             confirm
-                          </FormLabel_Shadcn_>
-                          <FormControl_Shadcn_>
-                            <Input_Shadcn_
+                          </FormLabel>
+                          <FormControl>
+                            <Input
                               autoFocus
                               {...field}
                               autoComplete="off"
-                              disabled={isLoading}
+                              disabled={isPending}
                               placeholder="Enter the account above"
                             />
-                          </FormControl_Shadcn_>
-                        </FormItem_Shadcn_>
+                          </FormControl>
+                        </FormItem>
                       )}
                     />
                   </DialogSection>
@@ -184,14 +186,14 @@ export const DeleteAccountButton = () => {
                       size="small"
                       type="danger"
                       htmlType="submit"
-                      loading={isLoading}
-                      disabled={account !== accountEmail || isLoading}
+                      loading={isPending}
+                      disabled={account !== accountEmail || isPending}
                     >
                       Submit request for account deletion
                     </Button>
                   </DialogFooter>
                 </form>
-              </Form_Shadcn_>
+              </Form>
             )}
           </>
         )}

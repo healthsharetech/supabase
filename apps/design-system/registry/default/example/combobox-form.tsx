@@ -4,9 +4,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Check, ChevronsUpDown } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
-import { z } from 'zod'
-
-import { cn } from '@/lib/utils'
 import {
   Button,
   Command_Shadcn_,
@@ -15,19 +12,20 @@ import {
   CommandInput_Shadcn_,
   CommandItem_Shadcn_,
   CommandList_Shadcn_,
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
 } from 'ui'
-import {
-  Form_Shadcn_,
-  FormControl_Shadcn_,
-  FormDescription_Shadcn_,
-  FormField_Shadcn_,
-  FormItem_Shadcn_,
-  FormLabel_Shadcn_,
-  FormMessage_Shadcn_,
-  Popover_Shadcn_,
-  PopoverContent_Shadcn_,
-  PopoverTrigger_Shadcn_,
-} from 'ui'
+import { z } from 'zod'
+
+import { cn } from '@/lib/utils'
 
 const languages = [
   { label: 'English', value: 'en' },
@@ -63,17 +61,17 @@ export default function ComboboxForm() {
   }
 
   return (
-    <Form_Shadcn_ {...form}>
+    <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField_Shadcn_
+        <FormField
           control={form.control}
           name="language"
           render={({ field }) => (
-            <FormItem_Shadcn_ className="flex flex-col">
-              <FormLabel_Shadcn_>Language</FormLabel_Shadcn_>
-              <Popover_Shadcn_>
-                <PopoverTrigger_Shadcn_ asChild>
-                  <FormControl_Shadcn_>
+            <FormItem className="flex flex-col">
+              <FormLabel>Language</FormLabel>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
                     <Button
                       type="default"
                       role="combobox"
@@ -93,9 +91,9 @@ export default function ComboboxForm() {
                         ? languages.find((language) => language.value === field.value)?.label
                         : 'Select language'}
                     </Button>
-                  </FormControl_Shadcn_>
-                </PopoverTrigger_Shadcn_>
-                <PopoverContent_Shadcn_ className="w-[200px] p-0">
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-0">
                   <Command_Shadcn_>
                     <CommandInput_Shadcn_ placeholder="Search language..." />
                     <CommandList_Shadcn_>
@@ -121,19 +119,19 @@ export default function ComboboxForm() {
                       </CommandGroup_Shadcn_>
                     </CommandList_Shadcn_>
                   </Command_Shadcn_>
-                </PopoverContent_Shadcn_>
-              </Popover_Shadcn_>
-              <FormDescription_Shadcn_>
+                </PopoverContent>
+              </Popover>
+              <FormDescription>
                 This is the language that will be used in the dashboard.
-              </FormDescription_Shadcn_>
-              <FormMessage_Shadcn_ />
-            </FormItem_Shadcn_>
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
           )}
         />
         <Button htmlType="submit" type="secondary" size="small">
           Submit
         </Button>
       </form>
-    </Form_Shadcn_>
+    </Form>
   )
 }
