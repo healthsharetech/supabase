@@ -1,7 +1,8 @@
 FROM dunglas/frankenphp
 
 RUN install-php-extensions \
-    pdo_pgsql
+    pdo_pgsql \
+    gd
 
 # QuickJS runtime (needed for todo-cli.cjs reconciliation bundle)
 # Build from source for latest stable version
