@@ -10,6 +10,63 @@
 
 name: supabase
 
+# Shared environment for the Laravel admin app and its background-worker containers.
+# The web container, the scheduler, and the queue worker are the same application and
+# must see the same configuration -- an anchor is the only way to guarantee that a var
+# added here reaches all three (compose silently interpolates a missing var to empty).
+x-admin-env: &admin-env
+  APP_DEBUG: false
+  APP_ENV: ${ADMIN_APP_ENV:-production}
+  APP_KEY: ${ADMIN_APP_KEY}
+  APP_URL: ${ADMIN_APP_URL}
+  ASSET_URL: ${ADMIN_ASSET_URL:-${ADMIN_APP_URL}}
+  AWS_ENVIRONMENT: ${AWS_ENVIRONMENT}
+  AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+  AWS_TEXTRACT_UPLOADS_BUCKET: ${ADMIN_AWS_TEXTRACT_UPLOADS_BUCKET:-"hst-textract-uploads"}
+  AWS_TEXTRACT_ROLE_ARN: ${ADMIN_AWS_TEXTRACT_ROLE_ARN}
+  AWS_TEXTRACT_SNS_TOPIC_ARN: ${ADMIN_AWS_TEXTRACT_SNS_TOPIC_ARN}
+  AWS_SQS_EMAIL_QUEUE_URL: ${ADMIN_AWS_SQS_EMAIL_QUEUE_URL}
+  AWS_SES_EMAIL_BUCKET: ${ADMIN_AWS_SES_EMAIL_BUCKET}
+  HIJACK_EMAIL_ADDRESS: ${HIJACK_EMAIL_ADDRESS}
+  PROXY_URL: ${ADMIN_APP_URL}
+  PROXY_SCHEMA: https
+  DB_CONNECTION: pgsql
+  DB_HOST: ${POSTGRES_HOST}
+  DB_PORT: ${POSTGRES_PORT}
+  DB_DATABASE: ${POSTGRES_DB}
+  DB_USERNAME: ${ADMIN_DB_USERNAME}
+  DB_PASSWORD: ${ADMIN_POSTGRES_PASSWORD}
+  JWT_SECRET: ${JWT_SECRET}
+  LOG_CHANNEL: ${ADMIN_LOG_CHANNEL:-stdout}
+  LOG_LEVEL: ${ADMIN_LOG_LEVEL:-info}
+  SUPABASE_URL: http://kong:8000
+  SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+  SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
+  TELNYX_API_KEY: ${ADMIN_TELNYX_API_KEY}
+  RETELL_API_KEY: ${ADMIN_RETELL_API_KEY}
+  BACKGROUND_JOB_PING_MONITOR_URL: ${ADMIN_BACKGROUND_JOB_PING_MONITOR_URL}
+  MAIL_MAILER: ${ADMIN_MAIL_MAILER:-ses}
+  MAIL_FROM_ADDRESS: ${ADMIN_MAIL_FROM_ADDRESS}
+  MAILCHIMP_API_KEY: ${ADMIN_MAILCHIMP_API_KEY}
+  MAILCHIMP_NEW_USER_LIST_ID: ${ADMIN_MAILCHIMP_NEW_USER_LIST_ID}
+  SENTRY_ENVIRONMENT: ${ADMIN_SENTRY_ENVIRONMENT:-production}
+  FIREBASE_CREDENTIALS: ${ADMIN_FIREBASE_CREDENTIALS}
+  STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+  STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+  STRIPE_BASIC_PRICE_ID: ${STRIPE_BASIC_PRICE_ID}
+  STRIPE_PREMIUM_PRICE_ID: ${STRIPE_PREMIUM_PRICE_ID}
+  STRIPE_TEAM_PRICE_ID: ${STRIPE_TEAM_PRICE_ID}
+  STRIPE_TEAM_ANNUAL_PRICE_ID: ${STRIPE_TEAM_ANNUAL_PRICE_ID}
+  STRIPE_SOLO_PRICE_ID: ${STRIPE_SOLO_PRICE_ID}
+  STRIPE_FAMILY_PRICE_ID: ${STRIPE_FAMILY_PRICE_ID}
+  PLAID_CLIENT_ID: ${PLAID_CLIENT_ID}
+  PLAID_SECRET: ${PLAID_SECRET}
+  PLAID_ENV: ${PLAID_ENV}
+  PLAID_WEBHOOK_URL: ${PLAID_WEBHOOK_URL}
+  # Must exceed the longest job timeout (ProcessReceiptWithBedrockAgentJob = 600s), or
+  # the queue re-reserves a job that is still running and executes it twice.
+  DB_QUEUE_RETRY_AFTER: ${ADMIN_DB_QUEUE_RETRY_AFTER:-900}
+
 services:
 
   ## Don't run the studio on the production server, b/c it gives access to the DB without requiring a password
@@ -620,55 +677,62 @@ services:
       interval: 30s
       retries: 10
     environment:
-      APP_DEBUG: false
-      APP_ENV: ${ADMIN_APP_ENV:-production}
-      APP_KEY: ${ADMIN_APP_KEY}
-      APP_URL: ${ADMIN_APP_URL}
-      ASSET_URL: ${ADMIN_ASSET_URL:-${ADMIN_APP_URL}}
-      AWS_ENVIRONMENT: ${AWS_ENVIRONMENT}
-      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
-      AWS_TEXTRACT_UPLOADS_BUCKET: ${ADMIN_AWS_TEXTRACT_UPLOADS_BUCKET:-"hst-textract-uploads"}
-      AWS_TEXTRACT_ROLE_ARN: ${ADMIN_AWS_TEXTRACT_ROLE_ARN}
-      AWS_TEXTRACT_SNS_TOPIC_ARN: ${ADMIN_AWS_TEXTRACT_SNS_TOPIC_ARN}
-      AWS_SQS_EMAIL_QUEUE_URL: ${ADMIN_AWS_SQS_EMAIL_QUEUE_URL}
-      AWS_SES_EMAIL_BUCKET: ${ADMIN_AWS_SES_EMAIL_BUCKET}
-      HIJACK_EMAIL_ADDRESS: ${HIJACK_EMAIL_ADDRESS}
-      PROXY_URL: ${ADMIN_APP_URL}
-      PROXY_SCHEMA: https
-      DB_CONNECTION: pgsql
-      DB_HOST: ${POSTGRES_HOST}
-      DB_PORT: ${POSTGRES_PORT}
-      DB_DATABASE: ${POSTGRES_DB}
-      DB_USERNAME: ${ADMIN_DB_USERNAME}
-      DB_PASSWORD: ${ADMIN_POSTGRES_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
-      LOG_CHANNEL: ${ADMIN_LOG_CHANNEL:-stdout}
-      LOG_LEVEL: ${ADMIN_LOG_LEVEL:-info}
+      <<: *admin-env
       SERVER_NAME: ':8080'
-      SUPABASE_URL: http://kong:8000
-      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
-      SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
-      TELNYX_API_KEY: ${ADMIN_TELNYX_API_KEY}
-      RETELL_API_KEY: ${ADMIN_RETELL_API_KEY}
-      BACKGROUND_JOB_PING_MONITOR_URL: ${ADMIN_BACKGROUND_JOB_PING_MONITOR_URL}
-      MAIL_MAILER: ${ADMIN_MAIL_MAILER:-ses}
-      MAIL_FROM_ADDRESS: ${ADMIN_MAIL_FROM_ADDRESS}
-      MAILCHIMP_API_KEY: ${ADMIN_MAILCHIMP_API_KEY}
-      MAILCHIMP_NEW_USER_LIST_ID: ${ADMIN_MAILCHIMP_NEW_USER_LIST_ID}
-      SENTRY_ENVIRONMENT: ${ADMIN_SENTRY_ENVIRONMENT:-production}
-      FIREBASE_CREDENTIALS: ${ADMIN_FIREBASE_CREDENTIALS}
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
-      STRIPE_BASIC_PRICE_ID: ${STRIPE_BASIC_PRICE_ID}
-      STRIPE_PREMIUM_PRICE_ID: ${STRIPE_PREMIUM_PRICE_ID}
-      STRIPE_TEAM_PRICE_ID: ${STRIPE_TEAM_PRICE_ID}
-      STRIPE_TEAM_ANNUAL_PRICE_ID: ${STRIPE_TEAM_ANNUAL_PRICE_ID}
-      STRIPE_SOLO_PRICE_ID: ${STRIPE_SOLO_PRICE_ID}
-      STRIPE_FAMILY_PRICE_ID: ${STRIPE_FAMILY_PRICE_ID}
-      PLAID_CLIENT_ID: ${PLAID_CLIENT_ID}
-      PLAID_SECRET: ${PLAID_SECRET}
-      PLAID_ENV: ${PLAID_ENV}
-      PLAID_WEBHOOK_URL: ${PLAID_WEBHOOK_URL}
+
+  ## Laravel scheduler. Replaces the `* * * * * ... php artisan schedule:run` entry that
+  ## used to live in the ec2-user crontab. schedule:work runs schedule:run in a child
+  ## process each minute, so a tick still gets a clean framework boot.
+  admin-scheduler:
+    container_name: reimbursement-tracker-admin-scheduler
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: supabase
+        tag: "{{.Name}}/{{.ID}}"
+    volumes:
+      - './volumes/admin/app:/app'
+    # `cd /app/current` rather than working_dir: so the release symlink is resolved when
+    # the container starts, and `exec` so php replaces the shell and receives SIGTERM.
+    command: ["sh", "-c", "cd /app/current && exec php artisan schedule:work"]
+    environment:
+      <<: *admin-env
+
+  ## Queue worker. Replaces the `* * * * * ... php artisan queue:work --stop-when-empty`
+  ## crontab entry, which started a new worker every 60s whether or not the previous one
+  ## had finished. --max-time/--max-jobs recycle the process for memory hygiene; the
+  ## restart policy brings it straight back.
+  admin-worker:
+    container_name: reimbursement-tracker-admin-worker
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    # Longest job timeout (600s) plus headroom, so a compose recreate never SIGKILLs a
+    # Bedrock receipt mid-flight.
+    stop_grace_period: 660s
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: supabase
+        tag: "{{.Name}}/{{.ID}}"
+    volumes:
+      - './volumes/admin/app:/app'
+    command: ["sh", "-c", "cd /app/current && exec php artisan queue:work --queue=default --sleep=1 --tries=1 --max-time=3600 --max-jobs=500"]
+    environment:
+      <<: *admin-env
 
   # Comment out everything below this point if you are using an external Postgres database
   db:
