@@ -4,26 +4,6 @@ RUN install-php-extensions \
     pdo_pgsql \
     gd
 
-# QuickJS runtime (needed for todo-cli.cjs reconciliation bundle)
-# Build from source for latest stable version
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        git \
-        make \
-        gcc \
-        libc6-dev && \
-    cd /tmp && \
-    git clone https://github.com/bellard/quickjs.git && \
-    cd quickjs && \
-    git checkout b5e62895c619d4ffc75c9d822c8d85f1ece77e5b && \
-    make && \
-    make install && \
-    cd / && \
-    rm -rf /tmp/quickjs && \
-    apt-get purge -y git make gcc libc6-dev && \
-    apt-get autoremove -y && \
-    rm -rf /var/lib/apt/lists/*
-
 ARG USER=www-data
 
 RUN \
