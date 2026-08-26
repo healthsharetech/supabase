@@ -176,6 +176,16 @@ services:
       # https://github.com/supabase/cli/issues/14
       KONG_DNS_ORDER: LAST,A,CNAME
       KONG_DNS_NOT_FOUND_TTL: 1
+      # Kong resolves every upstream by container name (see volumes/api/kong.yml) and caches
+      # the address. A container that merely restarts -- it does not have to be recreated --
+      # gets a new bridge IP, and Kong keeps sending traffic to the old one: dns_valid_ttl
+      # defaults to the TTL in the record (long, from Docker's embedded resolver) and
+      # dns_stale_ttl defaults to 3600, so a moved upstream can 502 for up to an hour until
+      # Kong itself is restarted. Re-resolve every 5s instead; the resolver is in-container,
+      # so the lookups are free. Observed 2026-08-26: realtime moved from .7 to .8 and every
+      # /realtime/v1/websocket returned 502 until kong was restarted by hand.
+      KONG_DNS_VALID_TTL: 5
+      KONG_DNS_STALE_TTL: 5
       KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth,request-termination,ip-restriction,post-function
       KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
       KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
