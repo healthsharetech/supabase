@@ -741,8 +741,10 @@ services:
     image: supabase/postgres:15.8.1.085
     restart: unless-stopped
     ports:
-      # supavisor is disabled on the production server, so expose Postgres directly
-      - ${POSTGRES_PORT}:5432
+      # Supavisor is disabled, so Postgres is published directly, but only on
+      # the host loopback. SSH tunnels and docker exec keep working; nothing
+      # off-host can connect.
+      - 127.0.0.1:${POSTGRES_PORT}:5432
     volumes:
       - ./volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql:Z
       # Must be superuser to create event trigger
