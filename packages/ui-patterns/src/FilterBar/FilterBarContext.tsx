@@ -40,8 +40,10 @@ export type FilterBarContextValue = {
   isLoading: boolean
   error: string | null
   highlightedConditionPath: number[] | null
+  setHighlightedConditionPath: (path: number[] | null) => void
 
   onFilterChange: (filters: FilterGroup) => void
+  commitFilters: (filters: FilterGroup) => void
   onFreeformTextChange: (text: string) => void
   setActiveInput: (input: ActiveInputState) => void
   handleInputChange: (path: number[], value: string) => void
@@ -70,6 +72,7 @@ export type FilterBarContextValue = {
   variant: FilterBarVariant
   actions?: FilterBarAction[]
   icon?: React.ReactNode
+  freeformDefaultProperty?: string
 
   rootRef: React.RefObject<HTMLDivElement | null>
 }
@@ -89,13 +92,17 @@ export type FilterBarRootProps = {
   filterProperties: FilterProperty[]
   filters: FilterGroup
   onFilterChange: (filters: FilterGroup) => void
+  onApply?: (filters: FilterGroup) => void
   freeformText: string
   onFreeformTextChange: (text: string) => void
   actions?: FilterBarAction[]
   isLoading?: boolean
   supportsOperators?: boolean
+  /** Logical operator for groups created via "New filter group". Defaults to 'AND'. */
+  defaultGroupOperator?: FilterGroup['logicalOperator']
   variant?: FilterBarVariant
   icon?: React.ReactNode
+  freeformDefaultProperty?: string
 }
 
 export type FilterBarVariant = 'default' | 'pill'
@@ -110,17 +117,40 @@ export const FilterBarRoot = forwardRef<FilterBarHandle, FilterBarRootProps>(fun
     filterProperties,
     filters,
     onFilterChange,
+    onApply,
     freeformText,
     onFreeformTextChange,
     actions,
     isLoading: externalLoading,
     supportsOperators = false,
+    defaultGroupOperator,
     variant = 'default',
     icon,
+    freeformDefaultProperty,
   }: FilterBarRootProps,
   ref: React.Ref<FilterBarHandle>
 ) {
   const rootRef = useRef<HTMLDivElement>(null)
+
+  // Keep latest onApply in a ref so commitFilters/handleInputBlur don't need to be re-created
+  // (and downstream callbacks don't churn) when only the consumer's onApply identity changes.
+  const onApplyRef = useRef(onApply)
+  useEffect(() => {
+    onApplyRef.current = onApply
+  }, [onApply])
+
+  const filtersRef = useRef(filters)
+  useEffect(() => {
+    filtersRef.current = filters
+  }, [filters])
+
+  const commitFilters = useCallback(
+    (next: FilterGroup) => {
+      onFilterChange(next)
+      onApplyRef.current?.(next)
+    },
+    [onFilterChange]
+  )
 
   const {
     isLoading,
@@ -161,9 +191,9 @@ export const FilterBarRoot = forwardRef<FilterBarHandle, FilterBarRootProps>(fun
   const handleOperatorChange = useCallback(
     (path: number[], value: string) => {
       const updatedFilters = updateNestedOperator(filters, path, value)
-      onFilterChange(updatedFilters)
+      commitFilters(updatedFilters)
     },
-    [filters, onFilterChange]
+    [filters, commitFilters]
   )
 
   const { handleItemSelect } = useCommandHandling({
@@ -171,20 +201,21 @@ export const FilterBarRoot = forwardRef<FilterBarHandle, FilterBarRootProps>(fun
     setActiveInput,
     activeFilters: filters,
     onFilterChange,
+    commitFilters,
     filterProperties,
     freeformText,
     onFreeformTextChange,
-    handleInputChange,
     handleOperatorChange,
     newPathRef,
     setIsCommandMenuVisible,
+    defaultGroupOperator,
   })
 
   const { handleKeyDown } = useKeyboardNavigation({
     activeInput,
     setActiveInput,
     activeFilters: filters,
-    onFilterChange,
+    commitFilters,
     highlightedConditionPath,
     setHighlightedConditionPath,
   })
@@ -254,6 +285,9 @@ export const FilterBarRoot = forwardRef<FilterBarHandle, FilterBarRootProps>(fun
       setIsCommandMenuVisible(false)
       setActiveInput(null)
       setHighlightedConditionPath(null)
+      // Focus has actually left the FilterBar — fire onApply with the latest filters so any
+      // value typed but never confirmed via Enter still gets pushed downstream.
+      onApplyRef.current?.(filtersRef.current)
     }, 0)
   }, [setIsCommandMenuVisible, setActiveInput, hideTimeoutRef, setHighlightedConditionPath])
 
@@ -299,27 +333,27 @@ export const FilterBarRoot = forwardRef<FilterBarHandle, FilterBarRootProps>(fun
         operator,
         value
       )
-      onFilterChange(updatedFilters)
+      commitFilters(updatedFilters)
       setActiveInput({ type: focusTarget, path })
     },
-    [filters, filterProperties, onFilterChange, setActiveInput]
+    [filters, filterProperties, commitFilters, setActiveInput]
   )
 
   const handleLogicalOperatorChange = useCallback(
     (path: number[]) => {
       const updatedFilters = updateNestedLogicalOperator(filters, path)
-      onFilterChange(updatedFilters)
+      commitFilters(updatedFilters)
     },
-    [filters, onFilterChange]
+    [filters, commitFilters]
   )
 
   const handleRemoveCondition = useCallback(
     (path: number[]) => {
       const updatedFilters = removeFromGroup(filters, path)
-      onFilterChange(updatedFilters)
+      commitFilters(updatedFilters)
       setActiveInput(null)
     },
-    [filters, onFilterChange, setActiveInput]
+    [filters, commitFilters, setActiveInput]
   )
 
   // Cleanup hideTimeoutRef on unmount to prevent memory leaks
@@ -341,8 +375,10 @@ export const FilterBarRoot = forwardRef<FilterBarHandle, FilterBarRootProps>(fun
     isLoading: loading,
     error,
     highlightedConditionPath,
+    setHighlightedConditionPath,
 
     onFilterChange,
+    commitFilters,
     onFreeformTextChange,
     setActiveInput,
     handleInputChange,
@@ -368,6 +404,7 @@ export const FilterBarRoot = forwardRef<FilterBarHandle, FilterBarRootProps>(fun
     variant,
     actions,
     icon,
+    freeformDefaultProperty,
 
     rootRef,
   }
@@ -378,7 +415,7 @@ export const FilterBarRoot = forwardRef<FilterBarHandle, FilterBarRootProps>(fun
 
   return (
     <FilterBarContext.Provider value={contextValue}>
-      <div ref={rootRef} data-filterbar-root className="h-full min-h-[32px] flex items-stretch">
+      <div ref={rootRef} data-filterbar-root className="h-full min-h-[26px] flex items-stretch">
         {children}
       </div>
     </FilterBarContext.Provider>

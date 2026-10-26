@@ -1,4 +1,9 @@
-import { skillBasedSolutions, useCaseSolutions } from 'data/Solutions'
+import {
+  appTypeSolutions,
+  migrationSolutions,
+  skillBasedSolutions,
+  useCaseSolutions,
+} from 'data/Solutions'
 import { PrivacySettings } from 'ui-patterns/PrivacySettings'
 
 const footerData = [
@@ -20,6 +25,10 @@ const footerData = [
       {
         text: 'Functions',
         url: '/edge-functions',
+      },
+      {
+        text: 'Compute',
+        url: '/compute',
       },
       {
         text: 'Realtime',
@@ -58,6 +67,14 @@ const footerData = [
         text: solution.text,
         url: solution.url,
       })),
+      ...appTypeSolutions.solutions.map((solution) => ({
+        text: solution.text,
+        url: solution.url,
+      })),
+      ...migrationSolutions.solutions.map((solution) => ({
+        text: solution.text,
+        url: solution.url,
+      })),
     ],
   },
   {
@@ -80,8 +97,12 @@ const footerData = [
         url: '/partners',
       },
       {
-        text: 'Integrations',
-        url: '/partners/integrations',
+        text: 'Partner Catalog',
+        url: '/partners/catalog',
+      },
+      {
+        text: 'Knowledge Base',
+        url: '/kb',
       },
       {
         text: 'Brand Assets',
@@ -92,8 +113,8 @@ const footerData = [
         url: '/security',
       },
       {
-        text: 'DPA',
-        url: '/legal/dpa',
+        text: 'Regions',
+        url: '/regions',
       },
       {
         text: 'SOC2',
@@ -113,8 +134,8 @@ const footerData = [
         url: '/docs',
       },
       {
-        text: 'Supabase UI',
-        url: 'https://supabase.com/ui',
+        text: 'Supabase Library',
+        url: 'https://supabase.com/library',
       },
       {
         text: 'Changelog',
@@ -167,8 +188,8 @@ const footerData = [
         url: '/ga',
       },
       {
-        text: 'Terms of Service',
-        url: '/terms',
+        text: 'Legal Hub',
+        url: '/legal',
       },
       {
         text: 'Privacy Policy',
@@ -181,14 +202,6 @@ const footerData = [
       {
         text: 'Acceptable Use Policy',
         url: '/aup',
-      },
-      {
-        text: 'Support Policy',
-        url: '/support-policy',
-      },
-      {
-        text: 'Service Level Agreement',
-        url: '/sla',
       },
       {
         text: 'Humans.txt',

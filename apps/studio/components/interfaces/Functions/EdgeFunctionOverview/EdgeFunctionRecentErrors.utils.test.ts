@@ -10,6 +10,7 @@ import {
   getNoErrorsSinceLastDeployMessage,
   getRecentErrorGroups,
   getRecentErrorGroupsBase,
+  getRecentErrorInvocationsSql,
   getRelatedExecutionIds,
   getSinceLastDeployInvocationCount,
   getSinceLastDeployInvocationCountSql,
@@ -41,18 +42,23 @@ describe('EdgeFunctionRecentErrors.utils', () => {
     expect(getFunctionRuntimeLogsSql({ functionId: undefined, executionIds: ['abc'] })).toBe('')
     expect(getFunctionRuntimeLogsSql({ functionId: 'fn_123', executionIds: [] })).toBe('')
 
-    expect(
-      getFunctionRuntimeLogsSql({
-        functionId: "fn_'123",
-        executionIds: ['exec_1', "exec_'2"],
-        limit: 25,
-      })
-    )
-      .toBe(`select id, function_logs.timestamp, event_message, metadata.event_type, metadata.function_id, metadata.execution_id, metadata.level from function_logs
-cross join unnest(metadata) as metadata
-where metadata.function_id = 'fn_''123' and metadata.execution_id in ('exec_1', 'exec_''2')
-order by timestamp desc
-limit 25`)
+    const sql = getFunctionRuntimeLogsSql({
+      functionId: "fn_'123",
+      executionIds: ['exec_1', "exec_'2"],
+      limit: 25,
+    })
+    expect(sql).toContain("source = 'function_logs'")
+    expect(sql).toContain("log_attributes['function_id'] = 'fn_''123'")
+    expect(sql).toContain("log_attributes['execution_id'] in ('exec_1', 'exec_''2')")
+    expect(sql).toMatch(/limit 25$/)
+  })
+
+  it('builds recent error invocations SQL and escapes the function id', () => {
+    const sql = getRecentErrorInvocationsSql("fn_'123", 25)
+    expect(sql).toContain("source = 'function_edge_logs'")
+    expect(sql).toContain("log_attributes['function_id'] = 'fn_''123'")
+    expect(sql).toContain('>= 500')
+    expect(sql).toMatch(/limit 25$/)
   })
 
   it('normalizes deploy timestamps and derives the logs query range', () => {
@@ -79,13 +85,22 @@ limit 25`)
     })
 
     expect(getSinceLastDeployLogRange()).toEqual({})
+
+    expect(getSinceLastDeployLogRange('2026-03-18T00:00:00.000Z')).toEqual({
+      isoTimestampStart: '2026-03-19T12:00:00.000Z',
+      isoTimestampEnd: '2026-03-20T12:00:00.000Z',
+    })
+
+    vi.useRealTimers()
   })
 
   it('builds the since-deploy invocation count query and empty-state message', () => {
     expect(getSinceLastDeployInvocationCountSql()).toContain(
-      'SELECT count(*) as count FROM function_edge_logs'
+      "select count() as count from logs where source = 'function_edge_logs'"
     )
-    expect(getSinceLastDeployInvocationCountSql()).toContain("(function_id = '__pending__')")
+    expect(getSinceLastDeployInvocationCountSql()).toContain(
+      "log_attributes['function_id'] = '__pending__'"
+    )
 
     expect(
       getSinceLastDeployInvocationCount([

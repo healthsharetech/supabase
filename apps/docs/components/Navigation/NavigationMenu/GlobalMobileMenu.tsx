@@ -1,16 +1,15 @@
-import { AnimatePresence, domAnimation, LazyMotion, m } from 'framer-motion'
+import { getCustomContent } from '~/lib/custom-content/getCustomContent'
+import { useIsLoggedIn, useIsUserLoading } from 'common'
 import { X } from 'lucide-react'
+import { AnimatePresence, domAnimation, LazyMotion, m } from 'motion/react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Dispatch, Fragment, SetStateAction, useEffect } from 'react'
 import { useKey } from 'react-use'
-
-import { useIsLoggedIn, useIsUserLoading } from 'common'
-import { Accordion, Button, cn } from 'ui'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, Button, cn } from 'ui'
 import { ThemeToggle } from 'ui-patterns/ThemeToggle'
 
-import { getCustomContent } from '~/lib/custom-content/getCustomContent'
 import type { DropdownMenuItem } from '../Navigation.types'
 import { MenuItem, useActiveMenuLabel } from './GlobalNavigationMenu'
 import { GLOBAL_MENU_ITEMS } from './NavigationMenu.constants'
@@ -30,71 +29,63 @@ const listItem = {
 }
 
 const itemClassName =
-  'block py-2 pl-2 pr-3.5 text-sm text-foreground-light hover:bg-surface-200 focus-visible:ring-2 focus-visible:outline-hidden focus-visible:ring-foreground-lighter focus-visible:rounded-sm'
+  'block py-2 pl-2 pr-3.5 text-sm text-foreground-light hover:bg-surface-200 focus-ring rounded-sm'
 
 const AccordionMenuItem = ({ section }: { section: DropdownMenuItem[] }) => {
   const activeLabel = useActiveMenuLabel(GLOBAL_MENU_ITEMS)
 
-  return (
-    <m.div
-      variants={listItem}
-      className="border-b border-muted [&>div]:rounded-none! [&_div[data-state=open]>div]:py-1"
-      key={section[0].label}
-    >
-      {section[0].menuItems ? (
-        <Accordion.Item
-          header={section[0].label}
-          id={section[0].label}
-          className={cn(
-            'relative',
-            activeLabel === section[0].label && 'text-foreground!',
-            itemClassName
-          )}
-        >
-          {section[0].menuItems?.map((menuItem, menuItemIndex) => (
-            <Fragment key={`desktop-docs-menu-section-${menuItemIndex}`}>
-              {menuItem
-                .filter((item) => item.enabled !== false)
-                .map((item) =>
-                  !item.href ? (
-                    <div className="font-mono tracking-wider flex items-center text-foreground-muted text-xs uppercase rounded-md p-2 leading-none">
-                      {item.label}
-                    </div>
-                  ) : (
-                    <MenuItem
-                      href={item.href}
-                      title={item.label}
-                      community={item.community}
-                      icon={item.icon}
-                    />
-                  )
-                )}
-            </Fragment>
-          ))}
-        </Accordion.Item>
-      ) : (
-        <Link
-          href={section[0].href || '#'}
-          className={cn(activeLabel === section[0].label && 'text-foreground!', itemClassName)}
-        >
-          {section[0].label}
-        </Link>
+  return section[0].menuItems ? (
+    <AccordionItem
+      value={section[0].label}
+      className={cn(
+        'relative',
+        activeLabel === section[0].label && 'text-foreground!',
+        itemClassName
       )}
-    </m.div>
+    >
+      <AccordionTrigger className="py-1">{section[0].label}</AccordionTrigger>
+      <AccordionContent>
+        {section[0].menuItems?.map((menuItem, menuItemIndex) => (
+          <Fragment key={`desktop-docs-menu-section-${menuItemIndex}`}>
+            {menuItem
+              .filter((item) => item.enabled !== false)
+              .map((item) =>
+                !item.href ? (
+                  <div
+                    key={item.label}
+                    className="font-mono tracking-wider flex items-center text-foreground-muted text-xs uppercase rounded-md p-2 leading-none"
+                  >
+                    {item.label}
+                  </div>
+                ) : (
+                  <MenuItem
+                    key={item.label}
+                    href={item.href}
+                    title={item.label}
+                    community={item.community}
+                    new={item.new}
+                    icon={item.icon}
+                  />
+                )
+              )}
+          </Fragment>
+        ))}
+      </AccordionContent>
+    </AccordionItem>
+  ) : (
+    <Link
+      href={section[0].href || '#'}
+      className={cn(activeLabel === section[0].label && 'text-foreground!', itemClassName)}
+    >
+      {section[0].label}
+    </Link>
   )
 }
 
 const Menu = () => (
-  <Accordion
-    type="default"
-    openBehaviour="multiple"
-    size="small"
-    className="space-y-1 mt-2.5"
-    justified
-    chevronAlign="right"
-  >
-    {GLOBAL_MENU_ITEMS.filter((section) => section[0].enabled !== false).map((section) => (
-      <AccordionMenuItem section={section} />
+  <Accordion type="multiple" className="space-y-1 mt-2.5">
+    {GLOBAL_MENU_ITEMS.filter((section) => section[0].enabled !== false).map((section, index) => (
+      <AccordionMenuItem key={index} section={section} />
     ))}
   </Accordion>
 )
@@ -146,14 +137,15 @@ const GlobalMobileMenu = ({ open, setOpen }: Props) => {
                   height={24}
                   alt="Supabase Logo"
                 />
-                <span className="font-mono text-sm font-medium text-brand-link mb-px">DOCS</span>
+                <span className="font-mono text-sm font-medium text-primary mb-px">DOCS</span>
               </Link>
               <div className="flex gap-4 items-center">
                 <ThemeToggle contentClassName="bg-surface-200" />
                 <button
+                  tabIndex={0}
                   onClick={() => setOpen(false)}
                   type="button"
-                  className="inline-flex items-center justify-center focus:ring-brand bg-surface-100 hover:bg-surface-200 focus:outline-hidden focus:ring-2 focus:ring-inset border border-default bg-surface-100/75 text-foreground-light rounded-sm min-w-[30px] w-[30px] h-[30px]"
+                  className="inline-flex items-center justify-center bg-surface-100 hover:bg-surface-200 border border-default bg-surface-100/75 text-foreground-light rounded-sm min-w-[30px] w-[30px] h-[30px] focus-ring"
                 >
                   <span className="sr-only">Close menu</span>
                   <X />
@@ -172,11 +164,13 @@ const GlobalMobileMenu = ({ open, setOpen }: Props) => {
                     </Button>
                   ) : (
                     <>
-                      <Button block size="medium" type="default" asChild>
+                      <Button block size="medium" asChild>
                         <Link href="https://supabase.com/dashboard/sign-in">Sign in</Link>
                       </Button>
-                      <Button block size="medium" asChild>
-                        <Link href="https://supabase.com/dashboard/new">Start your project</Link>
+                      <Button variant="primary" block size="medium" asChild>
+                        <Link href="https://supabase.com/dashboard/sign-up">
+                          Start your project
+                        </Link>
                       </Button>
                     </>
                   )}

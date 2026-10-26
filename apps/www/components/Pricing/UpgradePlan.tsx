@@ -1,21 +1,21 @@
 'use client'
 
+import { Organization } from '~/data/organizations'
 import { Check, ChevronsUpDown, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
 import { PlanId } from 'shared-data/plans'
-
 import {
   Button,
   ButtonProps,
   cn,
-  Command_Shadcn_,
-  CommandEmpty_Shadcn_,
-  CommandGroup_Shadcn_,
-  CommandInput_Shadcn_,
-  CommandItem_Shadcn_,
-  CommandList_Shadcn_,
-  CommandSeparator_Shadcn_,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
   Dialog,
   DialogClose,
   DialogContent,
@@ -29,7 +29,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from 'ui'
-import { Organization } from '~/data/organizations'
 
 interface UpgradePlanProps {
   organizations?: Organization[]
@@ -45,7 +44,7 @@ const UpgradePlan = ({ organizations = [], onClick, size = 'large', planId }: Up
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button block size={size} type="primary" onClick={onClick}>
+        <Button block size={size} variant="primary" onClick={onClick}>
           Upgrade now
         </Button>
       </DialogTrigger>
@@ -61,7 +60,6 @@ const UpgradePlan = ({ organizations = [], onClick, size = 'large', planId }: Up
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
               <Button
-                type="default"
                 role="combobox"
                 size={'small'}
                 aria-expanded={open}
@@ -81,13 +79,13 @@ const UpgradePlan = ({ organizations = [], onClick, size = 'large', planId }: Up
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0">
-              <Command_Shadcn_>
-                <CommandInput_Shadcn_ placeholder="Select organization..." />
-                <CommandList_Shadcn_>
-                  <CommandEmpty_Shadcn_>No organizations found.</CommandEmpty_Shadcn_>
-                  <CommandGroup_Shadcn_>
+              <Command>
+                <CommandInput placeholder="Select organization..." />
+                <CommandList>
+                  <CommandEmpty>No organizations found.</CommandEmpty>
+                  <CommandGroup>
                     {organizations.map((organization) => (
-                      <CommandItem_Shadcn_
+                      <CommandItem
                         key={organization.slug}
                         value={organization.slug}
                         onSelect={(currentValue) => {
@@ -103,12 +101,12 @@ const UpgradePlan = ({ organizations = [], onClick, size = 'large', planId }: Up
                           )}
                         />
                         {organization.name}
-                      </CommandItem_Shadcn_>
+                      </CommandItem>
                     ))}
-                  </CommandGroup_Shadcn_>
-                  <CommandSeparator_Shadcn_ />
-                  <CommandGroup_Shadcn_>
-                    <CommandItem_Shadcn_
+                  </CommandGroup>
+                  <CommandSeparator />
+                  <CommandGroup>
+                    <CommandItem
                       value="new-organization"
                       onSelect={(currentValue) => {
                         setValue(currentValue === value ? '' : currentValue)
@@ -123,10 +121,10 @@ const UpgradePlan = ({ organizations = [], onClick, size = 'large', planId }: Up
                         )}
                       />
                       <Plus className="h-4 w-4 mr-2" /> Create a new organization
-                    </CommandItem_Shadcn_>
-                  </CommandGroup_Shadcn_>
-                </CommandList_Shadcn_>
-              </Command_Shadcn_>
+                    </CommandItem>
+                  </CommandGroup>
+                </CommandList>
+              </Command>
             </PopoverContent>
           </Popover>
         </DialogSection>
@@ -140,9 +138,9 @@ const UpgradePlan = ({ organizations = [], onClick, size = 'large', planId }: Up
 
         <DialogFooter>
           <DialogClose asChild>
-            <Button type="outline">Cancel</Button>
+            <Button variant="outline">Cancel</Button>
           </DialogClose>
-          <Button disabled={!value} asChild>
+          <Button variant="primary" disabled={!value} asChild>
             <Link
               href={
                 value === 'new-organization'

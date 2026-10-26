@@ -30,7 +30,6 @@ import z from 'zod'
 import { useProfileIdentitiesQuery } from '@/data/profile/profile-identities-query'
 import { useProfileUpdateMutation } from '@/data/profile/profile-update-mutation'
 import { useProfile } from '@/lib/profile'
-import type { FormSchema } from '@/types'
 
 const FormSchema = z.object({
   first_name: z.string().optional(),
@@ -193,14 +192,10 @@ export const ProfileInformation = () => {
                 />
               </CardContent>
               <CardFooter className="justify-end space-x-2">
-                {form.formState.isDirty && (
-                  <Button type="default" onClick={() => form.reset()}>
-                    Cancel
-                  </Button>
-                )}
+                {form.formState.isDirty && <Button onClick={() => form.reset()}>Cancel</Button>}
                 <Button
-                  type="primary"
-                  htmlType="submit"
+                  variant="primary"
+                  type="submit"
                   loading={isUpdatingProfile || isIdentitiesLoading}
                   disabled={!form.formState.isDirty}
                 >

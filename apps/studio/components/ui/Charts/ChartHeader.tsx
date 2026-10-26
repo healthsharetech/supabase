@@ -1,10 +1,10 @@
 import { useParams } from 'common'
 import {
-  Activity,
+  ActivityIcon,
   BarChartIcon,
   GitCommitHorizontalIcon,
   InfoIcon,
-  SquareTerminal,
+  SquareTerminalIcon,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -14,7 +14,7 @@ import { formatPercentage, numberFormatter } from './Charts.utils'
 import { useChartHoverState } from './useChartHoverState'
 import { ButtonTooltip } from '@/components/ui/ButtonTooltip'
 import { formatDateTime, useFormatDateTime } from '@/lib/datetime'
-import { formatBytes } from '@/lib/helpers'
+import { formatBytes, formatBytesMinMB } from '@/lib/helpers'
 
 export interface ChartHeaderProps {
   title?: string
@@ -37,10 +37,19 @@ export interface ChartHeaderProps {
   data?: any[]
   xAxisKey?: string
   yAxisKey?: string
+  thresholdZoneAttribute?: string
+  thresholdZoneWarning?: {
+    label: string
+    color: string
+    textColor?: string
+    badgeLabel?: string
+    tooltip: string
+  }
   xAxisIsDate?: boolean
   valuePrecision?: number
   shouldFormatBytes?: boolean
   isNetworkChart?: boolean
+  isMemoryChart?: boolean
   attributes?: any[]
   sql?: string
   titleTooltip?: string
@@ -66,6 +75,8 @@ export const ChartHeader = ({
   data,
   xAxisKey,
   yAxisKey,
+  thresholdZoneAttribute,
+  thresholdZoneWarning,
   xAxisIsDate = true,
   displayDateInUtc,
   customDateFormat,
@@ -76,6 +87,7 @@ export const ChartHeader = ({
   sql,
   titleTooltip,
   showNewBadge,
+  isMemoryChart,
 }: ChartHeaderProps) => {
   const { ref } = useParams()
   const { hoveredIndex, isHovered } = useChartHoverState(syncId || 'default')
@@ -97,7 +109,9 @@ export const ChartHeader = ({
 
     if (shouldFormatBytes) {
       const bytesValue = isNetworkChart ? Math.abs(value) : value
-      return formatBytes(bytesValue, valuePrecision)
+      return isMemoryChart
+        ? formatBytesMinMB(bytesValue, valuePrecision)
+        : formatBytes(bytesValue, valuePrecision)
     }
 
     if (format === '%') {
@@ -119,10 +133,13 @@ export const ChartHeader = ({
       if (activeDataPoint) {
         // For stacked charts, we need to calculate the total of all attributes
         // that should be included in the total (excluding reference lines, max values, etc.)
-        let newValue = activeDataPoint[yAxisKey]
+        const isThresholdValueMissing =
+          thresholdZoneAttribute !== undefined &&
+          !Number.isFinite(activeDataPoint[thresholdZoneAttribute])
+        let newValue = isThresholdValueMissing ? 'Unavailable' : activeDataPoint[yAxisKey]
 
         // If this is a stacked chart with multiple attributes, calculate the total
-        if (attributes && attributes.length > 1) {
+        if (!isThresholdValueMissing && attributes && attributes.length > 1) {
           const attributesToIgnore =
             attributes
               ?.filter((a) => a.omitFromTotal || a.isMaxValue || a.provider === 'reference-line')
@@ -171,6 +188,7 @@ export const ChartHeader = ({
     data,
     xAxisKey,
     yAxisKey,
+    thresholdZoneAttribute,
     xAxisIsDate,
     displayDateInUtc,
     customDateFormat,
@@ -191,7 +209,7 @@ export const ChartHeader = ({
             <TooltipTrigger asChild>
               <InfoIcon className="w-4 h-4 text-foreground-lighter" />
             </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-xs">
+            <TooltipContent side="bottom" className="max-w-xs">
               {titleTooltip}
               {docsUrl && (
                 <>
@@ -211,7 +229,7 @@ export const ChartHeader = ({
       </div>
       {!titleTooltip && docsUrl && (
         <ButtonTooltip
-          type="text"
+          variant="text"
           className="px-1"
           asChild
           tooltip={{
@@ -275,7 +293,6 @@ export const ChartHeader = ({
       <div className="flex items-center gap-2">
         {sql ? (
           <ButtonTooltip
-            type="default"
             className="px-1.5"
             asChild
             tooltip={{
@@ -286,16 +303,39 @@ export const ChartHeader = ({
             }}
           >
             <Link href={`/project/${ref}/logs/explorer?q=${encodeURIComponent(sql)}`}>
-              <SquareTerminal className="w-4 h-4 text-foreground-lighter" />
+              <SquareTerminalIcon className="w-4 h-4 text-foreground-lighter" />
             </Link>
           </ButtonTooltip>
         ) : null}
 
+        {thresholdZoneWarning && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge
+                tabIndex={0}
+                className="cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label={`Warning: ${thresholdZoneWarning.label}`}
+                style={{
+                  color: thresholdZoneWarning.textColor ?? thresholdZoneWarning.color,
+                  borderColor: thresholdZoneWarning.color,
+                  backgroundColor: `color-mix(in srgb, ${thresholdZoneWarning.color} 10%, transparent)`,
+                }}
+              >
+                {thresholdZoneWarning.badgeLabel ?? 'Warning'}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs" side="top">
+              <p className="font-medium">
+                {thresholdZoneWarning.label} threshold crossed in this time range.
+              </p>
+              <p>{thresholdZoneWarning.tooltip}</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
         {!hideChartType && onChartStyleChange && (
           <ButtonTooltip
-            type="default"
             className="px-1.5"
-            icon={chartStyle === 'bar' ? <Activity /> : <BarChartIcon />}
+            icon={chartStyle === 'bar' ? <ActivityIcon /> : <BarChartIcon />}
             onClick={() => onChartStyleChange(chartStyle === 'bar' ? 'line' : 'bar')}
             tooltip={{
               content: {
@@ -307,7 +347,7 @@ export const ChartHeader = ({
         )}
         {setShowMaxValue && (
           <ButtonTooltip
-            type={showMaxValue ? 'default' : 'dashed'}
+            variant={showMaxValue ? 'default' : 'dashed'}
             className="px-1.5"
             icon={
               <GitCommitHorizontalIcon

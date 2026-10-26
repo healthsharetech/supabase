@@ -38,19 +38,33 @@ The `.env` is managed in 1Password (not `.env.example`).
 
 **Disabled services** (commented out in `docker/docker-compose.yml`, not deleted):
 - `studio` — gives DB access without a password; never run on prod.
-- `analytics` (logflare) — unused; the `admin` service takes its place.
-- `vector` — logs go to CloudWatch via `awslogs`, not logflare.
-- `supavisor` — skipped; clients connect directly to Postgres.
+- `api-gw` (Envoy) — upstream's default gateway since 0.8.0. This fork stays
+  on Kong. Do not start Envoy next to Kong; both want port 8000. Do not layer
+  `docker-compose.kong.yml` either: Kong is already the `kong` service.
+- `analytics` (logflare) and `vector` — moved upstream into
+  `docker-compose.logs.yml`. Do not enable that override; logs go to
+  CloudWatch via `awslogs`.
+- `supavisor` — skipped; clients connect directly to Postgres. The commented
+  ports are bound to `127.0.0.1`.
 - `functions` (edge-runtime) — all edge functions were removed
   (`reimbursement-tracker-web#330`); disabled to reduce attack surface.
 
-**Running services:** `admin, auth, db, imgproxy, kong, meta, realtime, rest, storage`.
+**Running services:** `admin, admin-scheduler, admin-worker, auth, db, imgproxy, kong, meta, realtime, rest, storage`.
 
 **Other compose changes:**
 - Every running service has an `awslogs` (CloudWatch) `logging:` block
   (`awslogs-region: ${AWS_REGION}`, `awslogs-group: supabase`, `tag`).
-- `db` exposes `${POSTGRES_PORT}:5432` directly (supavisor disabled).
-- `kong`: its `depends_on: studio` is commented out so the gateway can start.
+- `db` publishes `127.0.0.1:${POSTGRES_PORT}:5432` (supavisor disabled).
+  Kong stays on all interfaces so the load balancer can reach it.
+- `kong`: image `kong/kong:3.9.3`; `depends_on: studio` commented out;
+  `KONG_ROUTER_FLAVOR: expressions`; `KONG_DNS_VALID_TTL` and
+  `KONG_DNS_STALE_TTL` both `5` (the stale TTL is the PR #4 fix; upstream
+  only set the valid TTL). Network alias `api-gw` so upstream's
+  `http://api-gw:8000` URLs still resolve.
+- Postgres image is **17** (`supabase/postgres:17.6.1.136`). Do not
+  `docker compose up` that image onto the existing PG 15 data directory.
+  Run `sudo bash utils/upgrade-pg17.sh` first. See the header of
+  `docker/docker-compose.yml`.
 - Custom **`admin`** service (`reimbursement-tracker-admin`, Laravel) sits
   where `analytics` was. Built from `docker/admin/{Dockerfile,Caddyfile}`;
   volumes `docker/volumes/admin/{app,caddy_data,caddy_config}`; large
@@ -63,10 +77,15 @@ The `.env` is managed in 1Password (not `.env.example`).
   `GLOBAL_S3_BUCKET: ${AWS_S3_BUCKET}`, `REGION: ${AWS_REGION}`,
   `TENANT_ID: storage-single-tenant`. Credentials via EC2 instance IAM role.
 - `realtime`: `RLIMIT_NOFILE: ""` — workaround for an EC2 crash.
+  `DB_ENC_KEY` is `${REALTIME_DB_ENC_KEY}` with no demo fallback.
+  `REGION: us-east-1` is the upstream workaround for missed Postgres Changes
+  (realtime#2289), not this host's AWS region.
+- `meta` connects as `postgres`, not `supabase_admin` (upstream 0.6.0).
 
 **`docker/volumes/api/kong.yml`:** added `admin` route (`/admin`, `/backend`,
 `/livewire`, `/vendor/livewire` → `http://admin:8080`); studio "dashboard"
-catch-all commented out; `functions-v1` route commented out.
+catch-all commented out; `functions-v1` route commented out (the commented
+block tracks upstream's `sb-api-key` translation).
 
 **`docker/volumes/functions/main/index.ts`:** `.env`-file loader patch. Moot
 (functions disabled) but kept for minimal diff.
@@ -79,6 +98,16 @@ The 2026-05 upgrade introduced:
 - `IMGPROXY_AUTO_WEBP` — set `true` (replaced `IMGPROXY_ENABLE_WEBP_DETECTION`).
 - `S3_PROTOCOL_ACCESS_KEY_ID` / `S3_PROTOCOL_ACCESS_KEY_SECRET` — optional
   (storage S3-protocol API only).
+
+The 2026-10 upgrade (`0eb37adb..564d724e`) adds:
+- `REALTIME_DB_ENC_KEY` — **required**. No compose fallback. Existing rows
+  were encrypted with the old hardcoded demo value `supabaserealtime`; set
+  the 1Password `.env` to the key already in use before deploying.
+- `API_EXTERNAL_URL` — existing var. Upstream now expects it to end in
+  `/auth/v1` (`GOTRUE_JWT_ISSUER` is that value). Append the suffix once if
+  it is missing. Do not double it. Confirm mailer and OAuth callbacks still
+  land on `/auth/v1/...`.
+- Do not set `COMPOSE_FILE`. The deploy must keep using `docker-compose.yml` alone.
 
 ---
 

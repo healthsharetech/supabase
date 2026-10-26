@@ -1,27 +1,27 @@
 import { useParams } from 'common'
 import { uniqBy } from 'lodash'
-import { Check, ChevronsUpDown, Plus } from 'lucide-react'
-import Link from 'next/link'
-import { useRouter } from 'next/router'
+import { CheckIcon, PlusIcon } from 'lucide-react'
 import { useState } from 'react'
 import {
   Alert,
   AlertDescription,
   AlertTitle,
   Button,
-  Command_Shadcn_,
-  CommandEmpty_Shadcn_,
-  CommandGroup_Shadcn_,
-  CommandInput_Shadcn_,
-  CommandItem_Shadcn_,
-  CommandList_Shadcn_,
-  CommandSeparator_Shadcn_,
+  ComboboxTrigger,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
   Popover,
   PopoverContent,
   PopoverTrigger,
   ScrollArea,
 } from 'ui'
 
+import { CommandItemLink } from '@/components/ui/CommandItemLink'
 import {
   DatabaseFunctionsData,
   useDatabaseFunctionsQuery,
@@ -38,7 +38,6 @@ interface FunctionSelectorProps {
   value: string
   onChange: (value: string) => void
   disabled?: boolean
-  stopScrollPropagation?: boolean
   // used to filter the functions by a criteria
   filterFunction?: (func: DatabaseFunction) => boolean
   noResultsLabel?: React.ReactNode
@@ -52,11 +51,9 @@ const FunctionSelector = ({
   schema,
   value,
   onChange,
-  stopScrollPropagation = false,
   filterFunction = () => true,
   noResultsLabel = <span>No functions found in this schema.</span>,
 }: FunctionSelectorProps) => {
-  const router = useRouter()
   const { ref } = useParams()
   const { data: project } = useSelectedProjectQuery()
   const [open, setOpen] = useState(false)
@@ -81,7 +78,7 @@ const FunctionSelector = ({
   return (
     <div className={className}>
       {isLoading && (
-        <Button type="default" className="justify-start" block size={size} loading>
+        <Button variant="default" className="justify-start" block size={size} loading>
           Loading functions...
         </Button>
       )}
@@ -92,7 +89,7 @@ const FunctionSelector = ({
 
           <AlertDescription className="text-xs mb-2">Error: {error.message}</AlertDescription>
 
-          <Button type="default" size="tiny" onClick={() => refetch()}>
+          <Button variant="default" size="tiny" onClick={() => refetch()}>
             Reload functions
           </Button>
         </Alert>
@@ -101,47 +98,41 @@ const FunctionSelector = ({
       {isSuccess && (
         <Popover open={open} onOpenChange={setOpen} modal={false}>
           <PopoverTrigger asChild>
-            <Button
+            <ComboboxTrigger
               size={size}
               disabled={!!disabled}
-              type="default"
-              className={`w-full [&>span]:w-full ${size === 'small' ? 'py-1.5' : ''}`}
-              iconRight={
-                <ChevronsUpDown className="text-foreground-muted" strokeWidth={2} size={14} />
-              }
+              aria-expanded={open}
+              data-state={open ? 'open' : 'closed'}
+              className={size === 'small' ? 'py-1.5' : undefined}
             >
               {value ? (
-                <div className="w-full flex gap-1">
-                  <p className="text-foreground-lighter">function:</p>
-                  <p className="text-foreground">{value}</p>
-                </div>
+                <span className="flex w-full gap-1">
+                  <span className="text-foreground-lighter">function:</span>
+                  <span className="text-foreground">{value}</span>
+                </span>
               ) : (
-                <div className="w-full flex gap-1">
-                  <p className="text-foreground-lighter">Select a function</p>
-                </div>
+                <span className="flex w-full gap-1 text-foreground-lighter">Select a function</span>
               )}
-            </Button>
+            </ComboboxTrigger>
           </PopoverTrigger>
           <PopoverContent className="p-0" side="bottom" align="start" sameWidthAsTrigger>
-            <Command_Shadcn_>
-              <CommandInput_Shadcn_ placeholder="Search functions..." />
-              <CommandList_Shadcn_
-                onWheel={stopScrollPropagation ? (event) => event.stopPropagation() : undefined}
-              >
-                <CommandEmpty_Shadcn_>No functions found</CommandEmpty_Shadcn_>
-                <CommandGroup_Shadcn_>
+            <Command>
+              <CommandInput placeholder="Search functions..." />
+              <CommandList>
+                <CommandEmpty>No functions found</CommandEmpty>
+                <CommandGroup>
                   <ScrollArea className={(functions || []).length > 7 ? 'h-[210px]' : ''}>
                     {!functions.length && (
-                      <CommandItem_Shadcn_
+                      <CommandItem
                         key="no-function-found"
                         disabled={true}
                         className="flex items-center justify-between space-x-2 w-full"
                       >
                         {noResultsLabel}
-                      </CommandItem_Shadcn_>
+                      </CommandItem>
                     )}
                     {functions.map((func) => (
-                      <CommandItem_Shadcn_
+                      <CommandItem
                         key={func.id}
                         value={func.name.replaceAll('"', '')}
                         className="cursor-pointer flex items-center justify-between space-x-2 w-full"
@@ -156,36 +147,25 @@ const FunctionSelector = ({
                       >
                         <span>{func.name}</span>
                         {value === func.name && (
-                          <Check className="text-brand" size={14} strokeWidth={2} />
+                          <CheckIcon className="text-primary" size={14} strokeWidth={2} />
                         )}
-                      </CommandItem_Shadcn_>
+                      </CommandItem>
                     ))}
                   </ScrollArea>
-                </CommandGroup_Shadcn_>
-                <CommandSeparator_Shadcn_ />
-                <CommandGroup_Shadcn_>
-                  <CommandItem_Shadcn_
-                    className="cursor-pointer w-full"
-                    onSelect={() => {
-                      setOpen(false)
-                      router.push(`/project/${ref}/database/functions`)
-                    }}
-                    onClick={() => setOpen(false)}
+                </CommandGroup>
+                <CommandSeparator />
+                <CommandGroup>
+                  <CommandItemLink
+                    href={`/project/${ref}/database/functions`}
+                    className="cursor-pointer w-full gap-2"
+                    onSelect={() => setOpen(false)}
                   >
-                    <Link
-                      href={`/project/${ref}/database/functions`}
-                      onClick={() => {
-                        setOpen(false)
-                      }}
-                      className="w-full flex items-center gap-2"
-                    >
-                      <Plus size={14} strokeWidth={1.5} />
-                      <p>New function</p>
-                    </Link>
-                  </CommandItem_Shadcn_>
-                </CommandGroup_Shadcn_>
-              </CommandList_Shadcn_>
-            </Command_Shadcn_>
+                    <PlusIcon size={14} strokeWidth={1.5} />
+                    <p>New function</p>
+                  </CommandItemLink>
+                </CommandGroup>
+              </CommandList>
+            </Command>
           </PopoverContent>
         </Popover>
       )}

@@ -8,8 +8,14 @@ import {
   type PaginationState,
   type SortingState,
 } from '@tanstack/react-table'
-import { ChevronLeft, ChevronRight, RotateCcw, Search } from 'lucide-react'
-import { useEffect, useState, type ReactNode } from 'react'
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CopyIcon,
+  RotateCcwIcon,
+  SearchIcon,
+} from 'lucide-react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   Badge,
   Button,
@@ -23,15 +29,19 @@ import {
   TableHeader,
   TableRow,
 } from 'ui'
-import { TimestampInfo } from 'ui-patterns'
 import { Input } from 'ui-patterns/DataInputs/Input'
 import { TanStackTableHeadSort } from 'ui-patterns/Table'
+import { TimestampInfo } from 'ui-patterns/TimestampInfo'
 
 import type { WebhookDelivery, WebhookEndpoint } from './PlatformWebhooks.types'
 import { statusBadgeVariant } from './PlatformWebhooksView.utils'
 import { getStatusLevel } from '@/components/interfaces/UnifiedLogs/UnifiedLogs.utils'
 import { ButtonTooltip } from '@/components/ui/ButtonTooltip'
 import { DataTableColumnStatusCode } from '@/components/ui/DataTable/DataTableColumn/DataTableColumnStatusCode'
+import { ShortcutTooltip } from '@/components/ui/ShortcutTooltip'
+import { onSearchInputEscape } from '@/lib/keyboard'
+import { SHORTCUT_IDS } from '@/state/shortcuts/registry'
+import { useShortcut } from '@/state/shortcuts/useShortcut'
 
 interface DetailItemProps {
   label: string
@@ -50,6 +60,7 @@ interface PlatformWebhooksEndpointDetailsProps {
   deliverySearch: string
   filteredDeliveries: WebhookDelivery[]
   selectedEndpoint: WebhookEndpoint
+  onCopyUrl: () => void
   onDeliverySearchChange: (value: string) => void
   onOpenDelivery: (deliveryId: string) => void
   onRetryDelivery: (deliveryId: string) => void
@@ -69,10 +80,8 @@ const DELIVERY_COLUMNS: ColumnDef<WebhookDelivery>[] = [
   },
   {
     accessorKey: 'eventType',
-    header: ({ column }) => (
-      <TanStackTableHeadSort column={column}>Event type</TanStackTableHeadSort>
-    ),
-    cell: ({ row }) => <code className="text-code-inline">{row.original.eventType}</code>,
+    header: ({ column }) => <TanStackTableHeadSort column={column}>Event</TanStackTableHeadSort>,
+    cell: ({ row }) => <code className="text-xs">{row.original.eventType}</code>,
   },
   {
     accessorKey: 'responseCode',
@@ -118,10 +127,9 @@ const DELIVERY_COLUMNS: ColumnDef<WebhookDelivery>[] = [
         <div className="flex h-full items-center justify-end">
           {row.original.status !== 'success' ? (
             <ButtonTooltip
-              type="default"
               size="tiny"
               className="w-7 shrink-0 hit-area-2"
-              icon={<RotateCcw />}
+              icon={<RotateCcwIcon />}
               aria-label={`Retry ${row.original.id}`}
               tooltip={{ content: { side: 'top', text: 'Retry' } }}
               onClick={(event) => {
@@ -132,10 +140,9 @@ const DELIVERY_COLUMNS: ColumnDef<WebhookDelivery>[] = [
             />
           ) : (
             <Button
-              type="default"
               size="tiny"
               className="w-7 shrink-0 hit-area-2 invisible pointer-events-none"
-              icon={<RotateCcw />}
+              icon={<RotateCcwIcon />}
               aria-hidden
               tabIndex={-1}
             />
@@ -150,14 +157,19 @@ export const PlatformWebhooksEndpointDetails = ({
   deliverySearch,
   filteredDeliveries,
   selectedEndpoint,
+  onCopyUrl,
   onDeliverySearchChange,
   onOpenDelivery,
   onRetryDelivery,
 }: PlatformWebhooksEndpointDetailsProps) => {
   const hasCustomHeaders = selectedEndpoint.customHeaders.length > 0
-  const hasName = selectedEndpoint.name.trim().length > 0
   const hasDescription = selectedEndpoint.description.trim().length > 0
+  const deliverySearchRef = useRef<HTMLInputElement>(null)
   const [sorting, setSorting] = useState<SortingState>(DEFAULT_DELIVERY_SORTING)
+
+  useShortcut(SHORTCUT_IDS.LIST_PAGE_FOCUS_SEARCH, () => deliverySearchRef.current?.focus(), {
+    label: 'Search deliveries',
+  })
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: DELIVERIES_PAGE_SIZE,
@@ -196,10 +208,21 @@ export const PlatformWebhooksEndpointDetails = ({
         <Card className="overflow-hidden">
           <CardContent className="pb-5">
             <dl className="grid grid-cols-1 gap-x-10 gap-y-6 md:grid-cols-2">
-              {hasName && <DetailItem label="Name">{selectedEndpoint.name}</DetailItem>}
-
-              <DetailItem label="URL" ddClassName="text-sm break-all">
-                {selectedEndpoint.url}
+              <DetailItem label="URL" ddClassName="flex items-start gap-2 text-sm">
+                <span className="break-all">{selectedEndpoint.url}</span>
+                <ShortcutTooltip
+                  shortcutId={SHORTCUT_IDS.PLATFORM_WEBHOOKS_COPY_ENDPOINT_URL}
+                  label="Copy endpoint URL"
+                >
+                  <Button
+                    variant="text"
+                    size="tiny"
+                    className="mt-0.5 shrink-0 h-5 w-5 p-0"
+                    icon={<CopyIcon size={12} />}
+                    aria-label="Copy endpoint URL"
+                    onClick={onCopyUrl}
+                  />
+                </ShortcutTooltip>
               </DetailItem>
 
               {hasDescription && (
@@ -211,10 +234,7 @@ export const PlatformWebhooksEndpointDetails = ({
                   ? ['All events (*)']
                   : selectedEndpoint.eventTypes
                 ).map((eventType) => (
-                  <code
-                    key={eventType}
-                    className="text-code-inline rounded-md border px-3 py-1.5 text-2xs"
-                  >
+                  <code key={eventType} className="rounded-md border px-3 py-1.5 text-2xs">
                     {eventType}
                   </code>
                 ))}
@@ -226,6 +246,7 @@ export const PlatformWebhooksEndpointDetails = ({
                     {selectedEndpoint.customHeaders.map((header) => (
                       <div
                         key={header.id}
+                        data-code-style="plain"
                         className="px-2 py-2 font-mono font-medium text-xs flex items-center gap-2 flex-wrap"
                       >
                         <code className="text-code_block-4">{header.key}:</code>
@@ -250,12 +271,14 @@ export const PlatformWebhooksEndpointDetails = ({
         <h2 className="text-foreground text-xl">Deliveries</h2>
         <div className="flex items-center justify-between gap-2">
           <Input
+            ref={deliverySearchRef}
             placeholder="Search deliveries"
             size="tiny"
-            icon={<Search />}
+            icon={<SearchIcon />}
             value={deliverySearch}
             className="w-full lg:w-52"
             onChange={(event) => onDeliverySearchChange(event.target.value)}
+            onKeyDown={onSearchInputEscape(deliverySearch, onDeliverySearchChange)}
           />
         </div>
         <Card className="overflow-hidden">
@@ -295,7 +318,7 @@ export const PlatformWebhooksEndpointDetails = ({
                 paginatedDeliveries.map((row) => (
                   <TableRow
                     key={row.id}
-                    className="cursor-pointer inset-focus"
+                    className="cursor-pointer focus-inset"
                     onClick={() => onOpenDelivery(row.original.id)}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
@@ -337,19 +360,17 @@ export const PlatformWebhooksEndpointDetails = ({
               </p>
               <div className="flex items-center gap-x-2" aria-label="Pagination">
                 <Button
-                  icon={<ChevronLeft />}
+                  icon={<ChevronLeftIcon />}
                   className="w-7 hit-area-2"
                   aria-label="Previous page"
-                  type="default"
                   size="tiny"
                   disabled={!table.getCanPreviousPage()}
                   onClick={() => table.previousPage()}
                 />
                 <Button
-                  icon={<ChevronRight />}
+                  icon={<ChevronRightIcon />}
                   className="w-7 hit-area-2"
                   aria-label="Next page"
-                  type="default"
                   size="tiny"
                   disabled={!table.getCanNextPage()}
                   onClick={() => table.nextPage()}

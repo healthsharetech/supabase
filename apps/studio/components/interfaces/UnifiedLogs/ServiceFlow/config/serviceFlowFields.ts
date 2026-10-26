@@ -1,6 +1,6 @@
 import { BlockFieldConfig } from '../types'
 import { getStorageMetadata } from '../utils/storageUtils'
-import { formatBytes } from '@/lib/helpers'
+import { formatBytes, tryParseJson } from '@/lib/helpers'
 
 // Helper functions that avoid duplication with existing storage utilities
 const getFileName = (path: string): string => {
@@ -24,48 +24,40 @@ const formatStorageDate = (dateString: string): string => {
 // NETWORK FIELDS
 // =============================================================================
 
-// Field configurations - using filterable field IDs where possible
-export const originFields: BlockFieldConfig[] = [
-  {
-    id: 'date', // Matches filterFields 'date' (timerange) - FILTERABLE
-    label: 'Time',
-    getValue: (data) => {
-      if (!data?.timestamp && !data?.date) return null
-      try {
-        const timestamp = data?.timestamp || data?.date
-        return new Date(timestamp).toLocaleString()
-      } catch {
-        return 'Invalid date'
-      }
-    },
-  },
-]
-
 // Primary Network Fields (Always Visible) - FILTERABLE
 export const networkPrimaryFields: BlockFieldConfig[] = [
   {
     id: 'host', // Matches filterFields 'host' (input) - FILTERABLE
     label: 'Host',
     getValue: (data, enrichedData) =>
-      enrichedData?.request_host || enrichedData?.host || data?.host,
+      enrichedData?.request_host ||
+      enrichedData?.host ||
+      enrichedData?.['req.hostname'] ||
+      data?.host,
   },
   {
     id: 'method', // Matches filterFields 'method' (checkbox) - FILTERABLE
     label: 'Method',
     getValue: (data, enrichedData) =>
-      enrichedData?.request_method || enrichedData?.method || data?.method,
+      enrichedData?.request_method ||
+      enrichedData?.method ||
+      enrichedData?.['req.method'] ||
+      data?.method,
   },
   {
     id: 'pathname', // Matches filterFields 'pathname' (input) - FILTERABLE
     label: 'Path',
     getValue: (data, enrichedData) =>
-      enrichedData?.request_path || enrichedData?.pathname || data?.pathname,
+      enrichedData?.request_path ||
+      enrichedData?.pathname ||
+      enrichedData?.['req.url'] ||
+      data?.pathname,
   },
   {
     id: 'user_agent',
     label: 'Client',
     getValue: (_data, enrichedData) => {
-      const userAgent = enrichedData?.headers_user_agent
+      const userAgent = enrichedData?.headers_user_agent || enrichedData?.['req.headers.user_agent']
       if (!userAgent) return null
       // TODO: Parse user agent for nice display with icons
       return userAgent.length > 50 ? userAgent.substring(0, 50) + '...' : userAgent
@@ -197,7 +189,7 @@ export const locationAdditionalFields: BlockFieldConfig[] = [
   {
     id: 'client_region',
     label: 'Region',
-    getValue: (_data, enrichedData) => enrichedData?.client_region,
+    getValue: (_data, enrichedData) => enrichedData?.client_region || enrichedData?.region,
     requiresEnrichedData: true,
   },
   {
@@ -309,7 +301,8 @@ export const techDetailsFields: BlockFieldConfig[] = [
   {
     id: 'x_forwarded_proto',
     label: 'Forwarded Proto',
-    getValue: (_data, enrichedData) => enrichedData?.headers_x_forwarded_proto,
+    getValue: (_data, enrichedData) =>
+      enrichedData?.headers_x_forwarded_proto || enrichedData?.['req.headers.x_forwarded_proto'],
     requiresEnrichedData: true,
   },
 ]
@@ -371,28 +364,34 @@ export const postgrestResponseFields: BlockFieldConfig[] = [
 // Primary GoTrue/Auth Fields (Always Visible)
 export const authPrimaryFields: BlockFieldConfig[] = [
   {
-    id: 'auth_path',
-    label: 'Auth Path',
-    getValue: (data, enrichedData) => {
-      return enrichedData?.path || enrichedData?.request_path || data?.path
-    },
-    requiresEnrichedData: true,
-  },
-  {
     id: 'log_id',
     label: 'Log ID',
     getValue: (data, enrichedData) => {
       const logId = data?.id || enrichedData?.id
-      return logId ? `${logId.substring(0, 8)}...` : null
+      return logId ?? null
+    },
+  },
+  {
+    id: 'status',
+    label: 'Status',
+    getValue: (data) => {
+      return data.status
+    },
+  },
+  {
+    id: 'auth_path',
+    label: 'Auth Path',
+    getValue: (data, enrichedData) => {
+      return enrichedData?.path || enrichedData?.request_path || data?.path || data?.pathname
     },
   },
   {
     id: 'referer',
     label: 'Referer',
-    getValue: (_data, enrichedData) => {
-      return enrichedData?.headers_referer || null
+    getValue: (data, enrichedData) => {
+      const eventMessage = tryParseJson(data.event_message)
+      return eventMessage?.referer || enrichedData?.headers_referer || null
     },
-    requiresEnrichedData: true,
   },
 ]
 
@@ -491,7 +490,8 @@ export const storagePrimaryFields: BlockFieldConfig[] = [
   {
     id: 'status',
     label: 'Status',
-    getValue: (data, enrichedData) => enrichedData?.status || data?.status,
+    getValue: (data, enrichedData) =>
+      enrichedData?.status || enrichedData?.['res.statusCode'] || data?.status,
   },
   {
     id: 'filename',
@@ -548,8 +548,11 @@ export const storagePrimaryFields: BlockFieldConfig[] = [
     id: 'response_time',
     label: 'Response Time',
     getValue: (data, enrichedData) => {
-      const time = enrichedData?.response_origin_time || data?.response_time_ms
-      return time ? `${time}ms` : null
+      const time =
+        enrichedData?.response_origin_time ?? enrichedData?.responseTime ?? data?.response_time_ms
+      if (time === null || time === undefined || time === '') return null
+      const numericTime = Number(time)
+      return `${Number.isInteger(numericTime) ? numericTime : numericTime.toFixed(2)}ms`
     },
     requiresEnrichedData: true,
   },
@@ -618,7 +621,7 @@ export const storageDetailsFields: BlockFieldConfig[] = [
     id: 'content_disposition',
     label: 'Content Disposition',
     getValue: (data, enrichedData) => {
-      const status = enrichedData?.status || data?.status
+      const status = enrichedData?.status || enrichedData?.['res.statusCode'] || data?.status
       const isObjectDeleted = status === 404 || status === '404'
       const hasError = status && Number(status) >= 400
 
@@ -635,7 +638,8 @@ export const storageDetailsFields: BlockFieldConfig[] = [
   {
     id: 'method',
     label: 'Method',
-    getValue: (data, enrichedData) => enrichedData?.method || data?.method,
+    getValue: (data, enrichedData) =>
+      enrichedData?.method || enrichedData?.['req.method'] || data?.method,
     requiresEnrichedData: false,
   },
   {
@@ -683,6 +687,20 @@ export const postgresPrimaryFields: BlockFieldConfig[] = [
     label: 'User',
     getValue: (data, enrichedData) => enrichedData?.database_user || data?.database_user,
     requiresEnrichedData: true,
+  },
+  {
+    id: 'query',
+    label: 'Query',
+    getValue: (data, enrichedData) => enrichedData?.query || data?.query,
+    requiresEnrichedData: true,
+    wrap: true,
+  },
+  {
+    id: 'detail',
+    label: 'Details',
+    getValue: (data, enrichedData) => enrichedData?.detail || data?.detail,
+    requiresEnrichedData: true,
+    wrap: true,
   },
 ]
 
@@ -746,4 +764,53 @@ export const postgresDetailsFields: BlockFieldConfig[] = [
     },
     requiresEnrichedData: true,
   },
+]
+
+// =============================================================================
+// SUPAVISOR FIELDS
+// =============================================================================
+
+// Supavisor rows carry everything under `metadata` (the OTEL `log_attributes` map).
+const supavisorField = (
+  key: string,
+  label: string,
+  options?: Pick<BlockFieldConfig, 'wrap'>
+): BlockFieldConfig => ({
+  id: key,
+  label,
+  getValue: (_data, enrichedData) => enrichedData?.metadata?.[key],
+  requiresEnrichedData: true,
+  ...options,
+})
+
+export const supavisorPrimaryFields: BlockFieldConfig[] = [
+  {
+    id: 'event_message',
+    label: 'Message',
+    getValue: (data, enrichedData) => enrichedData?.event_message || data?.event_message,
+    wrap: true,
+  },
+  supavisorField('user', 'User'),
+  supavisorField('db_name', 'Database'),
+  supavisorField('mode', 'Pool mode'),
+  supavisorField('type', 'Pool type'),
+  supavisorField('state', 'State'),
+  supavisorField('app_name', 'Application'),
+  supavisorField('peer_ip', 'Peer IP'),
+  supavisorField('local', 'Local'),
+]
+
+export const supavisorNodeFields: BlockFieldConfig[] = [
+  supavisorField('region', 'Region'),
+  supavisorField('location', 'Location'),
+  supavisorField('nodehost', 'Node host', { wrap: true }),
+  supavisorField('instance_id', 'Instance ID'),
+]
+
+export const supavisorSourceFields: BlockFieldConfig[] = [
+  supavisorField('context.module', 'Module', { wrap: true }),
+  supavisorField('context.function', 'Function'),
+  supavisorField('context.file', 'File', { wrap: true }),
+  supavisorField('context.line', 'Line'),
+  supavisorField('context.pid', 'Process ID'),
 ]

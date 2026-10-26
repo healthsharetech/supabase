@@ -1,11 +1,10 @@
 // @ts-check
 
 /**
- * This file is for utils needed in both the Next.js app build and the
- * troubleshooting sync script. Because of unsolved problems with imports, the
- * script is a mjs file instead of a ts file. Any dependencies that are needed
- * in both places are defined here, and then typed in Troubleshooting.utils.ts
- * as required.
+ * This file is for utils needed in both the Next.js app build and other
+ * scripts that read troubleshooting entries (e.g. search embeddings
+ * generation). Any dependencies that are needed in both places are defined
+ * here, and then typed in Troubleshooting.utils.ts as required.
  */
 
 import matter from 'gray-matter'
@@ -61,6 +60,7 @@ export const TroubleshootingSchema = z
       z.enum([
         'ai',
         'ai-tools',
+        'api',
         'auth',
         'branching',
         'cli',
@@ -129,12 +129,10 @@ export async function getAllTroubleshootingEntriesInternal() {
 
     const parseResult = validateTroubleshootingMetadata(frontmatter)
     if ('error' in parseResult) {
-      console.error(
-        `Error validating troubleshooting metadata\nEntry:%O\nError:%O`,
-        frontmatter,
-        parseResult.error
+      throw Error(
+        `Error validating troubleshooting metadata for ${filePath}`,
+        { cause: parseResult.error }
       )
-      return null
     }
 
     const mdxTree = fromMarkdown(content, {

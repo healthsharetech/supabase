@@ -1,15 +1,15 @@
 'use client'
 
-import { Check, ChevronsUpDown } from 'lucide-react'
+import { Check } from 'lucide-react'
 import * as React from 'react'
 import {
-  Button,
-  Command_Shadcn_,
-  CommandEmpty_Shadcn_,
-  CommandGroup_Shadcn_,
-  CommandInput_Shadcn_,
-  CommandItem_Shadcn_,
-  CommandList_Shadcn_,
+  ComboboxTrigger,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -47,27 +47,24 @@ export default function ComboboxDemo() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          type="default"
-          role="combobox"
-          size={'small'}
+        <ComboboxTrigger
           aria-expanded={open}
-          className="w-[200px] justify-between"
-          iconRight={<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />}
+          data-state={open ? 'open' : 'closed'}
+          className={cn('w-[200px]', !value && 'text-foreground-lighter')}
         >
           {value
             ? frameworks.find((framework) => framework.value === value)?.label
             : 'Select framework...'}
-        </Button>
+        </ComboboxTrigger>
       </PopoverTrigger>
       <PopoverContent className="w-[200px] p-0">
-        <Command_Shadcn_>
-          <CommandInput_Shadcn_ placeholder="Search framework..." />
-          <CommandList_Shadcn_>
-            <CommandEmpty_Shadcn_>No framework found.</CommandEmpty_Shadcn_>
-            <CommandGroup_Shadcn_>
+        <Command>
+          <CommandInput placeholder="Search framework..." />
+          <CommandList>
+            <CommandEmpty>No framework found.</CommandEmpty>
+            <CommandGroup>
               {frameworks.map((framework) => (
-                <CommandItem_Shadcn_
+                <CommandItem
                   key={framework.value}
                   value={framework.value}
                   onSelect={(currentValue) => {
@@ -82,11 +79,11 @@ export default function ComboboxDemo() {
                     )}
                   />
                   {framework.label}
-                </CommandItem_Shadcn_>
+                </CommandItem>
               ))}
-            </CommandGroup_Shadcn_>
-          </CommandList_Shadcn_>
-        </Command_Shadcn_>
+            </CommandGroup>
+          </CommandList>
+        </Command>
       </PopoverContent>
     </Popover>
   )

@@ -16,6 +16,7 @@ import {
   checkForWithClause,
 } from '@/components/interfaces/Settings/Logs/Logs.utils'
 import { get } from '@/data/fetchers'
+import { logsAllEndpointUrl } from '@/data/logs/logs-endpoint'
 import { useIsFeatureEnabled } from '@/hooks/misc/useIsFeatureEnabled'
 import { DOCS_URL } from '@/lib/constants'
 
@@ -31,12 +32,17 @@ export interface LogsQueryHook {
   enabled?: boolean
 }
 
-export const useLogsQuery = (
-  projectRef: string,
-  initialParams: Partial<LogsEndpointParams> = {},
+export const useLogsQuery = ({
+  projectRef,
+  initialParams = {},
   enabled = true,
-  options: { useOtel?: boolean } = {}
-): LogsQueryHook => {
+  options = {},
+}: {
+  projectRef?: string
+  initialParams?: Partial<LogsEndpointParams>
+  enabled?: boolean
+  options?: { useOtel?: boolean }
+}): LogsQueryHook => {
   const { useOtel = false } = options
   const defaultHelper = getDefaultHelper(EXPLORER_DATEPICKER_HELPERS)
   const [params, setParams] = useState<LogsEndpointParams>({
@@ -75,12 +81,9 @@ export const useLogsQuery = (
   } = useQuery({
     queryKey: ['projects', projectRef, 'logs', params, { otel: useOtel }],
     queryFn: async ({ signal }) => {
-      const endpoint = useOtel
-        ? (`/platform/projects/{ref}/analytics/endpoints/logs.all.otel` as const)
-        : (`/platform/projects/{ref}/analytics/endpoints/logs.all` as const)
-      const { data, error } = await get(endpoint, {
+      const { data, error } = await get(logsAllEndpointUrl(useOtel), {
         params: {
-          path: { ref: projectRef },
+          path: { ref: projectRef! },
           query: params,
         },
         signal,
@@ -140,4 +143,3 @@ export const useLogsQuery = (
     setParams,
   }
 }
-export default useLogsQuery

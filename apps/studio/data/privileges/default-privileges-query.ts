@@ -2,7 +2,8 @@ import { getDefaultPrivilegesStateSql } from '@supabase/pg-meta'
 import { queryOptions } from '@tanstack/react-query'
 
 import { privilegeKeys } from './keys'
-import { executeSql } from '@/data/sql/execute-sql-query'
+import { unguarded } from '@/data/fetchers'
+import { executeSql } from '@/data/sql/execute-sql-mutation'
 import type { ResponseError } from '@/types'
 
 export type DefaultPrivilegesVariables = {
@@ -25,6 +26,7 @@ export async function getDefaultPrivilegesState(
       connectionString,
       sql,
       queryKey: ['default-privileges-state'],
+      grant: unguarded.migrating,
     },
     signal
   )
