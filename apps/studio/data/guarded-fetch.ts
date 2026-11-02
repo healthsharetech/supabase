@@ -16,10 +16,9 @@ import {
 } from '@/lib/fga-refinements'
 import type { EndpointKey, Grant, VariantOf } from '@/lib/grants'
 
-type InitParam<Init> =
-  RequiredKeysOf<Init> extends never
-    ? [(Init & { [key: string]: unknown })?]
-    : [Init & { [key: string]: unknown }]
+type InitParam<Init, Checked> = undefined extends Init
+  ? [(Checked & { [key: string]: unknown })?]
+  : [Checked & { [key: string]: unknown }]
 
 declare const unguardedBrand: unique symbol
 
@@ -38,8 +37,16 @@ export const unguarded = {
 
 type GrantForVariant<K extends FgaGuardedEndpoint, V> = V extends VariantOf<K> ? Grant<K, V> : never
 
-/** The grants a call to endpoint `K` accepts: a plain grant or a grant for any of its variants. */
-type AcceptedGrant<K extends FgaGuardedEndpoint> = Grant<K> | GrantForVariant<K, VariantOf<K>>
+type IsVariantRequired<K extends string> = FgaRefinements extends {
+  readonly [X in K]: { readonly variantRequired: true }
+}
+  ? true
+  : false
+
+/** The grants a call to endpoint `K` accepts: a grant for any of its variants, or a plain grant unless a variant is required. */
+type AcceptedGrant<K extends FgaGuardedEndpoint> =
+  | (IsVariantRequired<K> extends true ? never : Grant<K>)
+  | GrantForVariant<K, VariantOf<K>>
 
 type OwnedQueryKeys<K extends string> = FgaRefinements extends {
   readonly [X in K]: { readonly ownedQuery: infer O }
@@ -62,6 +69,28 @@ type GrantOption<K extends string> = K extends FgaGuardedEndpoint
   ? { grant: AcceptedGrant<K> | Unguarded }
   : { grant?: never }
 
+type GrantOf<Init> = Init extends { grant?: infer G } ? G : undefined
+
+/**
+ * Why `GrantOption<K>` rejects grant `G`, or `never` if it doesn't.
+ */
+type GrantProblem<K extends string, G> = unknown extends G
+  ? never
+  : [G] extends [GrantOption<K>['grant']]
+    ? never
+    : [K & FgaGuardedEndpoint] extends [never]
+      ? 'This endpoint has no FGA annotation. Remove the grant.'
+      : undefined extends G
+        ? 'This endpoint requires a grant or `unguarded`. The grant is missing or may be undefined.'
+        : 'The grant is for a different endpoint or method.'
+
+/** Readable stand-in for a grant error. Checked on `url`, so the error doesn't print the whole init type. */
+type GrantError<Message extends string> = { readonly grantError: Message }
+
+type CheckedUrl<Path, K extends string, Init> = [GrantProblem<K, GrantOf<Init>>] extends [never]
+  ? Path
+  : Path & GrantError<GrantProblem<K, GrantOf<Init>>>
+
 type MaybeOptional<T> = RequiredKeysOf<T> extends never ? T | undefined : T
 
 type CheckedInit<Init, Option> =
@@ -82,11 +111,12 @@ export type GuardedClientMethod<
     OmitOwned<
       FetchOptions<FilterKeys<Paths[Path], M>>,
       OwnedQueryKeys<EndpointKey<M, Path & string>>
-    >
+    > & { grant?: unknown }
   >,
 >(
-  url: Path,
+  url: CheckedUrl<Path, EndpointKey<M, NoInfer<Path> & string>, NoInfer<Init>>,
   ...init: InitParam<
+    Init,
     CheckedInit<Init, GrantOption<EndpointKey<M, NoInfer<Path> & string>>> & ParseAsContext<Init>
   >
 ) => Promise<FetchResponse<FilterKeys<Paths[Path], M>, Init, Media>>
@@ -165,6 +195,9 @@ export function assertGrant(endpoint: string, grant: unknown, init: RefinableIni
   }
 
   const refinement = getRefinement(endpoint)
+  if (grant.variant === undefined && refinement?.variantRequired) {
+    throw new GrantAssertionError(endpoint, 'grant needs a variant')
+  }
   if (grant.variant !== undefined && !refinement?.variants[grant.variant]) {
     throw new GrantAssertionError(endpoint, `unknown variant '${grant.variant}'`)
   }
