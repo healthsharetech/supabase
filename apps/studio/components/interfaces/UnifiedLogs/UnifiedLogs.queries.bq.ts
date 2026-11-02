@@ -7,32 +7,63 @@
 import dayjs from 'dayjs'
 
 import { DEFAULT_LOG_TYPES } from './UnifiedLogs.constants'
+import { groupLogsFiltersByColumn, parseLogsFilterUrlParams } from './UnifiedLogs.filters'
 import { QuerySearchParamsType, SearchParamsType } from './UnifiedLogs.types'
+import { wrapIlikePattern } from './UnifiedLogs.utils'
+import { getPipelineIdBigQuerySql } from '@/data/logs/pipeline-logs'
 import {
-  bqIdent,
   joinSqlFragments,
   analyticsLiteral as lit,
+  quotedIdent,
   safeSql,
   type SafeLogSqlFragment,
 } from '@/data/logs/safe-analytics-sql'
 
-// Pagination and control parameters
-const PAGINATION_PARAMS = ['sort', 'start', 'size', 'uuid', 'cursor', 'direction', 'live'] as const
+// Operator fragments for SQL emission. `safeSql` rejects plain strings, so we
+// pre-brand the keywords we want to switch between.
+const IN_OP = safeSql`IN`
+const NOT_IN_OP = safeSql`NOT IN`
+const LIKE_OP = safeSql`LIKE`
+const NOT_LIKE_OP = safeSql`NOT LIKE`
 
-// Special filter parameters that need custom handling
-const SPECIAL_FILTER_PARAMS = ['date'] as const
-
-// Combined list of all parameters to exclude from standard filtering
-const EXCLUDED_QUERY_PARAMS = [...PAGINATION_PARAMS, ...SPECIAL_FILTER_PARAMS] as const
+const ALL_LOG_TYPES = [
+  'edge',
+  'postgrest',
+  'storage',
+  'postgres',
+  'edge function',
+  'auth',
+  'pipelines',
+]
 
 /**
- * Builds WHERE-clause fragments from a search-param map. Identifier-position
- * keys are validated via `bqIdent()` (regex allowlist) and value-position
- * inputs via `analyticsLiteral` — both throw on disallowed input, in which
- * case we drop the predicate rather than emit unsafe SQL.
+ * Computes the log_type set that the CTE should union. With no filter, defaults
+ * to the cheap two-source set. With `=` filters, narrows to those values. With
+ * `<>` filters, excludes them from the full set.
+ */
+export const getEffectiveLogTypes = (search: QuerySearchParamsType): string[] => {
+  if (search.scope) throw new Error('Scoped unified logs queries are only supported on ClickHouse')
+  const filters = parseLogsFilterUrlParams(search.filter).filter((f) => f.column === 'log_type')
+  if (filters.length === 0) {
+    const hasPipelineFilter = parseLogsFilterUrlParams(search.filter).some(
+      (filter) => filter.column === 'pipeline_id'
+    )
+    return hasPipelineFilter ? ['pipelines'] : [...DEFAULT_LOG_TYPES]
+  }
+  const included = filters.filter((f) => f.operator === '=').map((f) => f.value)
+  const excluded = new Set(filters.filter((f) => f.operator === '<>').map((f) => f.value))
+  const base = included.length > 0 ? included : ALL_LOG_TYPES
+  return base.filter((t) => !excluded.has(t))
+}
+
+/**
+ * Builds WHERE-clause fragments from the parsed `filter` URL array. Identifier-
+ * position keys are validated via `quotedIdent()` (regex allowlist) and value-
+ * position inputs via `analyticsLiteral` — both throw on disallowed input, in
+ * which case we drop the predicate rather than emit unsafe SQL.
  *
  * @param search Search params (URL-derived filter values)
- * @param excludeKey Optional key to skip — used by facet-count branches that
+ * @param excludeKey Optional column to skip — used by facet-count branches that
  *                   need every filter applied *except* the one being faceted
  * @returns Array of SafeLogSqlFragment predicates ready to be AND-joined
  */
@@ -41,38 +72,51 @@ const buildConditions = (
   excludeKey?: string
 ): SafeLogSqlFragment[] => {
   const conditions: SafeLogSqlFragment[] = []
+  const grouped = groupLogsFiltersByColumn(parseLogsFilterUrlParams(search.filter))
 
-  Object.entries(search).forEach(([key, value]) => {
-    if (key === excludeKey) return
-    if ((EXCLUDED_QUERY_PARAMS as readonly string[]).includes(key)) return
+  for (const [key, { operator, values }] of Object.entries(grouped)) {
+    if (key === excludeKey) continue
+    if (values.length === 0) continue
 
     try {
-      // `key` is interpolated as a column identifier. `bqIdent()` rejects
+      // `key` is interpolated as a column identifier. `quotedIdent()` rejects
       // anything outside `[A-Za-z_][A-Za-z0-9_]*` (notably no spaces, so a
       // crafted URL key like `level OR id IS NOT NULL` is dropped rather
       // than emitted into the WHERE clause).
-      const col = bqIdent(key)
+      const col = quotedIdent(key)
+      const isNeq = operator === '<>'
+      const inOp = isNeq ? NOT_IN_OP : IN_OP
+      const likeOp = isNeq ? NOT_LIKE_OP : LIKE_OP
+      const joinAndOr = isNeq ? ' AND ' : ' OR '
 
-      if (Array.isArray(value) && value.length > 0) {
+      if (
+        (key === 'event_message' || key === 'pathname') &&
+        (operator === '~~*' || operator === '!~~*')
+      ) {
+        // BigQuery has no ILIKE; emulate via LOWER(col) (NOT) LIKE LOWER('%v%').
+        // Auto-wrap with `%…%` unless the user already included one. Multiple
+        // ILIKE values join with OR; NOT ILIKE joins with AND (row must contain
+        // none of the given substrings).
+        const likeKeyword = operator === '!~~*' ? safeSql`NOT LIKE` : safeSql`LIKE`
+        const join = operator === '!~~*' ? ' AND ' : ' OR '
+        const branches = values.map(
+          (v) => safeSql`LOWER(${col}) ${likeKeyword} LOWER(${lit(wrapIlikePattern(v))})`
+        )
+        conditions.push(safeSql`(${joinSqlFragments(branches, join)})`)
+      } else if (key === 'host' || key === 'pathname') {
+        const branches = values.map((v) => safeSql`${col} ${likeOp} ${lit('%' + v + '%')}`)
+        conditions.push(safeSql`(${joinSqlFragments(branches, joinAndOr)})`)
+      } else {
         const inList = joinSqlFragments(
-          value.map((v) => lit(String(v))),
+          values.map((v) => lit(v)),
           ','
         )
-        conditions.push(safeSql`${col} IN (${inList})`)
-        return
-      }
-
-      if (value !== null && value !== undefined) {
-        if (key === 'host' || key === 'pathname') {
-          conditions.push(safeSql`${col} LIKE ${lit('%' + String(value) + '%')}`)
-        } else {
-          conditions.push(safeSql`${col} = ${lit(String(value))}`)
-        }
+        conditions.push(safeSql`${col} ${inOp} (${inList})`)
       }
     } catch {
-      // bqIdent() or analyticsLiteral() rejected the input — drop the predicate.
+      // quotedIdent() or analyticsLiteral() rejected the input — drop the predicate.
     }
-  })
+  }
 
   return conditions
 }
@@ -159,7 +203,9 @@ const getEdgeLogsQuery = (): SafeLogSqlFragment => safeSql`
       null as event_message,
       edge_logs_request.method as method,
       null as log_count,
-      null as logs
+      null as logs,
+      cast(null as string) as pipeline_id,
+      cast(null as string) as pipeline_metadata
     from edge_logs as el
     cross join unnest(metadata) as edge_logs_metadata
     cross join unnest(edge_logs_metadata.request) as edge_logs_request
@@ -188,7 +234,9 @@ const getPostgrestLogsQuery = (): SafeLogSqlFragment => safeSql`
       null as event_message,
       edge_logs_request.method as method,
       null as log_count,
-      null as logs
+      null as logs,
+      cast(null as string) as pipeline_id,
+      cast(null as string) as pipeline_metadata
     from edge_logs as el
     cross join unnest(metadata) as edge_logs_metadata
     cross join unnest(edge_logs_metadata.request) as edge_logs_request
@@ -213,13 +261,16 @@ const getPostgresLogsQuery = (): SafeLogSqlFragment => safeSql`
           WHEN pgl_parsed.error_severity = 'WARNING' THEN 'warning'
           WHEN pgl_parsed.error_severity = 'FATAL' THEN 'error'
           WHEN pgl_parsed.error_severity = 'ERROR' THEN 'error'
+          WHEN pgl_parsed.error_severity = 'PANIC' THEN 'error'
           ELSE null
       END as level,
       null as pathname,
       event_message as event_message,
       null as method,
       null as log_count,
-      null as logs
+      null as logs,
+      cast(null as string) as pipeline_id,
+      cast(null as string) as pipeline_metadata
     from postgres_logs as pgl
     cross join unnest(pgl.metadata) as pgl_metadata
     cross join unnest(pgl_metadata.parsed) as pgl_parsed
@@ -245,7 +296,9 @@ const getEdgeFunctionLogsQuery = (): SafeLogSqlFragment => safeSql`
       COALESCE(function_logs_agg.last_event_message, '') as event_message,
       fel_request.method as method,
       function_logs_agg.function_log_count as log_count,
-      null as logs
+      null as logs,
+      cast(null as string) as pipeline_id,
+      cast(null as string) as pipeline_metadata
     from function_edge_logs as fel
     cross join unnest(metadata) as fel_metadata
     cross join unnest(fel_metadata.response) as fel_response
@@ -282,7 +335,9 @@ const getAuthLogsQuery = (): SafeLogSqlFragment => safeSql`
       null as event_message,
       el_in_al_request.method as method,
       null as log_count,
-      null as logs
+      null as logs,
+      cast(null as string) as pipeline_id,
+      cast(null as string) as pipeline_metadata
     from auth_logs as al
     cross join unnest(metadata) as al_metadata
     left join (
@@ -316,7 +371,9 @@ const getSupabaseStorageLogsQuery = (): SafeLogSqlFragment => safeSql`
       null as event_message,
       edge_logs_request.method as method,
       null as log_count,
-      null as logs
+      null as logs,
+      cast(null as string) as pipeline_id,
+      cast(null as string) as pipeline_metadata
     from edge_logs as el
     cross join unnest(metadata) as edge_logs_metadata
     cross join unnest(edge_logs_metadata.request) as edge_logs_request
@@ -325,6 +382,32 @@ const getSupabaseStorageLogsQuery = (): SafeLogSqlFragment => safeSql`
     WHERE edge_logs_request.path LIKE '%/storage/%'
   `
 
+/** Pipeline process logs, including metadata for the detail panel. */
+const getPipelinesLogsQuery = (): SafeLogSqlFragment => {
+  const level = safeSql`lower(coalesce(json_value(to_json_string(pl), '$.level'), json_value(to_json_string(pl), '$.metadata[0].level')))`
+  return safeSql`
+    select
+      pl.id,
+      null as source_id,
+      pl.timestamp,
+      'pipelines' as log_type,
+      cast(null as string) as status,
+      case
+        when ${level} in ('error', 'fatal', 'panic', 'critical', 'alert', 'emergency') then 'error'
+        when ${level} in ('warn', 'warning') then 'warning'
+        else 'success'
+      end as level,
+      cast(null as string) as pathname,
+      pl.event_message,
+      cast(null as string) as method,
+      null as log_count,
+      null as logs,
+      ${getPipelineIdBigQuerySql(safeSql`pl`)} as pipeline_id,
+      to_json_string(pl) as pipeline_metadata
+    from etl_replication_logs as pl
+  `
+}
+
 const LOG_TYPE_QUERIES: Record<string, () => SafeLogSqlFragment> = {
   edge: getEdgeLogsQuery,
   postgrest: getPostgrestLogsQuery,
@@ -332,6 +415,7 @@ const LOG_TYPE_QUERIES: Record<string, () => SafeLogSqlFragment> = {
   'edge function': getEdgeFunctionLogsQuery,
   auth: getAuthLogsQuery,
   storage: getSupabaseStorageLogsQuery,
+  pipelines: getPipelinesLogsQuery,
 }
 
 /**
@@ -358,9 +442,13 @@ WITH unified_logs AS (
 /**
  * Unified logs SQL query
  */
-export const getUnifiedLogsQuery = (search: QuerySearchParamsType): SafeLogSqlFragment => {
+export const getUnifiedLogsQuery = (
+  search: QuerySearchParamsType,
+  paginationFilter?: SafeLogSqlFragment
+): SafeLogSqlFragment => {
   const conditions = buildConditions(search)
-  const effectiveLogTypes = search.log_type?.length ? search.log_type : [...DEFAULT_LOG_TYPES]
+  if (paginationFilter) conditions.push(paginationFilter)
+  const effectiveLogTypes = getEffectiveLogTypes(search)
 
   return safeSql`
 ${getUnifiedLogsCTE(effectiveLogTypes)}
@@ -375,7 +463,9 @@ SELECT
     event_message,
     method,
     log_count,
-    logs
+    logs,
+    pipeline_id,
+    pipeline_metadata
 FROM unified_logs
 ${whereClause(conditions)}
 `
@@ -385,21 +475,23 @@ export const getFacetCountCTE = ({
   search,
   facet,
   facetSearch,
+  cteName,
 }: {
   search: QuerySearchParamsType
   facet: string
   facetSearch?: string
+  cteName: SafeLogSqlFragment
 }): SafeLogSqlFragment => {
   const MAX_FACETS_QUANTITY = 20
 
   // `facet` is used both as a column reference and to derive a CTE name;
-  // quote each appropriately with bqIdent() to reject non-identifier inputs.
-  const facetCol = bqIdent(facet)
-  const facetCte = bqIdent(facet + '_count')
+  // quote each appropriately with quotedIdent() to reject non-identifier inputs.
+  const facetCol = quotedIdent(facet)
   const baseConditions = buildConditions(search, facet)
   const facetSearchClause = facetSearch
     ? safeSql`AND ${facetCol} LIKE ${lit('%' + facetSearch + '%')}`
     : safeSql``
+  const facetOrder = facet === 'pathname' ? safeSql`ORDER BY count DESC` : safeSql``
 
   const where =
     baseConditions.length > 0
@@ -407,112 +499,20 @@ export const getFacetCountCTE = ({
       : safeSql`WHERE ${facetCol} IS NOT NULL`
 
   return safeSql`
-${facetCte} AS (
+${cteName} AS (
   SELECT ${lit(facet)} as dimension, ${facetCol} as value, COUNT(*) as count
   FROM unified_logs
   ${where}
   ${facetSearchClause}
   GROUP BY ${facetCol}
+  ${facetOrder}
   LIMIT ${lit(MAX_FACETS_QUANTITY)}
 )
 `
 }
 
-export const getUnifiedLogsCountCTE = (): SafeLogSqlFragment => safeSql`
-WITH unified_logs AS (
-    -- Single scan of edge_logs covering edge gateway, postgrest, and storage
-    select
-      id,
-      CASE
-        WHEN edge_logs_request.path LIKE '%/rest/%' THEN 'postgrest'
-        WHEN edge_logs_request.path LIKE '%/storage/%' THEN 'storage'
-        ELSE 'edge'
-      END as log_type,
-      CAST(edge_logs_response.status_code AS STRING) as status,
-      CASE
-        WHEN edge_logs_response.status_code BETWEEN 200 AND 299 THEN 'success'
-        WHEN edge_logs_response.status_code BETWEEN 400 AND 499 THEN 'warning'
-        WHEN edge_logs_response.status_code >= 500 THEN 'error'
-        ELSE 'success'
-      END as level,
-      edge_logs_request.path as pathname,
-      edge_logs_request.method as method
-    from edge_logs as el
-    cross join unnest(metadata) as edge_logs_metadata
-    cross join unnest(edge_logs_metadata.request) as edge_logs_request
-    cross join unnest(edge_logs_metadata.response) as edge_logs_response
-
-    union all
-
-    -- Postgres logs
-    select
-      id,
-      'postgres' as log_type,
-      CAST(pgl_parsed.sql_state_code AS STRING) as status,
-      CASE
-        WHEN pgl_parsed.error_severity = 'LOG' THEN 'success'
-        WHEN pgl_parsed.error_severity = 'WARNING' THEN 'warning'
-        WHEN pgl_parsed.error_severity = 'FATAL' THEN 'error'
-        WHEN pgl_parsed.error_severity = 'ERROR' THEN 'error'
-        ELSE null
-      END as level,
-      null as pathname,
-      null as method
-    from postgres_logs as pgl
-    cross join unnest(pgl.metadata) as pgl_metadata
-    cross join unnest(pgl_metadata.parsed) as pgl_parsed
-
-    union all
-
-    -- Edge function logs
-    select
-      fel.id,
-      'edge function' as log_type,
-      CAST(fel_response.status_code AS STRING) as status,
-      CASE
-        WHEN fel_response.status_code BETWEEN 200 AND 299 THEN 'success'
-        WHEN fel_response.status_code BETWEEN 400 AND 499 THEN 'warning'
-        WHEN fel_response.status_code >= 500 THEN 'error'
-        ELSE 'success'
-      END as level,
-      fel_request.pathname as pathname,
-      fel_request.method as method
-    from function_edge_logs as fel
-    cross join unnest(metadata) as fel_metadata
-    cross join unnest(fel_metadata.response) as fel_response
-    cross join unnest(fel_metadata.request) as fel_request
-
-    union all
-
-    -- Auth logs
-    select
-      el_in_al.id as id,
-      'auth' as log_type,
-      CAST(el_in_al_response.status_code AS STRING) as status,
-      CASE
-        WHEN el_in_al_response.status_code BETWEEN 200 AND 299 THEN 'success'
-        WHEN el_in_al_response.status_code BETWEEN 400 AND 499 THEN 'warning'
-        WHEN el_in_al_response.status_code >= 500 THEN 'error'
-        ELSE 'success'
-      END as level,
-      el_in_al_request.path as pathname,
-      el_in_al_request.method as method
-    from auth_logs as al
-    cross join unnest(metadata) as al_metadata
-    left join (
-    edge_logs as el_in_al
-      cross join unnest(metadata) as el_in_al_metadata
-      cross join unnest(el_in_al_metadata.response) as el_in_al_response
-      cross join unnest(el_in_al_response.headers) as el_in_al_response_headers
-      cross join unnest(el_in_al_metadata.request) as el_in_al_request
-    )
-    on al_metadata.request_id = el_in_al_response_headers.cf_ray
-    WHERE al_metadata.request_id is not null
-)
-  `
-
 export const getLogsCountQuery = (search: QuerySearchParamsType): SafeLogSqlFragment => {
-  const effectiveLogTypes = search.log_type?.length ? search.log_type : [...DEFAULT_LOG_TYPES]
+  const effectiveLogTypes = getEffectiveLogTypes(search)
   const logTypeConditions = buildConditions(search, 'log_type')
   const levelConditions = buildConditions(search, 'level')
   const logTypeWhere: SafeLogSqlFragment =
@@ -536,7 +536,8 @@ log_type_counts AS (
     COUNTIF(log_type = 'storage') AS storage_count,
     COUNTIF(log_type = 'postgres') AS postgres_count,
     COUNTIF(log_type = 'edge function') AS edge_function_count,
-    COUNTIF(log_type = 'auth') AS auth_count
+    COUNTIF(log_type = 'auth') AS auth_count,
+    COUNTIF(log_type = 'pipelines') AS pipelines_count
   FROM unified_logs
   ${logTypeWhere}
 ),
@@ -552,23 +553,24 @@ level_counts AS (
 ),
 
 -- Variable facets: open-ended values still need GROUP BY
-${getFacetCountCTE({ search, facet: 'method' })},
-${getFacetCountCTE({ search, facet: 'status' })},
-${getFacetCountCTE({ search, facet: 'pathname' })}
+${getFacetCountCTE({ search, facet: 'method', cteName: safeSql`method_count` })},
+${getFacetCountCTE({ search, facet: 'status', cteName: safeSql`status_count` })},
+${getFacetCountCTE({ search, facet: 'pipeline_id', cteName: safeSql`pipeline_id_count` })}
 
-SELECT 'total' AS dimension, 'all' AS value, total AS count FROM log_type_counts
+SELECT 'total' AS facet, 'all' AS value, total AS count FROM log_type_counts
 UNION ALL SELECT 'log_type', 'edge', edge_count FROM log_type_counts
 UNION ALL SELECT 'log_type', 'postgrest', postgrest_count FROM log_type_counts
 UNION ALL SELECT 'log_type', 'storage', storage_count FROM log_type_counts
 UNION ALL SELECT 'log_type', 'postgres', postgres_count FROM log_type_counts
 UNION ALL SELECT 'log_type', 'edge function', edge_function_count FROM log_type_counts
 UNION ALL SELECT 'log_type', 'auth', auth_count FROM log_type_counts
+UNION ALL SELECT 'log_type', 'pipelines', pipelines_count FROM log_type_counts
 UNION ALL SELECT 'level', 'success', success_count FROM level_counts
 UNION ALL SELECT 'level', 'warning', warning_count FROM level_counts
 UNION ALL SELECT 'level', 'error', error_count FROM level_counts
 UNION ALL SELECT dimension, value, count FROM method_count
 UNION ALL SELECT dimension, value, count FROM status_count
-UNION ALL SELECT dimension, value, count FROM pathname_count
+UNION ALL SELECT dimension, value, count FROM pipeline_id_count
 `
 }
 
@@ -579,7 +581,7 @@ UNION ALL SELECT dimension, value, count FROM pathname_count
 export const getLogsChartQuery = (search: QuerySearchParamsType): SafeLogSqlFragment => {
   const conditions = buildConditions(search)
   const truncationLevel = calculateChartBucketing(search)
-  const effectiveLogTypes = search.log_type?.length ? search.log_type : [...DEFAULT_LOG_TYPES]
+  const effectiveLogTypes = getEffectiveLogTypes(search)
 
   return safeSql`
 ${getUnifiedLogsCTE(effectiveLogTypes)}

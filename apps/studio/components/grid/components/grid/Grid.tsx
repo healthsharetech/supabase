@@ -21,14 +21,14 @@ import { useOnRowsChange } from './Grid.utils'
 import { GridError } from './GridError'
 import { useTableFilter } from '@/components/grid/hooks/useTableFilter'
 import { handleCellKeyDown } from '@/components/grid/SupabaseGrid.utils'
+import { getStableRowIdentifiers } from '@/components/grid/utils/queueOperationUtils'
 import { formatForeignKeys } from '@/components/interfaces/TableGridEditor/SidePanelEditor/ForeignKeySelector/ForeignKeySelector.utils'
 import { useForeignKeyConstraintsQuery } from '@/data/database/foreign-key-constraints-query'
 import { ENTITY_TYPE } from '@/data/entity-types/entity-type-constants'
 import { isTableLike } from '@/data/table-editor/table-editor-types'
-import { useSendEventMutation } from '@/data/telemetry/send-event-mutation'
-import { useSelectedOrganizationQuery } from '@/hooks/misc/useSelectedOrganization'
 import { useSelectedProjectQuery } from '@/hooks/misc/useSelectedProject'
 import { useCsvFileDrop } from '@/hooks/ui/useCsvFileDrop'
+import { useTrack } from '@/lib/telemetry/track'
 import { useTableEditorStateSnapshot } from '@/state/table-editor'
 import { useTableEditorTableStateSnapshot } from '@/state/table-editor-table'
 import { ResponseError } from '@/types'
@@ -69,7 +69,6 @@ export const Grid = memo(
       const snap = useTableEditorTableStateSnapshot()
       const { filters, clearFilters } = useTableFilter()
 
-      const { data: org } = useSelectedOrganizationQuery()
       const { data: project } = useSelectedProjectQuery()
 
       const onRowsChange = useOnRowsChange(rows)
@@ -91,21 +90,14 @@ export const Grid = memo(
       const tableEntityType = snap.originalTable?.entity_type
       const isForeignTable = tableEntityType === ENTITY_TYPE.FOREIGN_TABLE
       const isTableEmpty = (rows ?? []).length === 0
+      const canImportData = snap.editable && !isForeignTable
 
-      const { mutate: sendEvent } = useSendEventMutation()
+      const track = useTrack()
 
       const { isDraggedOver, onDragOver, onFileDrop } = useCsvFileDrop({
-        enabled: isTableEmpty && !isForeignTable,
+        enabled: isTableEmpty && canImportData,
         onFileDropped: (file) => tableEditorSnap.onImportData(valtioRef(file)),
-        onTelemetryEvent: (eventName) => {
-          sendEvent({
-            action: eventName,
-            groups: {
-              project: project?.ref ?? 'Unknown',
-              organization: org?.slug ?? 'Unknown',
-            },
-          })
-        },
+        onTelemetryEvent: (eventName) => track(eventName),
       })
 
       const { data } = useForeignKeyConstraintsQuery({
@@ -175,7 +167,7 @@ export const Grid = memo(
               // Check if this cell has pending changes
               const isDirty = tableEditorSnap.hasPendingCellChange(
                 snap.table.id,
-                rowIdentifiers,
+                getStableRowIdentifiers(row, rowIdentifiers),
                 col.key
               )
               return isDirty ? 'rdg-cell--dirty' : undefined
@@ -308,11 +300,7 @@ export const Grid = memo(
                     <div className="flex flex-col items-center justify-center">
                       <p className="text-sm text-light">This page does not have any data</p>
                       <div className="flex items-center space-x-2 mt-4">
-                        <Button
-                          type="default"
-                          className="pointer-events-auto"
-                          onClick={() => snap.setPage(1)}
-                        >
+                        <Button className="pointer-events-auto" onClick={() => snap.setPage(1)}>
                           Head back to first page
                         </Button>
                       </div>
@@ -321,7 +309,9 @@ export const Grid = memo(
                     <div
                       className={cn(
                         'flex flex-col items-center justify-center w-full h-full mt-9 transition',
-                        isTableEmpty && isDraggedOver && 'border-2 border-dashed border-brand'
+                        isTableEmpty &&
+                          isDraggedOver &&
+                          'border-2 border-dashed border-primary-bright'
                       )}
                     >
                       <p className="text-sm text-light pointer-events-auto">This table is empty</p>
@@ -332,21 +322,13 @@ export const Grid = memo(
                             started.
                           </p>
                         </div>
-                      ) : (
+                      ) : canImportData ? (
                         <div className="flex flex-col items-center gap-4 mt-4">
                           <Button
-                            type="default"
                             className="pointer-events-auto"
                             onClick={() => {
                               tableEditorSnap.onImportData()
-                              sendEvent({
-                                action: 'import_data_button_clicked',
-                                properties: { tableType: 'Existing Table' },
-                                groups: {
-                                  project: project?.ref ?? 'Unknown',
-                                  organization: org?.slug ?? 'Unknown',
-                                },
-                              })
+                              track('import_data_button_clicked', { tableType: 'Existing Table' })
                             }}
                           >
                             Import data from CSV
@@ -355,7 +337,7 @@ export const Grid = memo(
                             or drag and drop a CSV file here
                           </p>
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center">
@@ -363,11 +345,7 @@ export const Grid = memo(
                         The filters applied have returned no results from this table
                       </p>
                       <div className="flex items-center space-x-2 mt-4">
-                        <Button
-                          type="default"
-                          className="pointer-events-auto"
-                          onClick={() => removeAllFilters()}
-                        >
+                        <Button className="pointer-events-auto" onClick={() => removeAllFilters()}>
                           Remove all filters
                         </Button>
                       </div>
@@ -418,7 +396,11 @@ export const Grid = memo(
                 )}
                 <DataGrid
                   ref={ref}
-                  className={cn(gridClass, 'grow', isContextMenuOpen && 'rdg-context-menu-open')}
+                  className={cn(
+                    gridClass,
+                    'grow border-t-default! border-b-0!',
+                    isContextMenuOpen && 'rdg-context-menu-open'
+                  )}
                   rowClass={computedRowClass}
                   columns={columnsWithDirtyCellClass}
                   rows={rows ?? []}
@@ -440,6 +422,7 @@ export const Grid = memo(
                       rows: rows ?? [],
                       columns: snap.table.columns,
                       onRowsChange,
+                      sensitiveDataColumns: snap.sensitiveDataColumns,
                     })
                   }
                 />

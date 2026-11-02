@@ -1,11 +1,12 @@
 import { useIsLoggedIn, useParams } from 'common'
-import { Terminal } from 'lucide-react'
+import { TerminalIcon } from 'lucide-react'
 import Head from 'next/head'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from 'react'
 import { Button, Card, CardContent } from 'ui'
-import { Admonition, ShimmeringLoader } from 'ui-patterns'
+import { Admonition } from 'ui-patterns/Admonition'
+import { ShimmeringLoader } from 'ui-patterns/ShimmeringLoader'
 
 import {
   InterstitialAccountRow,
@@ -26,7 +27,7 @@ const PAGE_TITLE = buildStudioPageTitle({ section: 'Authorize CLI', brand: 'Supa
 
 const CliLogo = () => (
   <LogoBox className="bg-black">
-    <Terminal className="size-6 text-white" strokeWidth={2} />
+    <TerminalIcon className="size-6 text-white" strokeWidth={2} />
   </LogoBox>
 )
 
@@ -47,6 +48,19 @@ const CliLoginInterstitial = ({
     <div className="px-6 pb-6">{children}</div>
   </InterstitialLayout>
 )
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof (error as { message: unknown }).message === 'string'
+  ) {
+    return (error as { message: string }).message
+  }
+  return 'Unknown error'
+}
 
 const CliLoginPage: NextPageWithLayout = () => {
   const router = useRouter()
@@ -86,7 +100,7 @@ export const CliLoginScreen = ({
   publicKey,
   tokenName,
   deviceCode,
-  navigate,
+  navigate: navigateProp,
 }: {
   isLoggedIn: boolean
   routerReady: boolean
@@ -98,6 +112,10 @@ export const CliLoginScreen = ({
 }) => {
   const { profile } = useProfile()
   const [status, setStatus] = useState<CliLoginStatus>({ _tag: 'loading' })
+  const startedForSessionIdRef = useRef<string | undefined>(undefined)
+  // Keep navigate in a ref so changing the prop never re-triggers the effect
+  // or cancels an in-flight POST via the isActive cleanup.
+  const navigate = useEffectEvent(navigateProp)
   const displayName = profile?.primary_email ?? profile?.username
 
   useEffect(() => {
@@ -117,6 +135,13 @@ export const CliLoginScreen = ({
       return
     }
 
+    // Guard against re-render loops triggered by unstable deps (e.g. a new
+    // `navigate` reference on each parent render) firing the POST more than
+    // once per session_id. Without this, the dashboard creates several
+    // identical access tokens before navigating to the device_code view.
+    if (startedForSessionIdRef.current === sessionId) return
+    startedForSessionIdRef.current = sessionId
+
     let isActive = true
     setStatus({ _tag: 'loading' })
 
@@ -133,10 +158,7 @@ export const CliLoginScreen = ({
         }
       } catch (error: unknown) {
         if (!isActive) return
-        setStatus({
-          _tag: 'error',
-          message: error instanceof Error ? error.message : 'Unknown error',
-        })
+        setStatus({ _tag: 'error', message: getErrorMessage(error) })
       }
     }
 
@@ -145,7 +167,7 @@ export const CliLoginScreen = ({
     return () => {
       isActive = false
     }
-  }, [deviceCode, isLoggedIn, navigate, publicKey, routerReady, sessionId, tokenName])
+  }, [deviceCode, isLoggedIn, publicKey, routerReady, sessionId, tokenName])
 
   if (status._tag === 'loading') {
     return (
@@ -156,7 +178,7 @@ export const CliLoginScreen = ({
         <div className="flex flex-col gap-5">
           <Card className="shadow-none">
             <CardContent className="flex items-center gap-3 border-none px-4 py-3">
-              <ShimmeringLoader className="size-8 flex-shrink-0 rounded-full py-0" />
+              <ShimmeringLoader className="size-8 shrink-0 rounded-full py-0" />
               <div className="min-w-0 flex-1 space-y-2">
                 <ShimmeringLoader className="h-3 w-20 py-0" />
                 <ShimmeringLoader className="h-4 w-40 max-w-full py-0" />
@@ -184,7 +206,7 @@ export const CliLoginScreen = ({
               isPlural ? 's' : ''
             }: ${status.missingParameters.join(', ')}.`}
           />
-          <Button type="default" block asChild>
+          <Button block asChild>
             <Link href="/organizations">Back to dashboard</Link>
           </Button>
         </div>
@@ -212,7 +234,7 @@ export const CliLoginScreen = ({
               </>
             }
           />
-          <Button type="default" block asChild>
+          <Button block asChild>
             <Link href="/organizations">Back to dashboard</Link>
           </Button>
         </div>
@@ -248,7 +270,7 @@ export const CliLoginScreen = ({
             text={status.deviceCode}
             copyLabel="Copy code"
             copiedLabel="Copied"
-            type="primary"
+            variant="primary"
             size="tiny"
             className="w-full"
           />

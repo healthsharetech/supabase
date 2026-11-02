@@ -2,11 +2,23 @@
 #   Start:              docker compose up -d
 #   Stop:               docker compose down
 #   Dev mode:           docker compose -f docker-compose.yml -f ./dev/docker-compose.dev.yml up -d
-#   Reset everything:  ./reset.sh
+#   Reset everything:   sh reset.sh
 #
-# TODO:
-#   - Podman does not support nested variable interpolation (${A:-${B}})
+# HST fork: this file is the deployed stack. `docker compose up -d` (no override
+# files) must keep starting only:
+#   admin, admin-scheduler, admin-worker, auth, db, imgproxy, kong, meta, realtime, rest, storage
 #
+# Disabled on purpose (commented, not deleted): studio, envoy (api-gw), functions,
+# supavisor. Analytics and vector now live in docker-compose.logs.yml and are not
+# enabled. Do not set COMPOSE_FILE to add those overrides on the production host.
+#
+# Postgres 17 is the image below. Do not start it against the existing Postgres 15
+# data directory. Run `sudo bash utils/upgrade-pg17.sh` first, while the current
+# PG 15 container is still running. See docker/CHANGELOG.md [0.6.0].
+#
+# Notes:
+#   - Nested variable interpolation (${A:-${B}}) requires podman-compose >= 1.6.0
+
 
 name: supabase
 
@@ -70,10 +82,11 @@ x-admin-env: &admin-env
 
 services:
 
-  ## Don't run the studio on the production server, b/c it gives access to the DB without requiring a password
+  ## Studio is not run. It reaches the database with the postgres password and no
+  ## extra gate, so it stays off the production server.
   # studio:
   #   container_name: supabase-studio
-  #   image: supabase/studio:2026.04.27-sha-5f60601
+  #   image: supabase/studio:2026.10.12-sha-3699278
   #   restart: unless-stopped
   #   healthcheck:
   #     test:
@@ -84,63 +97,81 @@ services:
   #     timeout: 10s
   #     interval: 5s
   #     retries: 3
-  #   depends_on:
-  #     analytics:
-  #       condition: service_healthy
-  #   logging:
-  #     driver: awslogs
-  #     options:
-  #       awslogs-region: ${AWS_REGION}
-  #       awslogs-group: supabase
-  #       tag: "{{.Name}}/{{.ID}}"
+  #     start_period: 20s
   #   environment:
-  #     #  Listen on all IPv4 interfaces
   #     HOSTNAME: "0.0.0.0"
-  #
   #     STUDIO_PG_META_URL: http://meta:8080
   #     POSTGRES_PORT: ${POSTGRES_PORT}
   #     POSTGRES_HOST: ${POSTGRES_HOST}
   #     POSTGRES_DB: ${POSTGRES_DB}
   #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-  #
-  #     # See: https://supabase.com/docs/guides/self-hosting/remove-superuser-access
-  #     #POSTGRES_USER_READ_WRITE: postgres
-  #
+  #     POSTGRES_USER_READ_WRITE: postgres
   #     PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
   #     PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS}
   #     PGRST_DB_MAX_ROWS: ${PGRST_DB_MAX_ROWS:-1000}
   #     PGRST_DB_EXTRA_SEARCH_PATH: ${PGRST_DB_EXTRA_SEARCH_PATH:-public}
-  #
   #     DEFAULT_ORGANIZATION_NAME: ${STUDIO_DEFAULT_ORGANIZATION}
   #     DEFAULT_PROJECT_NAME: ${STUDIO_DEFAULT_PROJECT}
-  #     OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-  #
-  #     SUPABASE_URL: http://kong:8000
+  #     OPENAI_API_KEY: ${OPENAI_API_KEY}
+  #     SUPABASE_URL: http://api-gw:8000
   #     SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
   #     SUPABASE_ANON_KEY: ${ANON_KEY}
   #     SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
   #     AUTH_JWT_SECRET: ${JWT_SECRET}
-  #
-  #     # LOGFLARE_API_KEY is deprecated
-  #     LOGFLARE_API_KEY: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
-  #     LOGFLARE_PUBLIC_ACCESS_TOKEN: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
-  #     LOGFLARE_PRIVATE_ACCESS_TOKEN: ${LOGFLARE_PRIVATE_ACCESS_TOKEN}
-  #
-  #     LOGFLARE_URL: http://analytics:4000
-  #     NEXT_PUBLIC_ENABLE_LOGS: "true"
-  #     # Comment to use Big Query backend for analytics
-  #     NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
-  #     # Uncomment to use Big Query backend for analytics
-  #     # NEXT_ANALYTICS_BACKEND_PROVIDER: bigquery
+  #     SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY}
+  #     SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY}
+  #     ENABLED_FEATURES_LOGS_ALL: "false"
   #     SNIPPETS_MANAGEMENT_FOLDER: /app/snippets
   #     EDGE_FUNCTIONS_MANAGEMENT_FOLDER: /app/edge-functions
   #   volumes:
-  #     - ./volumes/snippets:/app/snippets:Z
-  #     - ./volumes/functions:/app/edge-functions:Z
+  #     - ./volumes/snippets:/app/snippets:z
+  #     - ./volumes/functions:/app/edge-functions:ro,z
 
+  ## Envoy replaced Kong as upstream's default gateway (service name `api-gw`).
+  ## This fork keeps Kong: HST routes live in volumes/api/kong.yml (admin, and the
+  ## disabled functions and studio routes) and the deploy runs this file alone.
+  ## Do not start Envoy alongside Kong; both want port 8000.
+  # api-gw:
+  #   container_name: supabase-envoy
+  #   image: envoyproxy/envoy:v1.39.1
+  #   restart: unless-stopped
+  #   networks:
+  #     default:
+  #       aliases:
+  #         - envoy
+  #         - kong
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "timeout 1 bash -c '</dev/tcp/127.0.0.1/8000'"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 3
+  #   ports:
+  #     # Loopback only. Envoy is not the public gateway on this fork.
+  #     - 127.0.0.1:${API_GW_HTTP_PORT:-${KONG_HTTP_PORT}}:8000/tcp
+  #   volumes:
+  #     - ./volumes/api/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
+  #     - ./volumes/api/envoy/cds.yaml:/etc/envoy/cds.yaml:ro
+  #     - ./volumes/api/envoy/lds.template.yaml:/etc/envoy/lds.template.yaml:ro
+  #     - ./volumes/api/envoy/docker-entrypoint.sh:/docker-entrypoint.sh:ro
+  #   environment:
+  #     ANON_KEY: ${ANON_KEY}
+  #     SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+  #     SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
+  #     SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
+  #     ANON_KEY_ASYMMETRIC: ${ANON_KEY_ASYMMETRIC:-}
+  #     SERVICE_ROLE_KEY_ASYMMETRIC: ${SERVICE_ROLE_KEY_ASYMMETRIC:-}
+  #     SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
+  #     DASHBOARD_USERNAME: ${DASHBOARD_USERNAME}
+  #     DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
+  #   entrypoint: ["/bin/sh", "/docker-entrypoint.sh"]
+
+  # Kong stays the API gateway. Alias `api-gw` so upstream URLs that moved from
+  # http://kong:8000 to http://api-gw:8000 still resolve. Published on all
+  # interfaces because the load balancer reaches Kong on the host; Postgres is
+  # the port that is loopback-only.
   kong:
     container_name: supabase-kong
-    image: kong/kong:3.9.1
+    image: kong/kong:3.9.3
     restart: unless-stopped
     networks:
       default:
@@ -151,7 +182,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    # studio is disabled on the production server (see above), so don't wait on it
+    # studio is disabled, so don't wait on it
     # depends_on:
     #   studio:
     #     condition: service_healthy
@@ -173,9 +204,16 @@ services:
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /usr/local/kong/kong.yml
+      # Required for the expression route on /rest/v1/ (OpenAPI root, admin only).
+      KONG_ROUTER_FLAVOR: expressions
       # https://github.com/supabase/cli/issues/14
       KONG_DNS_ORDER: LAST,A,CNAME
       KONG_DNS_NOT_FOUND_TTL: 1
+      # Re-resolve upstreams within 5s. Upstream sets VALID_TTL; STALE_TTL is the
+      # HST fix from PR #4 (upstream default is 3600, which stranded Kong on a
+      # dead container IP after realtime restarted).
+      KONG_DNS_VALID_TTL: 5
+      KONG_DNS_STALE_TTL: 5
       KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth,request-termination,ip-restriction,post-function
       KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
       KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
@@ -190,11 +228,11 @@ services:
       SERVICE_ROLE_KEY_ASYMMETRIC: ${SERVICE_ROLE_KEY_ASYMMETRIC:-}
       DASHBOARD_USERNAME: ${DASHBOARD_USERNAME}
       DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
-    entrypoint: /home/kong/kong-entrypoint.sh
+    entrypoint: ["/bin/sh", "/home/kong/kong-entrypoint.sh"]
 
   auth:
     container_name: supabase-auth
-    image: supabase/gotrue:v2.186.0
+    image: supabase/gotrue:v2.197.0
     restart: unless-stopped
     healthcheck:
       test:
@@ -243,6 +281,10 @@ services:
       # For Podman, use: GOTRUE_JWT_KEYS: ${JWT_KEYS}
       #GOTRUE_JWT_KEYS: ${JWT_KEYS:-[]}
 
+      # Upstream expects API_EXTERNAL_URL to already include /auth/v1.
+      # Do not append /auth/v1 here or the issuer doubles.
+      GOTRUE_JWT_ISSUER: ${API_EXTERNAL_URL}
+
       GOTRUE_EXTERNAL_EMAIL_ENABLED: ${ENABLE_EMAIL_SIGNUP}
       # Hardcoded false: an empty ${ENABLE_ANONYMOUS_USERS} breaks gotrue config parsing
       GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: false
@@ -283,21 +325,21 @@ services:
       GOTRUE_EXTERNAL_PHONE_ENABLED: ${ENABLE_PHONE_SIGNUP}
       GOTRUE_SMS_AUTOCONFIRM: ${ENABLE_PHONE_AUTOCONFIRM}
 
-      # Uncomment to enable OAuth / social login providers.
+      # Uncomment to enable OAuth / social sign-in providers.
       # GOTRUE_EXTERNAL_GOOGLE_ENABLED: ${GOOGLE_ENABLED}
       # GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       # GOTRUE_EXTERNAL_GOOGLE_SECRET: ${GOOGLE_SECRET}
-      # GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: ${API_EXTERNAL_URL}/auth/v1/callback
+      # GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: ${API_EXTERNAL_URL}/callback
 
       # GOTRUE_EXTERNAL_GITHUB_ENABLED: ${GITHUB_ENABLED}
       # GOTRUE_EXTERNAL_GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
       # GOTRUE_EXTERNAL_GITHUB_SECRET: ${GITHUB_SECRET}
-      # GOTRUE_EXTERNAL_GITHUB_REDIRECT_URI: ${API_EXTERNAL_URL}/auth/v1/callback
+      # GOTRUE_EXTERNAL_GITHUB_REDIRECT_URI: ${API_EXTERNAL_URL}/callback
 
       # GOTRUE_EXTERNAL_AZURE_ENABLED: ${AZURE_ENABLED}
       # GOTRUE_EXTERNAL_AZURE_CLIENT_ID: ${AZURE_CLIENT_ID}
       # GOTRUE_EXTERNAL_AZURE_SECRET: ${AZURE_SECRET}
-      # GOTRUE_EXTERNAL_AZURE_REDIRECT_URI: ${API_EXTERNAL_URL}/auth/v1/callback
+      # GOTRUE_EXTERNAL_AZURE_REDIRECT_URI: ${API_EXTERNAL_URL}/callback
 
       # Uncomment to configure SMS delivery (phone auth and phone MFA).
       # GOTRUE_SMS_PROVIDER: ${SMS_PROVIDER}
@@ -322,12 +364,14 @@ services:
       # GOTRUE_MFA_MAX_ENROLLED_FACTORS: ${MFA_MAX_ENROLLED_FACTORS}
 
       # SAML SSO
+      # See: https://supabase.com/docs/guides/self-hosting/self-hosted-saml-sso
       # GOTRUE_SAML_ENABLED: ${SAML_ENABLED}
       # GOTRUE_SAML_PRIVATE_KEY: ${SAML_PRIVATE_KEY}
       # GOTRUE_SAML_ALLOW_ENCRYPTED_ASSERTIONS: ${SAML_ALLOW_ENCRYPTED_ASSERTIONS}
       # GOTRUE_SAML_RELAY_STATE_VALIDITY_PERIOD: ${SAML_RELAY_STATE_VALIDITY_PERIOD}
-      # GOTRUE_SAML_EXTERNAL_URL: ${SAML_EXTERNAL_URL}
       # GOTRUE_SAML_RATE_LIMIT_ASSERTION: ${SAML_RATE_LIMIT_ASSERTION}
+      # Optional, defaults to API_EXTERNAL_URL if not set
+      # GOTRUE_SAML_EXTERNAL_URL: ${SAML_EXTERNAL_URL}
 
       # Uncomment to enable custom access token hook.
       # See: https://supabase.com/docs/guides/auth/auth-hooks for
@@ -353,12 +397,17 @@ services:
 
   rest:
     container_name: supabase-rest
-    image: postgrest/postgrest:v14.8
+    image: postgrest/postgrest:v14.18
     restart: unless-stopped
     depends_on:
       db:
         # Disable this if you are using an external Postgres database
         condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "postgrest", "--ready" ]
+      interval: 5s
+      timeout: 5s
+      retries: 3
     logging:
       driver: awslogs
       options:
@@ -372,13 +421,15 @@ services:
       PGRST_DB_EXTRA_SEARCH_PATH: ${PGRST_DB_EXTRA_SEARCH_PATH:-public}
       PGRST_DB_ANON_ROLE: anon
 
+      PGRST_ADMIN_SERVER_PORT: 3001
+      PGRST_ADMIN_SERVER_HOST: localhost
+
       # PostgREST accepts a plain-text symmetric secret, a single JWK, or a JWKS.
       # For Podman, use either PGRST_JWT_SECRET: ${JWT_SECRET} or
       # PGRST_JWT_SECRET: ${JWT_JWKS}
       PGRST_JWT_SECRET: ${JWT_JWKS:-${JWT_SECRET}}
 
       PGRST_DB_USE_LEGACY_GUCS: "false"
-      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
       PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY}
     command:
       [
@@ -388,7 +439,7 @@ services:
   realtime:
     # This container name looks inconsistent but is correct because realtime constructs tenant id by parsing the subdomain
     container_name: realtime-dev.supabase-realtime
-    image: supabase/realtime:v2.76.5
+    image: supabase/realtime:v2.143.3
     restart: unless-stopped
     depends_on:
       db:
@@ -418,7 +469,10 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_NAME: ${POSTGRES_DB}
       DB_AFTER_CONNECT_QUERY: 'SET search_path TO _realtime'
-      DB_ENC_KEY: supabaserealtime
+      # Required. No compose fallback: upstream's default "supabaserealtime" is a
+      # public demo key. Existing HST rows were encrypted with that value, so the
+      # production .env must set REALTIME_DB_ENC_KEY to the key already in use.
+      DB_ENC_KEY: ${REALTIME_DB_ENC_KEY}
 
       # Legacy symmetric HS256 key
       API_JWT_SECRET: ${JWT_SECRET}
@@ -431,16 +485,21 @@ services:
       METRICS_JWT_SECRET: ${JWT_SECRET}
       ERL_AFLAGS: -proto_dist inet_tcp
       DNS_NODES: "''"
-      RLIMIT_NOFILE: ""  # prevents supabase realtime from crashing on ec2 instance
+      # Empty on purpose: a numeric limit crashes realtime on this EC2 host.
+      RLIMIT_NOFILE: ""
       APP_NAME: realtime
       SEED_SELF_HOST: "true"
       RUN_JANITOR: "true"
       DISABLE_HEALTHCHECK_LOGGING: "true"
+      # Workaround for missed Postgres Changes every 10 minutes (realtime#2289).
+      # The value us-east-1 is the upstream workaround, not this host's AWS region.
+      REGION: us-east-1
 
-  # To use S3 backed storage: docker compose -f docker-compose.yml -f docker-compose.s3.yml up
+  # HST storage uses the S3 backend in this file (EC2 instance role). The
+  # docker-compose.s3.yml MinIO override is not used.
   storage:
     container_name: supabase-storage
-    image: supabase/storage-api:v1.48.26
+    image: supabase/storage-api:v1.81.0
     restart: unless-stopped
     depends_on:
       db:
@@ -510,7 +569,7 @@ services:
 
   imgproxy:
     container_name: supabase-imgproxy
-    image: darthsim/imgproxy:v3.30.1
+    image: darthsim/imgproxy:v3.31.4
     restart: unless-stopped
     volumes:
       - ./volumes/storage:/var/lib/storage:z
@@ -539,7 +598,7 @@ services:
 
   meta:
     container_name: supabase-meta
-    image: supabase/postgres-meta:v0.96.3
+    image: supabase/postgres-meta:v0.100.0
     restart: unless-stopped
     depends_on:
       db:
@@ -556,103 +615,46 @@ services:
       PG_META_DB_HOST: ${POSTGRES_HOST}
       PG_META_DB_PORT: ${POSTGRES_PORT}
       PG_META_DB_NAME: ${POSTGRES_DB}
-      PG_META_DB_USER: supabase_admin
+      # Upstream dropped the supabase_admin superuser here (0.6.0).
+      PG_META_DB_USER: postgres
       PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
       CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
 
-  ## Edge Functions are not run on the production server. All Supabase edge
-  ## functions were removed from the app (reimbursement-tracker-web#330), so the
-  ## service is disabled to reduce attack surface.
+  ## Edge Functions are not run. All Supabase edge functions were removed from
+  ## the app (reimbursement-tracker-web#330).
   # functions:
   #   container_name: supabase-edge-functions
-  #   image: supabase/edge-runtime:v1.71.2
+  #   image: supabase/edge-runtime:v1.77.4
   #   restart: unless-stopped
   #   volumes:
-  #     - ./volumes/functions:/home/deno/functions:Z
+  #     - ./volumes/functions:/home/deno/functions:z
   #     - deno-cache:/root/.cache/deno
   #   depends_on:
   #     kong:
   #       condition: service_healthy
-  #   logging:
-  #     driver: awslogs
-  #     options:
-  #       awslogs-region: ${AWS_REGION}
-  #       awslogs-group: supabase
-  #       tag: "{{.Name}}/{{.ID}}"
   #   environment:
-  #     # Legacy symmetric HS256 key
   #     JWT_SECRET: ${JWT_SECRET}
-  #     SUPABASE_URL: http://kong:8000
+  #     SUPABASE_URL: http://api-gw:8000
   #     SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
-  #     # Legacy API keys (HS256-signed JWTs)
   #     SUPABASE_ANON_KEY: ${ANON_KEY}
   #     SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
-  #     # New opaque API keys
   #     SUPABASE_PUBLISHABLE_KEYS: "{\"default\":\"${SUPABASE_PUBLISHABLE_KEY:-}\"}"
   #     SUPABASE_SECRET_KEYS: "{\"default\":\"${SUPABASE_SECRET_KEY:-}\"}"
   #     SUPABASE_DB_URL: postgresql://postgres:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
-  #     # TODO: Allow configuring VERIFY_JWT per function.
   #     VERIFY_JWT: "${FUNCTIONS_VERIFY_JWT}"
   #   command:
   #     [
   #       "start",
+  #       "--user-worker-request-idle-timeout",
+  #       "150000",
   #       "--main-service",
   #       "/home/deno/functions/main"
   #     ]
 
-  ## Analytics (logflare) is not run on the production server. The admin
-  ## (reimbursement-tracker-admin Laravel) container runs in its place.
-  # analytics:
-  #   container_name: supabase-analytics
-  #   image: supabase/logflare:1.36.1
-  #   restart: unless-stopped
-  #   # ports:
-  #   #   - 4000:4000
-  #   # Uncomment to use Big Query backend for analytics
-  #   # volumes:
-  #   #   - type: bind
-  #   #     source: ${PWD}/gcloud.json
-  #   #     target: /opt/app/rel/logflare/bin/gcloud.json
-  #   #     read_only: true
-  #   healthcheck:
-  #     test:
-  #       [
-  #         "CMD-SHELL",
-  #         "curl -sSfL -o /dev/null http://localhost:4000/health"
-  #       ]
-  #     timeout: 5s
-  #     interval: 5s
-  #     retries: 10
-  #   depends_on:
-  #     db:
-  #       # Disable this if you are using an external Postgres database
-  #       condition: service_healthy
-  #   logging:
-  #     driver: awslogs
-  #     options:
-  #       awslogs-region: ${AWS_REGION}
-  #       awslogs-group: supabase
-  #       tag: "{{.Name}}/{{.ID}}"
-  #   environment:
-  #     LOGFLARE_NODE_HOST: 127.0.0.1
-  #     DB_USERNAME: supabase_admin
-  #     DB_DATABASE: _supabase
-  #     DB_HOSTNAME: ${POSTGRES_HOST}
-  #     DB_PORT: ${POSTGRES_PORT}
-  #     DB_PASSWORD: ${POSTGRES_PASSWORD}
-  #     DB_SCHEMA: _analytics
-  #     LOGFLARE_PUBLIC_ACCESS_TOKEN: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
-  #     LOGFLARE_PRIVATE_ACCESS_TOKEN: ${LOGFLARE_PRIVATE_ACCESS_TOKEN}
-  #     LOGFLARE_SINGLE_TENANT: "true"
-  #     LOGFLARE_SUPABASE_MODE: "true"
-  #
-  #     # Comment variables to use Big Query backend for analytics
-  #     POSTGRES_BACKEND_URL: postgresql://supabase_admin:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/_supabase
-  #     POSTGRES_BACKEND_SCHEMA: _analytics
-  #     LOGFLARE_FEATURE_FLAG_OVERRIDE: multibackend=true
-  #     # Uncomment to use Big Query backend for analytics
-  #     # GOOGLE_PROJECT_ID: ${GOOGLE_PROJECT_ID}
-  #     # GOOGLE_PROJECT_NUMBER: ${GOOGLE_PROJECT_NUMBER}
+  ## Analytics (logflare) and vector are not in this file anymore. Upstream moved
+  ## them to docker-compose.logs.yml. Do not enable that override: container logs
+  ## go to CloudWatch through the awslogs driver, and the admin service occupies
+  ## the slot analytics used to fill.
 
   admin:
     container_name: reimbursement-tracker-admin
@@ -738,7 +740,10 @@ services:
   # Comment out everything below this point if you are using an external Postgres database
   db:
     container_name: supabase-db
-    image: supabase/postgres:15.8.1.085
+    # MAJOR UPGRADE from supabase/postgres:15.8.1.085. Starting this image on a
+    # Postgres 15 data directory will not migrate it. Run utils/upgrade-pg17.sh
+    # first (see the header of this file). To stay on 15, add docker-compose.pg15.yml.
+    image: supabase/postgres:17.6.1.136
     restart: unless-stopped
     ports:
       # Supavisor is disabled, so Postgres is published directly, but only on
@@ -751,7 +756,7 @@ services:
       - ./volumes/db/webhooks.sql:/docker-entrypoint-initdb.d/init-scripts/98-webhooks.sql:Z
       # Must be superuser to alter reserved role
       - ./volumes/db/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:Z
-      # Initialize the database settings with JWT_SECRET and JWT_EXP
+      # Initialize the database settings with JWT_EXP. jwt_secret is no longer set.
       - ./volumes/db/jwt.sql:/docker-entrypoint-initdb.d/init-scripts/99-jwt.sql:Z
       # PGDATA directory is persisted between restarts
       - ./volumes/db/data:/var/lib/postgresql/data:Z
@@ -790,7 +795,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PGDATABASE: ${POSTGRES_DB}
       POSTGRES_DB: ${POSTGRES_DB}
-      JWT_SECRET: ${JWT_SECRET}
       JWT_EXP: ${JWT_EXPIRY}
     command:
       [
@@ -801,54 +805,15 @@ services:
         "log_min_messages=fatal" # prevents Realtime polling queries from appearing in logs
       ]
 
-  ## Vector (log shipping to logflare) is not run on the production server.
-  ## Container logs are shipped to AWS CloudWatch via the awslogs driver instead.
-  # vector:
-  #   container_name: supabase-vector
-  #   image: timberio/vector:0.53.0-alpine
-  #   restart: unless-stopped
-  #   volumes:
-  #     - ./volumes/logs/vector.yml:/etc/vector/vector.yml:ro,z
-  #     - ${DOCKER_SOCKET_LOCATION}:/var/run/docker.sock:ro,z
-  #   healthcheck:
-  #     test:
-  #       [
-  #         "CMD",
-  #         "wget",
-  #         "--no-verbose",
-  #         "--tries=1",
-  #         "--spider",
-  #         "http://vector:9001/health"
-  #       ]
-  #     timeout: 5s
-  #     interval: 5s
-  #     retries: 3
-  #   environment:
-  #     LOGFLARE_PUBLIC_ACCESS_TOKEN: ${LOGFLARE_PUBLIC_ACCESS_TOKEN}
-  #   logging:
-  #     driver: awslogs
-  #     options:
-  #       awslogs-region: ${AWS_REGION}
-  #       awslogs-group: supabase
-  #       tag: "{{.Name}}/{{.ID}}"
-  #   command:
-  #     [
-  #       "--config",
-  #       "/etc/vector/vector.yml"
-  #     ]
-  #   security_opt:
-  #     - "label=disable"
-
-  # Update the DATABASE_URL if you are using an external Postgres database
-  ## supavisor (connection pooler) is skipped on the production server; clients
-  ## connect directly to Postgres (the db service exposes ${POSTGRES_PORT}).
+  ## supavisor is skipped; clients connect directly to Postgres on 127.0.0.1.
+  ## If this block is ever enabled, both ports stay on the host loopback.
   # supavisor:
   #   container_name: supabase-pooler
-  #   image: supabase/supavisor:2.7.4
+  #   image: supabase/supavisor:2.9.13
   #   restart: unless-stopped
   #   ports:
-  #     - ${POSTGRES_PORT}:5432
-  #     - ${POOLER_PROXY_PORT_TRANSACTION}:6543
+  #     - 127.0.0.1:${POSTGRES_PORT}:5432
+  #     - 127.0.0.1:${POOLER_PROXY_PORT_TRANSACTION}:6543
   #   volumes:
   #     - ./volumes/pooler/pooler.exs:/etc/pooler/pooler.exs:ro,z
   #   healthcheck:
@@ -888,7 +853,6 @@ services:
   #     POOLER_MAX_CLIENT_CONN: ${POOLER_MAX_CLIENT_CONN}
   #     POOLER_POOL_MODE: transaction
   #     DB_POOL_SIZE: ${POOLER_DB_POOL_SIZE}
-  #     RLIMIT_NOFILE: ""  # prevents supabase realtime from crashing on ec2 instance
   #   command:
   #     [
   #       "/bin/sh",
@@ -898,3 +862,4 @@ services:
 
 volumes:
   db-config:
+  deno-cache:
