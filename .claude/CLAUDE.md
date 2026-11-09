@@ -78,8 +78,9 @@ The `.env` is managed in 1Password (not `.env.example`).
   `TENANT_ID: storage-single-tenant`. Credentials via EC2 instance IAM role.
 - `realtime`: `RLIMIT_NOFILE: ""` — workaround for an EC2 crash.
   `DB_ENC_KEY` is `${REALTIME_DB_ENC_KEY}` with no demo fallback.
-  `REGION: us-east-1` is the upstream workaround for missed Postgres Changes
-  (realtime#2289), not this host's AWS region.
+  Do not set `REGION`. Self-hosted 0.8.4 (realtime `v2.148.3`) fixed the
+  missed Postgres Changes bug (realtime#2289 / realtime#2290), so the
+  temporary `REGION: us-east-1` workaround is gone.
 - `meta` connects as `postgres`, not `supabase_admin` (upstream 0.6.0).
 
 **`docker/volumes/api/kong.yml`:** added `admin` route (`/admin`, `/backend`,

@@ -381,13 +381,25 @@ services:
   ## (all edge functions were removed in reimbursement-tracker-web#330); this
   ## route is commented out so /functions/v1/* is not exposed.
   ##
-  ## Upstream (2026-10) header handling, kept here for a later re-enable:
-  ## opaque sb_ keys are translated to the pre-signed internal asymmetric JWT
-  ## and injected as a raw `sb-api-key` header (no `Bearer` prefix), while
-  ## `Authorization` is left untouched so user-session JWTs flow through.
-  ## No `key-auth`: the runtime handles verify_jwt itself. The transformer
-  ## strips any client-supplied `sb-api-key` (anti-spoof) and re-adds the
-  ## translated value; an empty result is removed by the post-function.
+  ## Upstream (2026-11, self-hosted 0.8.4) route, kept commented for a later re-enable.
+  ## The gateway cors plugin is gone: functions handle CORS themselves.
+  ## Functions header handling: opaque sb_ keys are translated to the pre-signed
+  ## internal asymmetric JWT and injected as a raw `sb-api-key` header (no
+  ## `Bearer` prefix), while `Authorization` is left untouched so user-session
+  ## JWTs and legacy bearers flow through to the runtime.
+  ##
+  ## No `key-auth`: Functions is a passthrough that does NOT validate keys. Kong
+  ## cannot reject an invalid key while still letting unauthenticated requests
+  ## through (key-auth's `anonymous` fallback accepts missing AND invalid keys
+  ## alike), so unknown/invalid keys simply pass to the runtime, which handles
+  ## verify_jwt itself.
+  ##
+  ## The request-transformer strips any client-supplied `sb-api-key` (anti-spoof)
+  ## and re-adds the translated value; on no match the Lua expression yields nil
+  ## (an empty header) which the post-function then removes.
+  ##
+  ## No `cors`: functions handle CORS themselves, as on the platform. Preflights
+  ## reach the function and its responses pass through unchanged.
   # - name: functions-v1
   #   _comment: 'Edge Functions: /functions/v1/* -> http://functions:9000/*'
   #   url: http://functions:9000/
@@ -399,7 +411,6 @@ services:
   #       paths:
   #         - /functions/v1/
   #   plugins:
-  #     - name: cors
   #     - name: request-transformer
   #       config:
   #         remove:

@@ -86,7 +86,7 @@ services:
   ## extra gate, so it stays off the production server.
   # studio:
   #   container_name: supabase-studio
-  #   image: supabase/studio:2026.10.12-sha-3699278
+  #   image: supabase/studio:2026.11.02-sha-a05e7ec
   #   restart: unless-stopped
   #   healthcheck:
   #     test:
@@ -99,20 +99,27 @@ services:
   #     retries: 3
   #     start_period: 20s
   #   environment:
+  #     # Listen on all IPv4 interfaces
   #     HOSTNAME: "0.0.0.0"
+
   #     STUDIO_PG_META_URL: http://meta:8080
   #     POSTGRES_PORT: ${POSTGRES_PORT}
   #     POSTGRES_HOST: ${POSTGRES_HOST}
   #     POSTGRES_DB: ${POSTGRES_DB}
   #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+  #     # See: https://supabase.com/docs/guides/self-hosting/remove-superuser-access
   #     POSTGRES_USER_READ_WRITE: postgres
+
   #     PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
   #     PGRST_DB_SCHEMAS: ${PGRST_DB_SCHEMAS}
   #     PGRST_DB_MAX_ROWS: ${PGRST_DB_MAX_ROWS:-1000}
   #     PGRST_DB_EXTRA_SEARCH_PATH: ${PGRST_DB_EXTRA_SEARCH_PATH:-public}
+
   #     DEFAULT_ORGANIZATION_NAME: ${STUDIO_DEFAULT_ORGANIZATION}
   #     DEFAULT_PROJECT_NAME: ${STUDIO_DEFAULT_PROJECT}
   #     OPENAI_API_KEY: ${OPENAI_API_KEY}
+
   #     SUPABASE_URL: http://api-gw:8000
   #     SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
   #     SUPABASE_ANON_KEY: ${ANON_KEY}
@@ -120,7 +127,10 @@ services:
   #     AUTH_JWT_SECRET: ${JWT_SECRET}
   #     SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY}
   #     SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY}
+
+  #     # See: docker-compose.logs.yml
   #     ENABLED_FEATURES_LOGS_ALL: "false"
+
   #     SNIPPETS_MANAGEMENT_FOLDER: /app/snippets
   #     EDGE_FUNCTIONS_MANAGEMENT_FOLDER: /app/edge-functions
   #   volumes:
@@ -133,20 +143,27 @@ services:
   ## Do not start Envoy alongside Kong; both want port 8000.
   # api-gw:
   #   container_name: supabase-envoy
-  #   image: envoyproxy/envoy:v1.39.1
+  #   image: envoyproxy/envoy:v1.39.6
   #   restart: unless-stopped
   #   networks:
   #     default:
+  #       # Expose `envoy` and `kong` as network aliases, so internal configs
+  #       # that reference either hostname resolve to whichever gateway is active.
   #       aliases:
   #         - envoy
   #         - kong
   #   healthcheck:
+  #     # Using a TCP port check because this image does not include curl or wget.
   #     test: ["CMD-SHELL", "timeout 1 bash -c '</dev/tcp/127.0.0.1/8000'"]
   #     interval: 10s
   #     timeout: 5s
   #     retries: 3
+  #   depends_on:
+  #     studio:
+  #       condition: service_healthy
   #   ports:
-  #     # Loopback only. Envoy is not the public gateway on this fork.
+  #     # Loopback only. Envoy is not the public gateway on this fork,
+  #     # and there is no baked-in 8000 default.
   #     - 127.0.0.1:${API_GW_HTTP_PORT:-${KONG_HTTP_PORT}}:8000/tcp
   #   volumes:
   #     - ./volumes/api/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
@@ -439,7 +456,7 @@ services:
   realtime:
     # This container name looks inconsistent but is correct because realtime constructs tenant id by parsing the subdomain
     container_name: realtime-dev.supabase-realtime
-    image: supabase/realtime:v2.143.3
+    image: supabase/realtime:v2.148.3
     restart: unless-stopped
     depends_on:
       db:
@@ -491,15 +508,12 @@ services:
       SEED_SELF_HOST: "true"
       RUN_JANITOR: "true"
       DISABLE_HEALTHCHECK_LOGGING: "true"
-      # Workaround for missed Postgres Changes every 10 minutes (realtime#2289).
-      # The value us-east-1 is the upstream workaround, not this host's AWS region.
-      REGION: us-east-1
 
   # HST storage uses the S3 backend in this file (EC2 instance role). The
   # docker-compose.s3.yml MinIO override is not used.
   storage:
     container_name: supabase-storage
-    image: supabase/storage-api:v1.81.0
+    image: supabase/storage-api:v1.89.12
     restart: unless-stopped
     depends_on:
       db:
@@ -569,7 +583,7 @@ services:
 
   imgproxy:
     container_name: supabase-imgproxy
-    image: darthsim/imgproxy:v3.31.4
+    image: darthsim/imgproxy:v4.0.21
     restart: unless-stopped
     volumes:
       - ./volumes/storage:/var/lib/storage:z
@@ -621,26 +635,41 @@ services:
       CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
 
   ## Edge Functions are not run. All Supabase edge functions were removed from
-  ## the app (reimbursement-tracker-web#330).
+  ## the app (reimbursement-tracker-web#330). The memory limit below only applies
+  ## if this service is uncommented.
   # functions:
   #   container_name: supabase-edge-functions
-  #   image: supabase/edge-runtime:v1.77.4
+  #   image: supabase/edge-runtime:v1.77.9
+  #   mem_limit: ${FUNCTIONS_MEMORY_LIMIT:-2g}
   #   restart: unless-stopped
   #   volumes:
   #     - ./volumes/functions:/home/deno/functions:z
   #     - deno-cache:/root/.cache/deno
   #   depends_on:
-  #     kong:
+  #     api-gw:
   #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "timeout 1 bash -c '</dev/tcp/127.0.0.1/9000'"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 3
   #   environment:
+  #     # Legacy symmetric HS256 key
   #     JWT_SECRET: ${JWT_SECRET}
+  #     # JWKS for token verification (EC public + legacy symmetric).
+  #     # For Podman, use: SUPABASE_JWKS: ${JWT_JWKS}
+  #     #SUPABASE_JWKS: ${JWT_JWKS:-{"keys":[]}}
+
   #     SUPABASE_URL: http://api-gw:8000
   #     SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
+  #     # Legacy API keys (HS256-signed JWTs)
   #     SUPABASE_ANON_KEY: ${ANON_KEY}
   #     SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+  #     # New opaque API keys
   #     SUPABASE_PUBLISHABLE_KEYS: "{\"default\":\"${SUPABASE_PUBLISHABLE_KEY:-}\"}"
   #     SUPABASE_SECRET_KEYS: "{\"default\":\"${SUPABASE_SECRET_KEY:-}\"}"
   #     SUPABASE_DB_URL: postgresql://postgres:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+  #     # TODO: Allow configuring VERIFY_JWT per function.
   #     VERIFY_JWT: "${FUNCTIONS_VERIFY_JWT}"
   #   command:
   #     [
