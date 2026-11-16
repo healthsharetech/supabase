@@ -48,8 +48,18 @@ Feel free to check [our documentation](https://docs.astro.build) or jump into ou
 ## Federated troubleshooting content
 
 `src/content/troubleshooting/` isn't hand-written — it's fetched from a private repo by
-`scripts/federated-content/fetch-federated-content.ts` as part of the build (`pnpm run fetch:federated-content`)
+`scripts/federated-content/fetch-federated-content.ts` as part of the build (the `fetch:federated-content` task in `turbo.jsonc`)
 and is gitignored. See `AGENTS.md` for how it works and what's intentionally left out for now.
+
+### Contributing to troubleshooting articles
+
+Troubleshooting articles (`/kb/troubleshooting/...`) aren't open for direct contributions. They go through an internal
+review process before they're published.
+
+You can still suggest a fix: comment on the article's GitHub Discussion (linked at the bottom of each article as
+"Go to the GitHub discussion"), or [open an issue](https://github.com/supabase/supabase/issues/new/choose) that
+links the article and describes the change. Pull requests for other `/kb` content, such as `src/content/guides/`,
+are welcome.
 
 ## Workflows
 
@@ -57,7 +67,7 @@ and is gitignored. See `AGENTS.md` for how it works and what's intentionally lef
 triggered manually): it fetches troubleshooting content, creates a GitHub Discussion for any guide that doesn't have one yet
 (`sync:troubleshooting-entries`), and pushes title/content updates to discussions whose guide has since
 changed (`sync:troubleshooting-updates`). This is separate from kb's own build — it has real side effects
-(creating/updating Discussions, writing DB rows), so it never runs as part of `pnpm build`/`prebuild`.
+(creating/updating Discussions, writing DB rows), so it never runs as part of `pnpm build`.
 
 ## Tests
 
