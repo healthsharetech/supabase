@@ -145,10 +145,14 @@ test.describe('SQL Editor', () => {
     await page.locator('.view-lines').click()
     await page.keyboard.press('ControlOrMeta+KeyA')
     await page.keyboard.type(`select length('hello');`)
+
+    const secondSqlMutationPromise = waitForApiResponse(page, 'pg-meta', ref, 'query?key=', {
+      method: 'POST',
+    })
     await page.getByTestId('sql-run-button').click()
+    await secondSqlMutationPromise
 
     // verify the result is updated.
-    await waitForApiResponse(page, 'pg-meta', ref, 'query?key=', { method: 'POST' })
     await expect(page.getByRole('gridcell', { name: '5' })).toBeVisible()
 
     await expect(page.getByText('Loading...')).not.toBeVisible()
@@ -291,7 +295,11 @@ test.describe('SQL Editor', () => {
   })
 
   test('warns on CREATE TABLE without RLS and "Run and enable RLS" enables it', async ({ ref }) => {
-    const tableName = 'pw_rls_smoke_test'
+    // Suffix with parallel worker index so parallel workers don't collide
+    // on the same table name — when they do, one worker's `dropTable`
+    // races another's "Run and enable RLS" and the post-action query
+    // sometimes finds the table missing.
+    const tableName = `pw_rls_smoke_test_${test.info().parallelIndex}`
 
     // Drop any leftover table from a previous failed run, and ensure cleanup
     // after the test regardless of pass/fail.
@@ -395,6 +403,84 @@ test.describe('SQL Editor', () => {
       } else {
         await page.reload()
       }
+    }
+  })
+
+  test('destructive query warning modal: confirm re-runs the forced query', async ({ ref }) => {
+    await expect(page.getByText('Loading...')).not.toBeVisible()
+    await page.locator('.view-lines').click()
+    await page.keyboard.press('ControlOrMeta+KeyA')
+    await page.keyboard.type(`drop table pw_sql_editor_confirm_dne_e2e;`)
+
+    // Track whether the SQL editor dispatches this specific query to pg-meta
+    let queryDispatched = false
+    const listener = (request: any) => {
+      if (
+        request.url().includes('query?key=') &&
+        request.method() === 'POST' &&
+        request.postData()?.includes('drop table pw_sql_editor_confirm_dne_e2e')
+      ) {
+        queryDispatched = true
+      }
+    }
+    page.on('request', listener)
+
+    await page.getByTestId('sql-run-button').click()
+
+    // Destructive query -> confirmation modal, and no query is sent yet.
+    await expect(page.getByRole('heading', { name: 'Potential issue detected' })).toBeVisible()
+    expect(queryDispatched).toBe(false)
+
+    // Confirming forces the (same) destructive query to actually run.
+    const sqlMutationPromise = waitForApiResponse(page, 'pg-meta', ref, 'query?key=', {
+      method: 'POST',
+    })
+    await page.getByRole('button', { name: 'Run query' }).click()
+    await sqlMutationPromise
+    expect(queryDispatched).toBe(true)
+
+    page.removeListener('request', listener)
+
+    // clear SQL snippet
+    if (!isCLI()) {
+      await deleteSqlSnippet(page, ref, newSqlSnippetName)
+    } else {
+      await page.reload()
+    }
+  })
+
+  test('debug button opens the AI Assistant with the query error pre-filled', async ({ ref }) => {
+    await expect(page.getByText('Loading...')).not.toBeVisible()
+    await page.locator('.view-lines').click()
+    await page.keyboard.press('ControlOrMeta+KeyA')
+    await page.keyboard.type(`select * from pw_sql_editor_missing_table_e2e;`)
+
+    const sqlMutationPromise = waitForApiResponse(page, 'pg-meta', ref, 'query?key=', {
+      method: 'POST',
+    })
+    await page.getByTestId('sql-run-button').click()
+    await sqlMutationPromise
+
+    const debugButton = page.getByRole('button', { name: 'Debug with Assistant' })
+    await expect(debugButton, 'Debug button should appear once the query errors').toBeVisible()
+    await debugButton.click()
+
+    await expect(
+      page.getByRole('button', { name: 'Close Assistant' }),
+      'AI Assistant panel should open'
+    ).toBeVisible()
+    await expect(
+      page.getByRole('button', { name: 'Debug SQL snippet' }),
+      'Assistant chat should be pre-named for the debug flow'
+    ).toBeVisible()
+
+    await page.getByRole('button', { name: 'Close Assistant' }).click()
+
+    // clear SQL snippet
+    if (!isCLI()) {
+      await deleteSqlSnippet(page, ref, newSqlSnippetName)
+    } else {
+      await page.reload()
     }
   })
 
@@ -782,11 +868,11 @@ hello world`)
     await expect(page.getByText('result found')).toBeVisible()
     await searchBar.fill('') // clear search bar
 
-    // download as migration file
+    // export query as migration file
     await privateSnippetSection
       .getByTitle(sqlSnippetName, { exact: true })
       .click({ button: 'right' })
-    await page.getByRole('menuitem', { name: 'Download as migration file' }).click()
+    await page.getByRole('menuitem', { name: 'Export query' }).click()
     await expect(page.getByText('supabase migration new')).toBeVisible()
     await page.getByRole('button', { name: 'Close' }).click()
 

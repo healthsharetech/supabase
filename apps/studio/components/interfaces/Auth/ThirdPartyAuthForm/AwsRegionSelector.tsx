@@ -1,14 +1,14 @@
-import { Check, ChevronsUpDown } from 'lucide-react'
+import { CheckIcon } from 'lucide-react'
 import { useId, useState } from 'react'
 import {
-  Button,
   cn,
-  Command_Shadcn_,
-  CommandEmpty_Shadcn_,
-  CommandGroup_Shadcn_,
-  CommandInput_Shadcn_,
-  CommandItem_Shadcn_,
-  CommandList_Shadcn_,
+  ComboboxTrigger,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
   FormControl,
   Popover,
   PopoverContent,
@@ -62,30 +62,26 @@ export const AwsRegionSelector = ({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <FormControl>
-          <Button
-            type="default"
-            role="combobox"
+          <ComboboxTrigger
             aria-expanded={open}
             aria-controls={listboxId}
-            className={cn('w-full justify-between', !value && 'text-muted-foreground')}
+            data-state={open ? 'open' : 'closed'}
+            className={cn(!value && 'text-muted-foreground')}
             size="small"
-            iconRight={
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" strokeWidth={1} />
-            }
           >
             {value ?? 'Select a region'}
-          </Button>
+          </ComboboxTrigger>
         </FormControl>
       </PopoverTrigger>
       <PopoverContent id={listboxId} className="p-0" sameWidthAsTrigger>
-        <Command_Shadcn_>
-          <CommandInput_Shadcn_ placeholder="Search AWS regions..." />
-          <CommandList_Shadcn_>
-            <CommandEmpty_Shadcn_>No regions found.</CommandEmpty_Shadcn_>
-            <CommandGroup_Shadcn_>
+        <Command>
+          <CommandInput placeholder="Search AWS regions..." />
+          <CommandList>
+            <CommandEmpty>No regions found.</CommandEmpty>
+            <CommandGroup>
               <ScrollArea className="h-72">
                 {AWS_IDP_REGIONS.map((option) => (
-                  <CommandItem_Shadcn_
+                  <CommandItem
                     value={option}
                     key={option}
                     onSelect={(currentValue) => {
@@ -93,16 +89,16 @@ export const AwsRegionSelector = ({
                       setOpen(false)
                     }}
                   >
-                    <Check
+                    <CheckIcon
                       className={cn('mr-2 h-4 w-4', option === value ? 'opacity-100' : 'opacity-0')}
                     />
                     {option}
-                  </CommandItem_Shadcn_>
+                  </CommandItem>
                 ))}
               </ScrollArea>
-            </CommandGroup_Shadcn_>
-          </CommandList_Shadcn_>
-        </Command_Shadcn_>
+            </CommandGroup>
+          </CommandList>
+        </Command>
       </PopoverContent>
     </Popover>
   )

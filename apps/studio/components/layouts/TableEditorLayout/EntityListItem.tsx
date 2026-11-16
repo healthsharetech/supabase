@@ -1,5 +1,16 @@
+import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'common'
-import { Copy, Download, Edit, Globe, Lock, MoreVertical, Trash } from 'lucide-react'
+import {
+  CopyIcon,
+  CornerDownRightIcon,
+  DownloadIcon,
+  EditIcon,
+  GlobeIcon,
+  LayersIcon,
+  LockIcon,
+  MoreVerticalIcon,
+  TrashIcon,
+} from 'lucide-react'
 import Link from 'next/link'
 import { type CSSProperties } from 'react'
 import { toast } from 'sonner'
@@ -23,14 +34,17 @@ import {
 } from 'ui'
 
 import { useExportAllRowsAsCsv, useExportAllRowsAsSql } from './ExportAllRows'
-import { useTableFilter } from '@/components/grid/hooks/useTableFilter'
+import { useUrlTableFilters } from '@/components/grid/hooks/useTableFilter'
 import { buildTableEditorUrl } from '@/components/grid/SupabaseGrid.utils'
 import { getEntityLintDetails } from '@/components/interfaces/TableGridEditor/TableEntity.utils'
+import { ButtonTooltip } from '@/components/ui/ButtonTooltip'
 import { EntityTypeIcon } from '@/components/ui/EntityTypeIcon'
 import { InlineLink } from '@/components/ui/InlineLink'
 import { getTableDefinition } from '@/data/database/table-definition-query'
+import { getViewDefinition } from '@/data/database/view-definition-query'
 import { ENTITY_TYPE } from '@/data/entity-types/entity-type-constants'
 import { Entity } from '@/data/entity-types/entity-types-infinite-query'
+import { partitionCountQueryOptions } from '@/data/entity-types/partition-count-query'
 import { useProjectLintsQuery } from '@/data/lint/lint-query'
 import { EditorTablePageLink } from '@/data/prefetchers/project.$ref.editor.$id'
 import type {
@@ -41,6 +55,7 @@ import { useTableRowsCountQuery } from '@/data/table-rows/table-rows-count-query
 import { useQuerySchemaState } from '@/hooks/misc/useSchemaQueryState'
 import { useSelectedProjectQuery } from '@/hooks/misc/useSelectedProject'
 import { formatSql } from '@/lib/formatSql'
+import { pluralize } from '@/lib/helpers'
 import {
   useRoleImpersonationStateSnapshot,
   type RoleImpersonationState,
@@ -57,6 +72,7 @@ export interface EntityListItemProps {
   style?: CSSProperties
   onExportCLI: () => void
   apiAccessMap?: TableApiAccessMap
+  onViewPartitions?: (id: number) => void
 }
 
 // [jordi] Used to determine the entity is a table and not a view or other unsupported entity type
@@ -73,6 +89,7 @@ export const EntityListItem = ({
   style,
   onExportCLI,
   apiAccessMap,
+  onViewPartitions,
 }: EntityListItemProps) => {
   const { data: project } = useSelectedProjectQuery()
   const snap = useTableEditorStateSnapshot()
@@ -83,9 +100,11 @@ export const EntityListItem = ({
   const isPreview = tabs.previewTabId === tabId
 
   const isActive = Number(id) === entity.id
+  const isChildPartition = entity.is_partition && entity.type !== ENTITY_TYPE.PARTITIONED_TABLE
   const canEdit = isActive && !isLocked
+  const canViewPartitions = isActive && entity.type === ENTITY_TYPE.PARTITIONED_TABLE
 
-  const { filters } = useTableFilter()
+  const filters = useUrlTableFilters(entity.id)
   const roleImpersonationState = useRoleImpersonationStateSnapshot()
   const { data: countData } = useTableRowsCountQuery(
     {
@@ -96,10 +115,19 @@ export const EntityListItem = ({
       roleImpersonationState: roleImpersonationState as RoleImpersonationState,
     },
     {
-      enabled: isTableLikeEntityListItem(entity) && isActive,
+      enabled: isTableLikeEntityListItem(entity) && isActive && filters !== undefined,
     }
   )
   const rowCount = countData?.count
+
+  const { data: partitionCount } = useQuery({
+    ...partitionCountQueryOptions({
+      projectRef: project?.ref,
+      connectionString: project?.connectionString,
+      id: entity.id,
+    }),
+    enabled: entity.type === ENTITY_TYPE.PARTITIONED_TABLE && !!project?.ref,
+  })
 
   const { data: lints = [] } = useProjectLintsQuery({
     projectRef: project?.ref,
@@ -110,7 +138,7 @@ export const EntityListItem = ({
     'rls_disabled_in_public',
     ['ERROR'],
     lints,
-    selectedSchema
+    entity.schema
   ).hasLint
 
   const tableHasRlsEnabledNoPolicyLint: boolean = getEntityLintDetails(
@@ -118,7 +146,7 @@ export const EntityListItem = ({
     'rls_enabled_no_policy',
     ['ERROR', 'WARN', 'INFO'],
     lints,
-    selectedSchema
+    entity.schema
   ).hasLint
 
   const viewHasLints: boolean = getEntityLintDetails(
@@ -126,7 +154,7 @@ export const EntityListItem = ({
     'security_definer_view',
     ['ERROR', 'WARN'],
     lints,
-    selectedSchema
+    entity.schema
   ).hasLint
 
   const materializedViewHasLints: boolean = getEntityLintDetails(
@@ -134,7 +162,7 @@ export const EntityListItem = ({
     'materialized_view_in_api',
     ['ERROR', 'WARN'],
     lints,
-    selectedSchema
+    entity.schema
   ).hasLint
 
   const foreignTableHasLints: boolean = getEntityLintDetails(
@@ -142,10 +170,12 @@ export const EntityListItem = ({
     'foreign_table_in_api',
     ['ERROR', 'WARN'],
     lints,
-    selectedSchema
+    entity.schema
   ).hasLint
 
-  const apiAccessData = apiAccessMap?.[entity.name]
+  const isInSelectedSchema = entity.schema === selectedSchema
+  // The map is keyed by name within the selected schema, so it can't describe other schemas
+  const apiAccessData = isInSelectedSchema ? apiAccessMap?.[entity.name] : undefined
 
   const formatTooltipText = (entityType: string) => {
     const text =
@@ -183,6 +213,7 @@ export const EntityListItem = ({
       id={String(entity.id)}
       href={buildTableEditorUrl({ projectRef, tableId: entity.id, schema: entity.schema })}
       role="button"
+      tabIndex={0}
       aria-label={`View ${entity.name}`}
       className={cn(
         TreeViewItemVariant({
@@ -201,9 +232,11 @@ export const EntityListItem = ({
         {isActive && <div className="absolute left-0 h-full w-0.5 bg-foreground" />}
         <Tooltip disableHoverableContent={true}>
           <TooltipTrigger className="min-w-4">
-            <EntityTypeIcon type={entity.type} isActive={isActive} />
+            <EntityTypeIcon type={entity.type} isPartition={isChildPartition} isActive={isActive} />
           </TooltipTrigger>
-          <TooltipContent side="bottom">{formatTooltipText(entity.type)}</TooltipContent>
+          <TooltipContent side="bottom">
+            {isChildPartition ? 'Partition' : formatTooltipText(entity.type)}
+          </TooltipContent>
         </Tooltip>
         <div
           className={cn(
@@ -217,33 +250,63 @@ export const EntityListItem = ({
               'text-sm transition truncate'
             )}
           >
+            {!isInSelectedSchema && <span className="text-foreground-muted">{entity.schema}.</span>}
             {entity.name}
           </span>
-          <EntityTooltipTrigger
-            entity={entity}
-            tableHasRlsDisabledLint={tableHasRlsDisabledLint}
-            tableHasRlsEnabledNoPolicyLint={tableHasRlsEnabledNoPolicyLint}
-            viewHasLints={viewHasLints}
-            materializedViewHasLints={materializedViewHasLints}
-            foreignTableHasLints={foreignTableHasLints}
-            apiAccessData={apiAccessData}
-          />
+          <div className="flex items-center gap-x-1">
+            <EntityTooltipTrigger
+              entity={entity}
+              tableHasRlsDisabledLint={tableHasRlsDisabledLint}
+              tableHasRlsEnabledNoPolicyLint={tableHasRlsEnabledNoPolicyLint}
+              viewHasLints={viewHasLints}
+              materializedViewHasLints={materializedViewHasLints}
+              foreignTableHasLints={foreignTableHasLints}
+              apiAccessData={apiAccessData}
+            />
+            {entity.type === ENTITY_TYPE.PARTITIONED_TABLE && !!partitionCount && (
+              <ButtonTooltip
+                variant="text"
+                className="h-6 py-0 px-1 space-x-1 text-foreground-lighter"
+                aria-label={`View ${partitionCount} ${pluralize(partitionCount, 'partition')}`}
+                iconRight={<LayersIcon />}
+                tooltip={{
+                  content: {
+                    side: 'bottom',
+                    text: `View ${partitionCount} ${pluralize(partitionCount, 'partition')}`,
+                  },
+                }}
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onViewPartitions?.(entity.id)
+                }}
+              >
+                {partitionCount}
+              </ButtonTooltip>
+            )}
+          </div>
         </div>
 
-        {canEdit && (
+        {(canEdit || canViewPartitions) && (
           <DropdownMenu>
-            <DropdownMenuTrigger
-              asChild
-              className="text-foreground-lighter transition-all text-transparent group-hover:text-foreground data-open:text-foreground"
-            >
-              <Button
-                type="text"
-                className="w-6 h-6"
-                icon={<MoreVertical size={14} strokeWidth={2} />}
-                onClick={(e) => e.preventDefault()}
-              />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="bottom" align="start" className="w-44">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger
+                  asChild
+                  className="text-foreground-lighter transition-all text-transparent group-hover:text-foreground data-open:text-foreground"
+                >
+                  <Button
+                    variant="text"
+                    className="w-6 h-6"
+                    icon={<MoreVerticalIcon size={14} strokeWidth={2} />}
+                    onClick={(e) => e.preventDefault()}
+                    aria-label={`More options for ${entity.name}`}
+                  />
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">More options</TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent side="bottom" align="start" className="w-52">
               <DropdownMenuItem
                 key="copy-name"
                 className="space-x-2"
@@ -252,7 +315,7 @@ export const EntityListItem = ({
                   copyToClipboard(entity.name)
                 }}
               >
-                <Copy size={12} />
+                <CopyIcon size={12} className="shrink-0" />
                 <span>Copy name</span>
               </DropdownMenuItem>
 
@@ -279,55 +342,106 @@ export const EntityListItem = ({
                       await copyToClipboard(formattedSchema, () => {
                         toast.success('Table schema copied to clipboard', { id: toastId })
                       })
-                    } catch (err: any) {
-                      toast.error('Failed to copy schema: ' + (err.message || err), { id: toastId })
+                    } catch (err: unknown) {
+                      if (err instanceof Error) {
+                        toast.error('Failed to copy schema: ' + (err.message || err), {
+                          id: toastId,
+                        })
+                      }
                     }
                   }}
                 >
-                  <Copy size={12} />
+                  <CopyIcon size={12} className="shrink-0" />
                   <span>Copy table schema</span>
                 </DropdownMenuItem>
               )}
 
-              {entity.type === ENTITY_TYPE.TABLE && (
+              {(entity.type === ENTITY_TYPE.VIEW ||
+                entity.type === ENTITY_TYPE.MATERIALIZED_VIEW) && (
+                <DropdownMenuItem
+                  key="copy-view-definition"
+                  className="space-x-2"
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    const label =
+                      entity.type === ENTITY_TYPE.MATERIALIZED_VIEW ? 'materialized view' : 'view'
+                    const toastId = toast.loading(`Getting ${label} definition...`)
+
+                    const formattedDefinition = getViewDefinition({
+                      id: entity.id,
+                      projectRef: project?.ref,
+                      connectionString: project?.connectionString,
+                      includeCreateStatement: true,
+                    }).then((definition) => {
+                      if (!definition) {
+                        throw new Error(`Failed to get ${label} definition`)
+                      }
+                      return formatSql(definition)
+                    })
+
+                    try {
+                      await copyToClipboard(formattedDefinition, () => {
+                        toast.success(
+                          `${label[0].toUpperCase() + label.slice(1)} definition copied to clipboard`,
+                          { id: toastId }
+                        )
+                      })
+                    } catch (err: any) {
+                      toast.error(`Failed to copy ${label} definition: ` + (err.message || err), {
+                        id: toastId,
+                      })
+                    }
+                  }}
+                >
+                  <CopyIcon size={12} className="shrink-0" />
+                  <span>Copy definition</span>
+                </DropdownMenuItem>
+              )}
+
+              {isTableLikeEntityListItem(entity) && (
                 <>
                   <DropdownMenuSeparator />
 
-                  <DropdownMenuItem
-                    key="edit-table"
-                    className="space-x-2"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      snap.onEditTable()
-                    }}
-                  >
-                    <Edit size={12} />
-                    <span>Edit table</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    key="duplicate-table"
-                    className="space-x-2"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      snap.onDuplicateTable()
-                    }}
-                  >
-                    <Copy size={12} />
-                    <span>Duplicate table</span>
-                  </DropdownMenuItem>
+                  {entity.type === ENTITY_TYPE.TABLE && !entity.is_partition && (
+                    <>
+                      <DropdownMenuItem
+                        key="edit-table"
+                        className="space-x-2"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          snap.onEditTable()
+                        }}
+                      >
+                        <EditIcon size={12} className="shrink-0" />
+                        <span>Edit table</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        key="duplicate-table"
+                        className="space-x-2"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          snap.onDuplicateTable()
+                        }}
+                      >
+                        <CopyIcon size={12} className="shrink-0" />
+                        <span>Duplicate table</span>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+
                   <DropdownMenuItem key="view-policies" className="space-x-2" asChild>
                     <Link
                       key="view-policies"
-                      href={`/project/${projectRef}/auth/policies?schema=${selectedSchema}&search=${entity.id}`}
+                      href={`/project/${projectRef}/database/policies?schema=${encodeURIComponent(entity.schema)}&search=${encodeURIComponent(String(entity.id))}`}
                     >
-                      <Lock size={12} />
+                      <LockIcon size={12} className="shrink-0" />
                       <span>View policies</span>
                     </Link>
                   </DropdownMenuItem>
 
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger className="gap-x-2">
-                      <Download size={12} />
+                      <DownloadIcon size={12} className="shrink-0" />
                       Export data
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent>
@@ -364,17 +478,134 @@ export const EntityListItem = ({
                     </DropdownMenuSubContent>
                   </DropdownMenuSub>
 
+                  {entity.type === ENTITY_TYPE.PARTITIONED_TABLE && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        key="view-partitions"
+                        className="gap-x-2"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onViewPartitions?.(entity.id)
+                        }}
+                      >
+                        <CornerDownRightIcon size={12} className="shrink-0" />
+                        <span>View partitions</span>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+
+                  {canEdit && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        key="delete-table"
+                        className="gap-x-2"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          snap.onDeleteTable()
+                        }}
+                      >
+                        <TrashIcon size={12} className="shrink-0" />
+                        <span>Delete table</span>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </>
+              )}
+
+              {entity.type === ENTITY_TYPE.VIEW && (
+                <>
+                  <DropdownMenuSeparator />
+
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="gap-x-2">
+                      <DownloadIcon size={12} className="shrink-0" />
+                      Export data
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem
+                        key="download-view-csv"
+                        className="space-x-2"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          exportCsv()
+                        }}
+                      >
+                        <span>Export view as CSV</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        key="download-view-sql"
+                        className="gap-x-2"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          exportSql()
+                        }}
+                      >
+                        <span>Export view as SQL</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    key="delete-table"
+                    key="delete-view"
                     className="gap-x-2"
                     onClick={(e) => {
                       e.stopPropagation()
-                      snap.onDeleteTable()
+                      snap.onDeleteView()
                     }}
                   >
-                    <Trash size={12} />
-                    <span>Delete table</span>
+                    <TrashIcon size={12} className="shrink-0" />
+                    <span>Delete view</span>
+                  </DropdownMenuItem>
+                </>
+              )}
+
+              {entity.type === ENTITY_TYPE.MATERIALIZED_VIEW && (
+                <>
+                  <DropdownMenuSeparator />
+
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="gap-x-2">
+                      <DownloadIcon size={12} className="shrink-0" />
+                      Export data
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem
+                        key="download-mv-csv"
+                        className="space-x-2"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          exportCsv()
+                        }}
+                      >
+                        <span>Export view as CSV</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        key="download-mv-sql"
+                        className="gap-x-2"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          exportSql()
+                        }}
+                      >
+                        <span>Export view as SQL</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    key="delete-materialized-view"
+                    className="gap-x-2"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      snap.onDeleteMaterializedView()
+                    }}
+                  >
+                    <TrashIcon size={12} className="shrink-0" />
+                    <span>Delete view</span>
                   </DropdownMenuItem>
                 </>
               )}
@@ -428,6 +659,17 @@ const EntityTooltipTrigger = ({
         )
       }
       break
+    case ENTITY_TYPE.PARTITIONED_TABLE:
+      // The RLS lint doesn't report partitioned tables, so derive it from the table itself
+      if (!entity.rls_enabled && apiAccessData?.apiAccessType === 'access') {
+        tooltipContent = (
+          <>
+            This table can be accessed by anyone via the Data API as RLS is disabled. {learnMoreCTA}
+            .
+          </>
+        )
+      }
+      break
     case ENTITY_TYPE.VIEW:
       if (viewHasLints) {
         tooltipContent = (
@@ -441,7 +683,7 @@ const EntityTooltipTrigger = ({
       if (materializedViewHasLints) {
         tooltipContent = (
           <>
-            {accessWarning} as this is a Security definer view {learnMoreCTA}.
+            {accessWarning} as materialized view is accessible via API. {learnMoreCTA}.
           </>
         )
       }
@@ -462,7 +704,7 @@ const EntityTooltipTrigger = ({
   if (tooltipContent) {
     return (
       <Tooltip>
-        <TooltipTrigger className="min-w-4">
+        <TooltipTrigger className="shrink-0">
           <Badge variant="destructive">Unrestricted</Badge>
         </TooltipTrigger>
         <TooltipContent side="right" className="max-w-52">
@@ -473,14 +715,14 @@ const EntityTooltipTrigger = ({
   }
 
   const isRlsEnabledNoPolicies =
-    entity.type === ENTITY_TYPE.TABLE &&
+    (entity.type === ENTITY_TYPE.TABLE || entity.type === ENTITY_TYPE.PARTITIONED_TABLE) &&
     apiAccessData?.apiAccessType === 'access' &&
     tableHasRlsEnabledNoPolicyLint
   if (isRlsEnabledNoPolicies) {
     return (
       <Tooltip>
-        <TooltipTrigger className="min-w-4" aria-label="Table exposed via Data API">
-          <Globe size={14} strokeWidth={1} className="text-foreground-lighter" />
+        <TooltipTrigger className="shrink-0" aria-label="Table exposed via Data API">
+          <GlobeIcon size={14} strokeWidth={1} className="text-foreground-lighter" />
         </TooltipTrigger>
         <TooltipContent side="right" className="max-w-52">
           This table can be accessed via the Data API but no RLS policies exist so no data will be
@@ -495,8 +737,8 @@ const EntityTooltipTrigger = ({
   if (isApiExposedWithRlsAndPolicies) {
     return (
       <Tooltip>
-        <TooltipTrigger className="min-w-4" aria-label="Table exposed via Data API">
-          <Globe size={14} strokeWidth={1} className="text-foreground-lighter" />
+        <TooltipTrigger className="shrink-0" aria-label="Table exposed via Data API">
+          <GlobeIcon size={14} strokeWidth={1} className="text-foreground-lighter" />
         </TooltipTrigger>
         <TooltipContent side="right">This table can be accessed via the Data API</TooltipContent>
       </Tooltip>

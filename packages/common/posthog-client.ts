@@ -1,4 +1,13 @@
-import posthog, { PostHogConfig } from 'posthog-js'
+import posthog, {
+  type CapturedNetworkRequest,
+  type PostHogConfig,
+  type SessionRecordingOptions,
+} from 'posthog-js'
+
+import { safeSessionStorage } from './safe-storage'
+import { getTelemetryPlatform } from './telemetry-utils'
+
+export type { CapturedNetworkRequest, SessionRecordingOptions }
 
 // Limit the max number of queued events
 // (e.g. if a user navigates around a lot before accepting consent)
@@ -19,6 +28,30 @@ interface PostHogClientConfig {
   apiKey?: string
   apiHost?: string
   uiHost?: string
+}
+
+interface PostHogInitOptions {
+  hasConsent?: boolean
+  /**
+   * Masking policy for session replay. Omit to disable recording, which every app
+   * sharing this PostHog project does unless it passes a policy of its own.
+   */
+  sessionReplay?: SessionRecordingOptions
+}
+
+/**
+ * Enables session recording when given a masking config, and disables it when
+ * given nothing.
+ */
+export function buildSessionRecordingConfig(
+  sessionReplay?: SessionRecordingOptions
+): Partial<PostHogConfig> {
+  return {
+    disable_session_recording: !sessionReplay,
+    // Console output is not in the DOM, so text masking cannot reach it.
+    enable_recording_console_log: false,
+    ...(sessionReplay && { session_recording: sessionReplay }),
+  }
 }
 
 class PostHogClient {
@@ -48,7 +81,7 @@ class PostHogClient {
     }
   }
 
-  init(hasConsent: boolean = true) {
+  init({ hasConsent = true, sessionReplay }: PostHogInitOptions = {}) {
     if (this.initStarted || typeof window === 'undefined' || !hasConsent) return
 
     if (!this.config.apiKey) {
@@ -62,6 +95,14 @@ class PostHogClient {
       autocapture: false, // We'll manually track events
       capture_pageview: false, // We'll manually track pageviews
       capture_pageleave: false, // We'll manually track page leaves
+      ...buildSessionRecordingConfig(sessionReplay),
+      // Not posthog.register(): super properties persist in localStorage shared by every
+      // supabase.com app, so events sent before register() runs carry the last app's value.
+      before_send: (event) => {
+        const platform = getTelemetryPlatform()
+        if (event && platform) event.properties.platform = platform
+        return event
+      },
       loaded: (posthog) => {
         // Apply pending properties that were set before PostHog
         // initialized due to poor connection or user not accepting
@@ -373,11 +414,11 @@ class PostHogClient {
     const storageKey = `ph_exposed:${experimentId}`
 
     try {
-      if (sessionStorage.getItem(storageKey) === sessionId) return
+      if (safeSessionStorage.getItem(storageKey) === sessionId) return
 
       const eventName = `${experimentId}_experiment_exposed`
       posthog.capture(eventName, { experiment_id: experimentId, ...properties })
-      sessionStorage.setItem(storageKey, sessionId)
+      safeSessionStorage.setItem(storageKey, sessionId)
     } catch (error) {
       console.error('PostHog experiment exposure capture failed:', error)
     }

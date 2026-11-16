@@ -13,6 +13,11 @@ import type { ForeignKeyConstraint } from '@/data/database/foreign-key-constrain
 import type { RetrieveTableResult } from '@/data/tables/table-retrieve-query'
 import { uuidv4 } from '@/lib/helpers'
 import type { SafePostgresColumn } from '@/lib/postgres-types'
+import {
+  decodeSensitiveComment,
+  encodeSensitiveComment,
+  isSensitiveComment,
+} from '@/lib/sensitive-column-comment'
 import { trimSafeSqlFragment } from '@/lib/sql'
 import type { DeepReadonly } from '@/lib/type-helpers'
 import type { Dictionary } from '@/types'
@@ -82,6 +87,7 @@ export const generateColumnField = (
     isIdentity: false,
     isNewColumn: true,
     isEncrypted: false,
+    isSensitiveData: false,
   }
 }
 
@@ -101,6 +107,7 @@ export const generateColumnFieldFromPGColumn = (
   const primaryKeyColumns = primary_keys.map((key) => key.name)
   const foreignKey = getColumnForeignKey(column, table, foreignKeys)
   const isArray = column?.data_type === 'ARRAY'
+  const isSensitiveData = isSensitiveComment(column?.comment)
 
   return {
     foreignKey,
@@ -108,7 +115,7 @@ export const generateColumnFieldFromPGColumn = (
     table: column.table,
     schema: column.schema,
     name: column.name,
-    comment: column?.comment,
+    comment: decodeSensitiveComment(column?.comment),
     format: isArray ? column.format.slice(1) : column.format,
     formatSchema: normalizeFormatSchema(lookupFormatSchema(column, table)),
     defaultValue: column?.default_value as string | null,
@@ -121,6 +128,7 @@ export const generateColumnFieldFromPGColumn = (
     isNewColumn: false,
     isEncrypted: false,
     isPrimaryKey: primaryKeyColumns.includes(column.name),
+    isSensitiveData,
   }
 }
 
@@ -135,7 +143,9 @@ export const generateCreateColumnPayload = (
     table: table.name,
     isIdentity,
     name: field.name.trim(),
-    comment: field.comment?.trim(),
+    comment: encodeSensitiveComment(field.comment?.trim(), field.isSensitiveData ?? false) as
+      | string
+      | undefined,
     type: { schema: field.formatSchema, name: field.format, isArray: field.isArray },
     check: trimSafeSqlFragment(field.check) ?? undefined,
     isUnique: field.isUnique,
@@ -164,7 +174,9 @@ export const generateUpdateColumnPayload = (
 
   // Only append the properties which are getting updated
   const name = field.name.trim()
-  const comment = field.comment?.trim()
+  const comment = encodeSensitiveComment(field.comment?.trim(), field.isSensitiveData ?? false) as
+    | string
+    | undefined
   const check = trimSafeSqlFragment(field.check) ?? undefined
 
   const payload: Partial<UpdateColumnPayload> = {}

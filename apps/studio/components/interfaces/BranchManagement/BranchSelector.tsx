@@ -1,12 +1,12 @@
-import { Check, GitMerge, Shield } from 'lucide-react'
+import { CheckIcon, GitMergeIcon, ShieldIcon } from 'lucide-react'
 import { useState } from 'react'
 import {
-  Command_Shadcn_,
-  CommandEmpty_Shadcn_,
-  CommandGroup_Shadcn_,
-  CommandInput_Shadcn_,
-  CommandItem_Shadcn_,
-  CommandList_Shadcn_,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -21,7 +21,7 @@ interface BranchSelectorProps {
   onBranchSelected?: (branch: Branch) => void
   disabled?: boolean
   isUpdating?: boolean
-  type?: 'primary' | 'outline'
+  variant?: 'primary' | 'outline'
   align?: 'end' | 'center'
 }
 
@@ -30,7 +30,7 @@ export const BranchSelector = ({
   onBranchSelected,
   disabled = false,
   isUpdating = false,
-  type = 'primary',
+  variant = 'primary',
   align = 'end',
 }: BranchSelectorProps) => {
   const [open, setOpen] = useState(false)
@@ -48,8 +48,8 @@ export const BranchSelector = ({
     <Popover open={open} onOpenChange={setOpen} modal={false}>
       <PopoverTrigger asChild>
         <ButtonTooltip
-          icon={<GitMerge size={14} strokeWidth={1.5} />}
-          type={type}
+          icon={<GitMergeIcon size={14} strokeWidth={1.5} />}
+          variant={variant}
           disabled={
             disabled || isUpdating || branches.length === 0 || availableBranches.length === 0
           }
@@ -68,14 +68,14 @@ export const BranchSelector = ({
         </ButtonTooltip>
       </PopoverTrigger>
       <PopoverContent className="p-0 w-80" side="bottom" align="end">
-        <Command_Shadcn_>
-          <CommandInput_Shadcn_ placeholder="Find branch to review..." />
-          <CommandList_Shadcn_>
-            <CommandEmpty_Shadcn_>No available branches found</CommandEmpty_Shadcn_>
-            <CommandGroup_Shadcn_>
+        <Command>
+          <CommandInput placeholder="Find branch to review..." />
+          <CommandList>
+            <CommandEmpty>No available branches found</CommandEmpty>
+            <CommandGroup>
               <ScrollArea className="max-h-[210px] overflow-y-auto">
                 {availableBranches.map((branch) => (
-                  <CommandItem_Shadcn_
+                  <CommandItem
                     key={branch.id}
                     value={branch.name.replaceAll('"', '')}
                     className="cursor-pointer w-full flex items-center justify-between"
@@ -83,22 +83,22 @@ export const BranchSelector = ({
                     disabled={isUpdating || !!branch.git_branch || !!branch.review_requested_at}
                   >
                     <div className="flex items-center gap-2">
-                      {branch.is_default && <Shield size={14} className="text-amber-900" />}
+                      {branch.is_default && <ShieldIcon size={14} className="text-amber-900" />}
                       <span className="truncate" title={branch.name}>
                         {branch.name}
                       </span>
                     </div>
                     {selectedBranch?.id === branch.id && (
-                      <Check size={14} strokeWidth={1.5} className="text-brand" />
+                      <CheckIcon size={14} strokeWidth={1.5} className="text-primary" />
                     )}
                     {branch.git_branch && <span>Synced to a Git branch</span>}
                     {branch.review_requested_at && <span>Merge request opened</span>}
-                  </CommandItem_Shadcn_>
+                  </CommandItem>
                 ))}
               </ScrollArea>
-            </CommandGroup_Shadcn_>
-          </CommandList_Shadcn_>
-        </Command_Shadcn_>
+            </CommandGroup>
+          </CommandList>
+        </Command>
       </PopoverContent>
     </Popover>
   )

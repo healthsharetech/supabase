@@ -1,10 +1,11 @@
 import React from 'react'
+import { useInView } from 'react-intersection-observer'
 import { Table, TableBody, TableCell, TableFooter, TableRow } from 'ui'
 import { InfoTooltip } from 'ui-patterns/info-tooltip'
 import { ShimmeringLoader } from 'ui-patterns/ShimmeringLoader'
 
 import { billingMetricUnit, formatUsage } from '../helpers'
-import AlertError from '@/components/ui/AlertError'
+import { AlertError } from '@/components/ui/AlertError'
 import { InlineLink } from '@/components/ui/InlineLink'
 import { PricingMetric } from '@/data/analytics/org-daily-stats-query'
 import {
@@ -47,16 +48,21 @@ const usageBillingDocsLink: { [K in PricingMetric]?: string } = {
   [PricingMetric.DISK_IOPS_IO2]: `${DOCS_URL}/guides/platform/manage-your-usage/disk-iops`,
   [PricingMetric.DISK_THROUGHPUT_GP3]: `${DOCS_URL}/guides/platform/manage-your-usage/disk-throughput`,
   [PricingMetric.LOG_DRAIN]: `${DOCS_URL}/guides/platform/manage-your-usage/log-drains`,
+  [PricingMetric.PIPELINES_PIPELINE]: `${DOCS_URL}/guides/platform/manage-your-usage/pipelines`,
+  [PricingMetric.PIPELINES_COPY_BACKFILL_DATA]: `${DOCS_URL}/guides/platform/manage-your-usage/pipelines`,
+  [PricingMetric.PIPELINES_REPLICATED_DATA]: `${DOCS_URL}/guides/platform/manage-your-usage/pipelines`,
 }
 
 export const UpcomingInvoice = ({ slug }: UpcomingInvoiceProps) => {
+  const { ref, inView } = useInView({ triggerOnce: true })
+
   const {
     data: upcomingInvoice,
     error: error,
     isPending: isLoading,
     isError,
     isSuccess,
-  } = useOrgUpcomingInvoiceQuery({ orgSlug: slug })
+  } = useOrgUpcomingInvoiceQuery({ orgSlug: slug }, { enabled: inView })
 
   const { data: organization } = useOrganizationQuery({ slug })
 
@@ -106,7 +112,7 @@ export const UpcomingInvoice = ({ slug }: UpcomingInvoiceProps) => {
     !planItem && upcomingInvoice?.fixed_fees_billing_mode === 'in_arrears'
 
   return (
-    <>
+    <div ref={ref}>
       {isLoading && (
         <div className="space-y-2">
           <ShimmeringLoader />
@@ -260,7 +266,8 @@ export const UpcomingInvoice = ({ slug }: UpcomingInvoiceProps) => {
                                           {usageMetric && (
                                             <span>
                                               ({formatUsage(usageMetric, breakdown)}
-                                              {!!unit ? ` ${unit}` : ''})
+                                              {!!unit ? <span>{` ${unit}`}</span> : ''}
+                                              <span>)</span>
                                             </span>
                                           )}
                                         </li>
@@ -277,9 +284,7 @@ export const UpcomingInvoice = ({ slug }: UpcomingInvoiceProps) => {
                                     docs
                                   </InlineLink>{' '}
                                   on how billing for {item.description} works and{' '}
-                                  <InlineLink href={`/organization/${slug}/usage`}>
-                                    usage page
-                                  </InlineLink>{' '}
+                                  <InlineLink href={`/org/${slug}/usage`}>usage page</InlineLink>{' '}
                                   for a detailed breakdown.
                                 </p>
                               )}
@@ -348,8 +353,9 @@ export const UpcomingInvoice = ({ slug }: UpcomingInvoiceProps) => {
                             <div className="flex items-center justify-between gap-4 text-xs">
                               <span>
                                 Tax
-                                {upcomingInvoice.tax?.tax_rate_percentage != null &&
-                                  ` (${upcomingInvoice.tax.tax_rate_percentage}%)`}
+                                {upcomingInvoice.tax?.tax_rate_percentage != null && (
+                                  <span>{` (${upcomingInvoice.tax.tax_rate_percentage}%)`}</span>
+                                )}
                               </span>
                               <span translate="no">
                                 {formatCurrency(upcomingInvoice.tax!.tax_amount)}
@@ -386,9 +392,11 @@ export const UpcomingInvoice = ({ slug }: UpcomingInvoiceProps) => {
                       className="pt-2! pb-0! px-0 text-foreground-light text-xs text-right"
                       colSpan={2}
                     >
-                      Your {organization?.plan?.name && `${organization.plan.name} `}Plan fee for
-                      this period has already been paid. This invoice will only reflect usage
-                      charges.
+                      Your {organization?.plan?.name && <span>{`${organization.plan.name} `}</span>}
+                      <span>
+                        Plan fee for this period has already been paid. This invoice will only
+                        reflect usage charges.
+                      </span>
                     </TableCell>
                   </TableRow>
                 )}
@@ -397,7 +405,7 @@ export const UpcomingInvoice = ({ slug }: UpcomingInvoiceProps) => {
           </div>
         </div>
       )}
-    </>
+    </div>
   )
 }
 
@@ -455,7 +463,7 @@ function ComputeLineItem({
 
   const discountedComputeCosts = Math.max(
     0,
-    computeItems.reduce((prev, cur) => prev + (cur.amount ?? 0), 0) + (computeCredits?.amount ?? 0)
+    computeItems.reduce((prev, cur) => prev + (cur.amount ?? 0), 0)
   )
 
   if (!computeItems.length) return null

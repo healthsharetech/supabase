@@ -27,6 +27,23 @@ export interface PgFormatConfig {
 export type SafeSqlFragment = string & { readonly __safeSqlFragmentBrand: never }
 
 /**
+ * SQL that writes (DDL/DML). Needs a `write` grant to run through executeSql.
+ * Composing it via safeSql`...${w}...` or joinSqlFragments keeps the brand; only SQL written from
+ * scratch needs asWriteSql.
+ */
+export type WriteSqlFragment = SafeSqlFragment & { readonly __sqlIntent: 'write' }
+
+/** `WriteSqlFragment` if any input fragment writes, otherwise `SafeSqlFragment`. */
+type ComposedSql<F extends SafeSqlFragment> = [Extract<F, WriteSqlFragment>] extends [never]
+  ? SafeSqlFragment
+  : WriteSqlFragment
+
+/** Marks SQL as writing. Only for SQL that has already been built safely. */
+export function asWriteSql(sql: SafeSqlFragment): WriteSqlFragment {
+  return sql as WriteSqlFragment
+}
+
+/**
  * A branded string type representing SQL that may have been influenced by a
  * third party (URL params, AI output, external content). Safe to display;
  * must never be auto-executed or persisted as user-authored content.
@@ -212,18 +229,28 @@ export function literal(value?: unknown): SafeSqlFragment {
   return quoted as SafeSqlFragment
 }
 
+// Multi-word SQL keyword phrases callers are allowed to pass to `keyword()`.
+// Compared case-insensitively. Any phrase not listed here must be expressed as
+// separate single-word `keyword()` calls composed via `safeSql`, so that
+// arbitrary control phrases (e.g. "DROP TABLE") can't slip through.
+const ALLOWED_MULTI_WORD_KEYWORDS = new Set(['INSTEAD OF', 'BY DEFAULT'])
+
 /**
- * Marks SQL keywords (e.g., 'BEFORE', 'instead of') as safe for interpolation.
- * Only letters, numbers, underscores, and spaces are allowed, to prevent
- * injection.
+ * Marks SQL keywords (e.g., 'BEFORE', 'INSTEAD OF') as safe for interpolation.
+ * Accepts either a single word matching [A-Za-z][A-Za-z0-9_]*, or a
+ * multi-word phrase from `ALLOWED_MULTI_WORD_KEYWORDS`. Any other input —
+ * including arbitrary space-separated tokens like "DROP TABLE" — is rejected.
  */
 export function keyword(value: string): SafeSqlFragment {
-  if (!/^[A-Za-z][A-Za-z0-9_ ]*$/.test(value)) {
-    throw new Error(
-      `Not a valid keyword: "${value}". Only letters, numbers, underscores, and spaces are permitted.`
-    )
+  if (/^[A-Za-z][A-Za-z0-9_]*$/.test(value)) {
+    return value as SafeSqlFragment
   }
-  return value as SafeSqlFragment
+  if (ALLOWED_MULTI_WORD_KEYWORDS.has(value.toUpperCase())) {
+    return value as SafeSqlFragment
+  }
+  throw new Error(
+    `Not a valid keyword: "${value}". Must be a single word matching [A-Za-z][A-Za-z0-9_]*, or one of: ${[...ALLOWED_MULTI_WORD_KEYWORDS].join(', ')}.`
+  )
 }
 
 type Stringifyable =
@@ -346,14 +373,14 @@ export function format(fmt: SafeSqlFragment, ...arguments_: SafeSqlFragment[]): 
  * Only accepts SafeSqlFragment interpolations — plain strings are rejected at
  * compile time.
  */
-export function safeSql(
+export function safeSql<const F extends ReadonlyArray<SafeSqlFragment>>(
   strings: TemplateStringsArray,
-  ...interpolated: Array<SafeSqlFragment>
-): SafeSqlFragment {
+  ...interpolated: F
+): ComposedSql<F[number]> {
   return strings.reduce(
     (result, string, i) => result + string + (interpolated[i] ?? ''),
     ''
-  ) as SafeSqlFragment
+  ) as ComposedSql<F[number]>
 }
 
 /**
@@ -391,9 +418,9 @@ export function acceptUntrustedSql(sql: DisplayableSqlFragment): SafeSqlFragment
  * Joins an array of already-safe SQL fragments with a fixed structural
  * separator.
  */
-export function joinSqlFragments(
-  fragments: Array<SafeSqlFragment>,
+export function joinSqlFragments<const F extends ReadonlyArray<SafeSqlFragment>>(
+  fragments: F,
   separator: SqlFragmentSeparator
-): SafeSqlFragment {
-  return fragments.join(separator) as SafeSqlFragment
+): ComposedSql<F[number]> {
+  return fragments.join(separator) as ComposedSql<F[number]>
 }

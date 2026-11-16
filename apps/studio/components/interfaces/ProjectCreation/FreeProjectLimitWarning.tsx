@@ -1,4 +1,4 @@
-import { Admonition } from 'ui-patterns/admonition'
+import { Admonition } from 'ui-patterns/Admonition'
 
 import Panel from '@/components/ui/Panel'
 import { UpgradePlanButton } from '@/components/ui/UpgradePlanButton'
@@ -23,8 +23,7 @@ export const FreeProjectLimitWarning = ({ membersExceededLimit }: FreeProjectLim
             <ul className="pl-5 list-disc">
               {membersExceededLimit.map((member, idx: number) => (
                 <li key={`member-${idx}`}>
-                  {member.username || member.primary_email} (Limit: {member.free_project_limit} free
-                  projects)
+                  {`${member.username || member.primary_email} (Limit: ${member.free_project_limit} free projects)`}
                 </li>
               ))}
             </ul>

@@ -1,13 +1,12 @@
 import { noop } from 'lodash'
 import {
-  Calendar,
-  Check,
-  ChevronsUpDown,
-  ExternalLink,
-  Hash,
-  ListPlus,
-  ToggleRight,
-  Type,
+  CalendarIcon,
+  CheckIcon,
+  ExternalLinkIcon,
+  HashIcon,
+  ListPlusIcon,
+  ToggleRightIcon,
+  TypeIcon,
 } from 'lucide-react'
 import Link from 'next/link'
 import { ReactNode, useId, useState } from 'react'
@@ -17,13 +16,14 @@ import {
   AlertTitle,
   Button,
   cn,
-  Command_Shadcn_,
-  CommandEmpty_Shadcn_,
-  CommandGroup_Shadcn_,
-  CommandInput_Shadcn_,
-  CommandItem_Shadcn_,
-  CommandList_Shadcn_,
-  CommandSeparator_Shadcn_,
+  ComboboxTrigger,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
   CriticalIcon,
   Input,
   InputGroup,
@@ -110,11 +110,11 @@ const ColumnType = ({
   const inferIcon = (type: string) => {
     switch (type) {
       case 'number':
-        return <Hash size={14} className="text-foreground" strokeWidth={1.5} />
+        return <HashIcon size={14} className="text-foreground" strokeWidth={1.5} />
       case 'time':
-        return <Calendar size={14} className="text-foreground" strokeWidth={1.5} />
+        return <CalendarIcon size={14} className="text-foreground" strokeWidth={1.5} />
       case 'text':
-        return <Type size={14} className="text-foreground" strokeWidth={1.5} />
+        return <TypeIcon size={14} className="text-foreground" strokeWidth={1.5} />
       case 'json':
         return (
           <div className="text-foreground" style={{ padding: '0px 1px' }}>
@@ -128,9 +128,9 @@ const ColumnType = ({
           </div>
         )
       case 'bool':
-        return <ToggleRight size={14} className="text-foreground" strokeWidth={1.5} />
+        return <ToggleRightIcon size={14} className="text-foreground" strokeWidth={1.5} />
       default:
-        return <ListPlus size={16} className="text-foreground" strokeWidth={1.5} />
+        return <ListPlusIcon size={16} className="text-foreground" strokeWidth={1.5} />
     }
   }
 
@@ -188,14 +188,15 @@ const ColumnType = ({
       {showLabel && <Label className="text-foreground-light">Type</Label>}
       <Popover modal open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button
-            type={error ? 'danger' : 'default'}
-            role="combobox"
-            size={'small'}
+          <ComboboxTrigger
+            size="small"
             aria-expanded={open}
             aria-controls={listboxId}
-            className={cn('w-full justify-between', !hasValue && 'text-foreground-lighter')}
-            iconRight={<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />}
+            aria-invalid={Boolean(error)}
+            className={cn(
+              !hasValue && 'text-foreground-lighter',
+              error && 'border-destructive-400'
+            )}
             title={displayValue}
           >
             {hasValue ? (
@@ -206,25 +207,25 @@ const ColumnType = ({
             ) : (
               'Choose a column type...'
             )}
-          </Button>
+          </ComboboxTrigger>
         </PopoverTrigger>
         <PopoverContent id={listboxId} className="w-[460px] p-0" side="bottom" align="center">
-          <Command_Shadcn_>
-            <CommandInput_Shadcn_
+          <Command>
+            <CommandInput
               placeholder="Search types..."
               // [Joshen] Addresses style issues when this component is being used in the old Form component
               // Specifically in WrapperDynamicColumns - can be cleaned up once we're no longer using that
               className="bg-transparent! focus:shadow-none! focus:ring-0! text-xs"
             />
-            <CommandEmpty_Shadcn_>Type not found.</CommandEmpty_Shadcn_>
+            <CommandEmpty>Type not found.</CommandEmpty>
 
-            <CommandList_Shadcn_>
+            <CommandList>
               <ScrollArea className="h-[240px]">
-                <CommandGroup_Shadcn_ heading="Postgres data types">
+                <CommandGroup heading="Postgres data types">
                   {POSTGRES_DATA_TYPE_OPTIONS.map((option: PostgresDataTypeOption) => {
                     const isSelected = matchesBuiltin(option.name, value)
                     return (
-                      <CommandItem_Shadcn_
+                      <CommandItem
                         key={option.name}
                         value={option.name}
                         className={cn('relative', isSelected ? 'bg-surface-200' : '')}
@@ -239,21 +240,21 @@ const ColumnType = ({
                           <span className="text-foreground-lighter">{option.description}</span>
                         </div>
                         <span className="absolute right-3 top-2">
-                          {isSelected ? <Check className="text-brand" size={14} /> : ''}
+                          {isSelected ? <CheckIcon className="text-primary" size={14} /> : ''}
                         </span>
-                      </CommandItem_Shadcn_>
+                      </CommandItem>
                     )
                   })}
-                </CommandGroup_Shadcn_>
+                </CommandGroup>
 
                 {enumTypes.length > 0 && (
                   <>
-                    <CommandSeparator_Shadcn_ />
-                    <CommandGroup_Shadcn_ heading="Other types">
+                    <CommandSeparator />
+                    <CommandGroup heading="Other types">
                       {enumTypes.map((option) => {
                         const isSelected = matchesEnum(option, value)
                         return (
-                          <CommandItem_Shadcn_
+                          <CommandItem
                             key={option.id}
                             value={option.format}
                             className={cn('relative', isSelected ? 'bg-surface-200' : '')}
@@ -268,7 +269,11 @@ const ColumnType = ({
                           >
                             <div className="flex items-center gap-2">
                               <div>
-                                <ListPlus size={16} className="text-foreground" strokeWidth={1.5} />
+                                <ListPlusIcon
+                                  size={16}
+                                  className="text-foreground"
+                                  strokeWidth={1.5}
+                                />
                               </div>
                               <span className="text-foreground">
                                 {option.format.replaceAll('"', '')}
@@ -283,19 +288,19 @@ const ColumnType = ({
                               )}
                               {isSelected && (
                                 <span className="absolute right-3 top-2">
-                                  <Check className="text-brand" size={14} />
+                                  <CheckIcon className="text-primary" size={14} />
                                 </span>
                               )}
                             </div>
-                          </CommandItem_Shadcn_>
+                          </CommandItem>
                         )
                       })}
-                    </CommandGroup_Shadcn_>
+                    </CommandGroup>
                   </>
                 )}
               </ScrollArea>
-            </CommandList_Shadcn_>
-          </Command_Shadcn_>
+            </CommandList>
+          </Command>
         </PopoverContent>
       </Popover>
 
@@ -304,23 +309,21 @@ const ColumnType = ({
           <CriticalIcon />
           <AlertTitle>
             {' '}
-            It is recommended to use{' '}
-            <code className="text-code-inline">{recommendation.alternative}</code> instead
+            It is recommended to use <code>{recommendation.alternative}</code> instead
           </AlertTitle>
           <AlertDescription>
             <p>
-              Postgres recommends against using the data type{' '}
-              <code className="text-code-inline">{displayValue}</code> unless you have a very
-              specific use case.
+              Postgres recommends against using the data type <code>{displayValue}</code> unless you
+              have a very specific use case.
             </p>
             <div className="flex items-center space-x-2 mt-3">
-              <Button asChild type="default" icon={<ExternalLink />}>
+              <Button asChild icon={<ExternalLinkIcon />}>
                 <Link href={recommendation.reference} target="_blank" rel="noreferrer">
                   Read more
                 </Link>
               </Button>
               <Button
-                type="primary"
+                variant="primary"
                 onClick={() => onOptionSelect({ format: recommendation.alternative })}
               >
                 Use {recommendation.alternative}

@@ -1,37 +1,47 @@
-import { PermissionAction } from '@supabase/shared-types/out/constants'
 import { IS_PLATFORM, useParams } from 'common'
 import { isEqual } from 'lodash'
-import { AlertCircle, CornerDownLeft, Loader2 } from 'lucide-react'
+import { CornerDownLeftIcon, Loader2Icon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { LogoLoader } from 'ui'
 
 import { DeployEdgeFunctionWarningModal } from '@/components/interfaces/EdgeFunctions/DeployEdgeFunctionWarningModal'
-import { formatFunctionBodyToFiles } from '@/components/interfaces/EdgeFunctions/EdgeFunctions.utils'
+import {
+  formatFunctionBodyToFiles,
+  getDefaultSelectedFileId,
+} from '@/components/interfaces/EdgeFunctions/EdgeFunctions.utils'
 import { DefaultLayout } from '@/components/layouts/DefaultLayout'
 import EdgeFunctionDetailsLayout from '@/components/layouts/EdgeFunctionsLayout/EdgeFunctionDetailsLayout'
-import { PreventNavigationOnUnsavedChanges } from '@/components/ui-patterns/Dialogs/PreventNavigationOnUnsavedChanges'
+import { DiscardChangesConfirmationDialog } from '@/components/ui-patterns/Dialogs/DiscardChangesConfirmationDialog'
+import { AlertError } from '@/components/ui/AlertError'
 import { ButtonTooltip } from '@/components/ui/ButtonTooltip'
 import { FileExplorerAndEditor } from '@/components/ui/FileExplorerAndEditor'
 import { FileData } from '@/components/ui/FileExplorerAndEditor/FileExplorerAndEditor.types'
-import { useEdgeFunctionBodyQuery } from '@/data/edge-functions/edge-function-body-query'
+import { InlineLink } from '@/components/ui/InlineLink'
+import {
+  isFunctionBodyMaxSizeError,
+  useEdgeFunctionBodyQuery,
+} from '@/data/edge-functions/edge-function-body-query'
 import { useEdgeFunctionQuery } from '@/data/edge-functions/edge-function-query'
 import { useEdgeFunctionDeployMutation } from '@/data/edge-functions/edge-functions-deploy-mutation'
-import { useSendEventMutation } from '@/data/telemetry/send-event-mutation'
-import { useAsyncCheckPermissions } from '@/hooks/misc/useCheckPermissions'
+import { FGA_PERMISSIONS, useAsyncCheckPermissionsV2 } from '@/hooks/misc/useCheckPermissionsV2'
 import { useSelectedOrganizationQuery } from '@/hooks/misc/useSelectedOrganization'
 import { useSelectedProjectQuery } from '@/hooks/misc/useSelectedProject'
-import { BASE_PATH } from '@/lib/constants'
+import { usePreventNavigationOnUnsavedChanges } from '@/hooks/ui/usePreventNavigationOnUnsavedChanges'
+import { BASE_PATH, DOCS_URL } from '@/lib/constants'
+import { useTrack } from '@/lib/telemetry/track'
 
 const CodePage = () => {
   const { ref, functionSlug } = useParams()
   const { data: project } = useSelectedProjectQuery()
   const { data: org } = useSelectedOrganizationQuery()
 
-  const { mutate: sendEvent } = useSendEventMutation()
+  const track = useTrack()
   const [showDeployWarning, setShowDeployWarning] = useState(false)
 
-  const { can: canDeployFunction } = useAsyncCheckPermissions(PermissionAction.FUNCTIONS_WRITE, '*')
+  const { can: canDeployFunction } = useAsyncCheckPermissionsV2(
+    FGA_PERMISSIONS.PROJECT.EDGE_FUNCTIONS_WRITE
+  )
 
   const { data: selectedFunction } = useEdgeFunctionQuery({
     projectRef: ref,
@@ -62,6 +72,7 @@ const CodePage = () => {
     }
   )
   const [files, setFiles] = useState<FileData[]>([])
+  const isExceedMaxSize = isFunctionBodyMaxSizeError(filesError)
 
   const initialFiles = useMemo(() => {
     return !!functionBody
@@ -71,6 +82,12 @@ const CodePage = () => {
         })
       : []
   }, [functionBody, selectedFunction?.entrypoint_path])
+
+  const [selectedFileId, setSelectedFileId] = useState<number>()
+  const defaultSelectedFileId = getDefaultSelectedFileId(
+    initialFiles,
+    functionBody?.metadata?.deno2_entrypoint_path ?? selectedFunction?.entrypoint_path
+  )
 
   const { mutate: deployFunction, isPending: isDeploying } = useEdgeFunctionDeployMutation({
     onSuccess: () => {
@@ -121,23 +138,11 @@ const CodePage = () => {
   const handleDeployClick = () => {
     if (files.length === 0 || isLoadingFiles) return
     setShowDeployWarning(true)
-    sendEvent({
-      action: 'edge_function_deploy_updates_button_clicked',
-      groups: {
-        project: ref ?? 'Unknown',
-        organization: org?.slug ?? 'Unknown',
-      },
-    })
+    track('edge_function_deploy_updates_button_clicked')
   }
 
   const handleDeployConfirm = () => {
-    sendEvent({
-      action: 'edge_function_deploy_updates_confirm_clicked',
-      groups: {
-        project: ref ?? 'Unknown',
-        organization: org?.slug ?? 'Unknown',
-      },
-    })
+    track('edge_function_deploy_updates_confirm_clicked')
     onUpdate()
   }
 
@@ -152,6 +157,11 @@ const CodePage = () => {
     return !isEqual(normalizeFiles(initialFiles), normalizeFiles(files))
   }, [initialFiles, files])
 
+  const { handleCancelNavigation, handleConfirmNavigation, shouldConfirmNavigation } =
+    usePreventNavigationOnUnsavedChanges({
+      hasChanges: hasUnsavedChanges,
+    })
+
   return (
     <div className="flex flex-col h-full">
       {isLoadingFiles && (
@@ -162,14 +172,41 @@ const CodePage = () => {
 
       {isErrorLoadingFiles && (
         <div className="flex flex-col items-center justify-center h-full bg-surface-200">
-          <div className="flex flex-col items-center text-center gap-2 max-w-md">
-            <AlertCircle size={24} strokeWidth={1.5} className="text-amber-900" />
-            <h3 className="text-md mt-4">Failed to load function code</h3>
-            <p className="text-sm text-foreground-light">
-              {filesError?.message ||
-                'There was an error loading the function code. The format may be invalid or the function may be corrupted.'}
-            </p>
-          </div>
+          <AlertError
+            hideContactSupport
+            className="max-w-xl"
+            subject="Failed to load function code"
+            description={
+              filesError?.message ?? 'The format may be invalid or the function may be corrupted'
+            }
+          >
+            <p className="mb-0!">To resolve this issue:</p>
+            <ol className="mt-0!">
+              <li>Update to the latest Supabase CLI version</li>
+              {isExceedMaxSize ? (
+                <li>
+                  Download your function via the CLI with:
+                  <br />
+                  <code>supabase functions download {functionSlug}</code>
+                </li>
+              ) : (
+                <li>
+                  Redeploy your function using either:
+                  <ul className="list-disc! mt-0!">
+                    <li>
+                      The CLI via: <code>supabase functions deploy {functionSlug}</code>
+                    </li>
+                    <li>
+                      Or the{' '}
+                      <InlineLink href={`${DOCS_URL}/reference/api/v1-deploy-a-function`}>
+                        Management API
+                      </InlineLink>
+                    </li>
+                  </ul>
+                </li>
+              )}
+            </ol>
+          </AlertError>
         </div>
       )}
 
@@ -177,6 +214,8 @@ const CodePage = () => {
         <>
           <FileExplorerAndEditor
             files={files}
+            selectedFileId={selectedFileId ?? defaultSelectedFileId}
+            setSelectedFileId={setSelectedFileId}
             onFilesChange={(files) => {
               const formattedFiles: FileData[] = files.map((f) => {
                 const originalFile = initialFiles.find((x) => x.id === f.id)
@@ -201,16 +240,17 @@ const CodePage = () => {
           {IS_PLATFORM && (
             <div className="flex items-center bg-background-muted justify-end p-4 border-t bg-surface-100 shrink-0">
               <ButtonTooltip
+                variant="primary"
                 loading={isDeploying}
                 size="medium"
                 disabled={!canDeployFunction || files.length === 0 || isLoadingFiles}
                 onClick={handleDeployClick}
                 iconRight={
                   isDeploying ? (
-                    <Loader2 className="animate-spin" size={10} strokeWidth={1.5} />
+                    <Loader2Icon className="animate-spin" size={10} strokeWidth={1.5} />
                   ) : (
                     <div className="flex items-center space-x-1">
-                      <CornerDownLeft size={10} strokeWidth={1.5} />
+                      <CornerDownLeftIcon size={10} strokeWidth={1.5} />
                     </div>
                   )
                 }
@@ -236,7 +276,11 @@ const CodePage = () => {
         onConfirm={handleDeployConfirm}
         isDeploying={isDeploying}
       />
-      <PreventNavigationOnUnsavedChanges hasChanges={hasUnsavedChanges} />
+      <DiscardChangesConfirmationDialog
+        visible={shouldConfirmNavigation}
+        onCancel={handleCancelNavigation}
+        onClose={handleConfirmNavigation}
+      />
     </div>
   )
 }

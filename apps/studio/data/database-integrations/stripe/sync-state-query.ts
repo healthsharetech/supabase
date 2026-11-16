@@ -3,7 +3,9 @@ import { QueryClient, useQuery, UseQueryOptions } from '@tanstack/react-query'
 import { z } from 'zod'
 
 import { stripeSyncKeys } from './keys'
-import { executeSql, ExecuteSqlError } from '@/data/sql/execute-sql-query'
+import { unguarded } from '@/data/fetchers'
+import { executeSql } from '@/data/sql/execute-sql-mutation'
+import type { StudioError } from '@/lib/errors/studio-errors'
 
 export type DbConnection = {
   projectRef: string
@@ -21,7 +23,7 @@ const StripeSyncStateSchema = z
 export type StripeSyncState = z.infer<typeof StripeSyncStateSchema>
 
 export type StripeSyncStateData = z.infer<typeof StripeSyncStateSchema>
-export type StripeSyncStateError = ExecuteSqlError
+export type StripeSyncStateError = StudioError
 
 export async function getStripeSyncState(
   { projectRef, connectionString }: DbConnection,
@@ -31,10 +33,13 @@ export async function getStripeSyncState(
     {
       projectRef,
       connectionString,
+      sqlOrigin: 'studio',
+      queryName: 'stripe-sync-state',
       sql: safeSql`
        SELECT started_at, closed_at, status FROM stripe.sync_runs WHERE status != 'pending' ORDER BY started_at DESC LIMIT 1;
       `,
       queryKey: stripeSyncKeys.syncState(projectRef),
+      grant: unguarded.migrating,
     },
     signal
   )

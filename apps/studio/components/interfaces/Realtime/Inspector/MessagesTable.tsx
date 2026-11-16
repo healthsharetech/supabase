@@ -1,24 +1,24 @@
-import { PermissionAction } from '@supabase/shared-types/out/constants'
 import { useParams } from 'common'
 import { isEqual } from 'lodash'
-import { ExternalLink, Loader2, Megaphone } from 'lucide-react'
+import { ExternalLinkIcon, Loader2Icon, MegaphoneIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import DataGrid, { Row } from 'react-data-grid'
 import { Button, cn, IconBroadcast, IconDatabaseChanges, IconPresence } from 'ui'
-import { GenericSkeletonLoader } from 'ui-patterns'
+import { GenericSkeletonLoader } from 'ui-patterns/ShimmeringLoader'
 
 import type { LogData } from './Messages.types'
 import MessageSelection from './MessageSelection'
 import NoChannelEmptyState from './NoChannelEmptyState'
 import { ColumnRenderer } from './RealtimeMessageColumnRenderer'
 import { DocsButton } from '@/components/ui/DocsButton'
-import NoPermission from '@/components/ui/NoPermission'
+import { NoPermission } from '@/components/ui/NoPermission'
 import ShimmerLine from '@/components/ui/ShimmerLine'
-import { useSendEventMutation } from '@/data/telemetry/send-event-mutation'
-import { useAsyncCheckPermissions } from '@/hooks/misc/useCheckPermissions'
-import { useSelectedOrganizationQuery } from '@/hooks/misc/useSelectedOrganization'
+import { ShortcutTooltip } from '@/components/ui/ShortcutTooltip'
+import { FGA_PERMISSIONS, useAsyncCheckPermissionsV2 } from '@/hooks/misc/useCheckPermissionsV2'
 import { DOCS_URL } from '@/lib/constants'
+import { useTrack } from '@/lib/telemetry/track'
+import { SHORTCUT_IDS } from '@/state/shortcuts/registry'
 
 export const isErrorLog = (l: LogData) => {
   return l.message === 'SYSTEM' && l.metadata?.status === 'error'
@@ -35,10 +35,11 @@ const NoResultAlert = ({
 }) => {
   const { ref } = useParams()
 
-  const { can: canReadAPIKeys, isLoading: isLoadingPermissions } = useAsyncCheckPermissions(
-    PermissionAction.READ,
-    'service_api_keys'
+  const { can: canReadAPIKeys, isLoading: isLoadingPermissions } = useAsyncCheckPermissionsV2(
+    FGA_PERMISSIONS.PROJECT.API_GATEWAY_KEYS_READ
   )
+
+  const broadcastButton = <Button onClick={showSendMessage}>Broadcast a message</Button>
 
   return (
     <div className="w-full max-w-md flex items-center flex-col">
@@ -63,9 +64,13 @@ const NoResultAlert = ({
                 <p className="text-foreground">Create a Broadcast message</p>
                 <p className="text-foreground-lighter text-xs">Send a message in the channel</p>
               </div>
-              <Button type="default" onClick={showSendMessage}>
-                Broadcast a message
-              </Button>
+              {enabled ? (
+                <ShortcutTooltip shortcutId={SHORTCUT_IDS.INSPECTOR_BROADCAST} side="bottom">
+                  {broadcastButton}
+                </ShortcutTooltip>
+              ) : (
+                broadcastButton
+              )}
             </div>
             <div className="w-full px-5 py-4 items-center gap-4 inline-flex border-b">
               <IconPresence
@@ -79,9 +84,7 @@ const NoResultAlert = ({
                 </p>
               </div>
               <Link href={`/project/${ref}/realtime/inspector`} target="_blank" rel="noreferrer">
-                <Button type="default" iconRight={<ExternalLink />}>
-                  Open inspector
-                </Button>
+                <Button iconRight={<ExternalLinkIcon />}>Open inspector</Button>
               </Link>
             </div>
 
@@ -95,9 +98,7 @@ const NoResultAlert = ({
                 <p className="text-foreground-lighter text-xs">Tables must have realtime enabled</p>
               </div>
               <Link href={`/project/${ref}/database/publications`} target="_blank" rel="noreferrer">
-                <Button type="default" iconRight={<ExternalLink />}>
-                  Publications settings
-                </Button>
+                <Button iconRight={<ExternalLinkIcon />}>Publications settings</Button>
               </Link>
             </div>
             <div className="w-full px-5 py-4 items-center gap-4 inline-flex rounded-b-md bg-studio">
@@ -130,9 +131,7 @@ const MessagesTable = ({
   const [focusedLog, setFocusedLog] = useState<LogData | null>(null)
   const stringData = JSON.stringify(data)
 
-  const { ref } = useParams()
-  const { data: org } = useSelectedOrganizationQuery()
-  const { mutate: sendEvent } = useSendEventMutation()
+  const track = useTrack()
 
   useEffect(() => {
     if (!data) return
@@ -155,32 +154,35 @@ const MessagesTable = ({
           )}
         >
           <div className="flex grow flex-col lg:w-1/2">
-            {enabled && (
-              <div className="w-full h-9 px-4 bg-surface-100 items-center inline-flex justify-between text-foreground-light">
-                <div className="inline-flex gap-2.5 text-xs">
-                  <Loader2 size="16" className="animate-spin" />
-                  <div>Listening</div>
-                  <div>•</div>
-                  <div>
-                    {data.length > 0
-                      ? data.length >= 100
-                        ? `Found a large number of messages, showing only the latest 100...`
-                        : `Found ${data.length} messages...`
-                      : `No message found yet...`}
+            {/* Persistent role="status" live region so screen readers announce when
+            listening starts — a live region only announces updates to content it
+            already contains. */}
+            <div role="status">
+              {enabled && (
+                <div className="w-full h-9 px-4 bg-surface-100 items-center inline-flex justify-between text-foreground-light">
+                  <div className="inline-flex gap-2.5 text-xs">
+                    <Loader2Icon size="16" aria-hidden="true" className="animate-spin" />
+                    <div>Listening</div>
+                    <div aria-hidden="true">•</div>
+                    <div>
+                      {data.length > 0
+                        ? data.length >= 100
+                          ? `Found a large number of messages, showing only the latest 100...`
+                          : `Found ${data.length} messages...`
+                        : `No message found yet...`}
+                    </div>
                   </div>
+                  <ShortcutTooltip shortcutId={SHORTCUT_IDS.INSPECTOR_BROADCAST} side="bottom">
+                    <Button onClick={showSendMessage} icon={<MegaphoneIcon strokeWidth={1.5} />}>
+                      <span>Broadcast a message</span>
+                    </Button>
+                  </ShortcutTooltip>
                 </div>
-                <Button
-                  type="default"
-                  onClick={showSendMessage}
-                  icon={<Megaphone strokeWidth={1.5} />}
-                >
-                  <span>Broadcast a message</span>
-                </Button>
-              </div>
-            )}
+              )}
+            </div>
 
             <DataGrid
-              className="data-grid--simple-logs h-full border-b-0"
+              className="data-grid--simple-logs h-full! border-t-0! border-b-0!"
               rowHeight={40}
               headerRowHeight={0}
               columns={ColumnRenderer}
@@ -205,13 +207,7 @@ const MessagesTable = ({
                       isRowSelected={false}
                       selectedCellIdx={undefined}
                       onClick={() => {
-                        sendEvent({
-                          action: 'realtime_inspector_message_clicked',
-                          groups: {
-                            project: ref ?? 'Unknown',
-                            organization: org?.slug ?? 'Unknown',
-                          },
-                        })
+                        track('realtime_inspector_message_clicked')
                         setFocusedLog(row)
                       }}
                     />

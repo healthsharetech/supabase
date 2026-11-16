@@ -1,13 +1,13 @@
-import { Check, ChevronsUpDown } from 'lucide-react'
+import { CheckIcon, ChevronsUpDownIcon } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { useState } from 'react'
 import {
   Badge,
   Button,
-  Command_Shadcn_,
-  CommandGroup_Shadcn_,
-  CommandItem_Shadcn_,
-  CommandList_Shadcn_,
+  Command,
+  CommandGroup,
+  CommandItem,
+  CommandList,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -56,19 +56,18 @@ export const ModelSelector = ({ selectedModel, onSelectModel }: ModelSelectorPro
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          type="default"
           className="text-foreground-light"
-          iconRight={<ChevronsUpDown strokeWidth={1} size={12} />}
+          iconRight={<ChevronsUpDownIcon strokeWidth={1} size={12} />}
         >
           {selectedModel}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="p-0 w-44" align="start" side="top">
-        <Command_Shadcn_>
-          <CommandList_Shadcn_>
-            <CommandGroup_Shadcn_>
+        <Command>
+          <CommandList>
+            <CommandGroup>
               {ASSISTANT_MODELS.map((m) => (
-                <CommandItem_Shadcn_
+                <CommandItem
                   key={m.id}
                   value={m.id}
                   disabled={isLoadingEntitlements && isAdvanceOnlyModelId(m.id)}
@@ -82,9 +81,7 @@ export const ModelSelector = ({ selectedModel, onSelectModel }: ModelSelectorPro
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div>
-                          <Badge role="button" variant="warning">
-                            Upgrade
-                          </Badge>
+                          <Badge variant="warning">Upgrade</Badge>
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="right">
@@ -92,13 +89,13 @@ export const ModelSelector = ({ selectedModel, onSelectModel }: ModelSelectorPro
                       </TooltipContent>
                     </Tooltip>
                   ) : (
-                    selectedModel === m.id && <Check className="h-3.5 w-3.5" />
+                    selectedModel === m.id && <CheckIcon className="h-3.5 w-3.5" />
                   )}
-                </CommandItem_Shadcn_>
+                </CommandItem>
               ))}
-            </CommandGroup_Shadcn_>
-          </CommandList_Shadcn_>
-        </Command_Shadcn_>
+            </CommandGroup>
+          </CommandList>
+        </Command>
       </PopoverContent>
     </Popover>
   )

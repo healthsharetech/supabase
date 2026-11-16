@@ -1,9 +1,9 @@
 'use client'
 
+import { useDocsPathname, useNavItems } from '~/features/IaNav'
 import { resolveBreadcrumbs } from '~/lib/breadcrumbs'
 import { useBreakpoint } from 'common'
 import Link from 'next/link'
-import { usePathname, useSearchParams } from 'next/navigation'
 import React, { Fragment, Suspense } from 'react'
 import {
   Breadcrumb,
@@ -58,7 +58,7 @@ const BreadcrumbsInternal = ({
   )
 
   return (
-    <Breadcrumb className={cn(className)}>
+    <Breadcrumb data-docs-nav="breadcrumb" className={cn('layout-v2:lg:hidden', className)}>
       <BreadcrumbList className="text-foreground-lighter p-0">
         {breadcrumbs.length >= ITEMS_TO_DISPLAY && (
           <>
@@ -118,7 +118,7 @@ const BreadcrumbsInternal = ({
                     </div>
                     <DrawerFooter className="pt-4">
                       <DrawerClose asChild>
-                        <Button type="outline">Close</Button>
+                        <Button variant="outline">Close</Button>
                       </DrawerClose>
                     </DrawerFooter>
                   </DrawerContent>
@@ -155,6 +155,7 @@ const BreadcrumbsInternal = ({
 }
 
 function useBreadcrumbs() {
-  const pathname = usePathname()
-  return resolveBreadcrumbs(pathname)
+  const pathname = useDocsPathname()
+  const navItems = useNavItems()
+  return resolveBreadcrumbs(pathname, navItems)
 }

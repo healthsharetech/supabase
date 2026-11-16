@@ -13,7 +13,7 @@ import schemas from './pg-meta-schemas'
 import tablePrivileges from './pg-meta-table-privileges'
 import * as tables from './pg-meta-tables'
 import triggers from './pg-meta-triggers'
-import types from './pg-meta-types'
+import * as types from './pg-meta-types'
 import version from './pg-meta-version'
 import views from './pg-meta-views'
 import * as query from './query/index'
@@ -42,8 +42,14 @@ export {
   untrustedSql,
   acceptUntrustedSql,
   joinSqlFragments,
+  asWriteSql,
 } from './pg-format'
-export type { SafeSqlFragment, UntrustedSqlFragment, DisplayableSqlFragment } from './pg-format'
+export type {
+  WriteSqlFragment,
+  SafeSqlFragment,
+  UntrustedSqlFragment,
+  DisplayableSqlFragment,
+} from './pg-format'
 
 export type { PGTable, PGTablePrimaryKey, PGTableRelationship } from './pg-meta-tables'
 export type { PGColumn } from './pg-meta-columns'
@@ -54,6 +60,7 @@ export type { PGMaterializedView } from './pg-meta-materialized-views'
 export type { PGForeignTable } from './pg-meta-foreign-tables'
 export type { PGSchema } from './pg-meta-schemas'
 export type { PGPublication } from './pg-meta-publications'
+export type { PGType } from './pg-meta-types'
 
 export default {
   roles,

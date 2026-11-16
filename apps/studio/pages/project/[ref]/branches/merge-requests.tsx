@@ -1,7 +1,7 @@
-import { PermissionAction } from '@supabase/shared-types/out/constants'
+import { useQuery } from '@tanstack/react-query'
 import { useParams } from 'common'
 import { partition } from 'lodash'
-import { ArrowRight, GitMerge, MessageCircle, MoreVertical, Shield, X } from 'lucide-react'
+import { ArrowRightIcon, GitMergeIcon, MoreVerticalIcon, ShieldIcon, XIcon } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { PropsWithChildren } from 'react'
 import { toast } from 'sonner'
@@ -12,6 +12,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from 'ui'
 import { GenericSkeletonLoader } from 'ui-patterns/ShimmeringLoader'
 
@@ -22,20 +24,21 @@ import {
 import { BranchSelector } from '@/components/interfaces/BranchManagement/BranchSelector'
 import { PullRequestsEmptyState } from '@/components/interfaces/BranchManagement/EmptyStates'
 import BranchLayout from '@/components/layouts/BranchLayout/BranchLayout'
-import DefaultLayout from '@/components/layouts/DefaultLayout'
+import { DefaultLayout } from '@/components/layouts/DefaultLayout'
 import { PageLayout } from '@/components/layouts/PageLayout/PageLayout'
 import { ScaffoldContainer, ScaffoldSection } from '@/components/layouts/Scaffold'
-import AlertError from '@/components/ui/AlertError'
+import { AlertError } from '@/components/ui/AlertError'
 import { DocsButton } from '@/components/ui/DocsButton'
-import NoPermission from '@/components/ui/NoPermission'
+import { NoPermission } from '@/components/ui/NoPermission'
 import { useBranchUpdateMutation } from '@/data/branches/branch-update-mutation'
-import { Branch, useBranchesQuery } from '@/data/branches/branches-query'
+import { branchesQueryOptions, type Branch } from '@/data/branches/branches-query'
 import { useGitHubConnectionsQuery } from '@/data/integrations/github-connections-query'
-import { useSendEventMutation } from '@/data/telemetry/send-event-mutation'
-import { useAsyncCheckPermissions } from '@/hooks/misc/useCheckPermissions'
+import { useBranchGrant } from '@/hooks/branches/useBranchGrant'
 import { useSelectedOrganizationQuery } from '@/hooks/misc/useSelectedOrganization'
 import { useSelectedProjectQuery } from '@/hooks/misc/useSelectedProject'
 import { DOCS_URL } from '@/lib/constants'
+import { useGrant } from '@/lib/grants'
+import { useTrack } from '@/lib/telemetry/track'
 import type { NextPageWithLayout } from '@/types'
 
 const MergeRequestsPage: NextPageWithLayout = () => {
@@ -48,10 +51,11 @@ const MergeRequestsPage: NextPageWithLayout = () => {
   const projectRef =
     project !== undefined ? (isBranch ? project.parent_project_ref : ref) : undefined
 
-  const { can: canReadBranches, isSuccess: isPermissionsLoaded } = useAsyncCheckPermissions(
-    PermissionAction.READ,
-    'preview_branches'
-  )
+  const branchesGrant = useGrant('GET /v1/projects/{ref}/branches', { projectRef })
+  const updateBranchGrant = useBranchGrant('PATCH /v1/branches/{branch_id_or_ref}', {
+    projectRef,
+    isDefault: false,
+  })
 
   const {
     data: connections,
@@ -66,7 +70,7 @@ const MergeRequestsPage: NextPageWithLayout = () => {
     error: branchesError,
     isPending: isLoadingBranches,
     isError: isErrorBranches,
-  } = useBranchesQuery({ projectRef })
+  } = useQuery(branchesQueryOptions({ projectRef, grant: branchesGrant.grant }))
   const [[mainBranch], previewBranchesUnsorted] = partition(branches, (branch) => branch.is_default)
   const previewBranches = previewBranchesUnsorted.sort((a, b) =>
     new Date(a.updated_at) < new Date(b.updated_at) ? 1 : -1
@@ -88,7 +92,7 @@ const MergeRequestsPage: NextPageWithLayout = () => {
 
   const isGithubConnected = githubConnection !== undefined
 
-  const { mutate: sendEvent } = useSendEventMutation()
+  const track = useTrack()
 
   const { mutate: updateBranch, isPending: isUpdating } = useBranchUpdateMutation({
     onError: () => {
@@ -101,8 +105,10 @@ const MergeRequestsPage: NextPageWithLayout = () => {
     parent_project_ref: projectRef,
     persistent,
   }: Branch) => {
+    if (updateBranchGrant.status !== 'granted') return
     updateBranch(
       {
+        grant: updateBranchGrant.grant,
         branchRef,
         projectRef,
         requestReview: true,
@@ -111,18 +117,14 @@ const MergeRequestsPage: NextPageWithLayout = () => {
         onSuccess: () => {
           toast.success('Merge request created')
 
-          // Track merge request creation
-          sendEvent({
-            action: 'branch_create_merge_request_button_clicked',
-            properties: {
+          track(
+            'branch_create_merge_request_button_clicked',
+            {
               branchType: persistent ? 'persistent' : 'preview',
               origin: 'merge_page',
             },
-            groups: {
-              project: projectRef ?? 'Unknown',
-              organization: selectedOrg?.slug ?? 'Unknown',
-            },
-          })
+            { project: projectRef }
+          )
 
           router.push(`/project/${branchRef}/merge`)
         },
@@ -134,8 +136,10 @@ const MergeRequestsPage: NextPageWithLayout = () => {
     project_ref: branchRef,
     parent_project_ref: projectRef,
   }: Branch) => {
+    if (updateBranchGrant.status !== 'granted') return
     updateBranch(
       {
+        grant: updateBranchGrant.grant,
         branchRef,
         projectRef,
         requestReview: false,
@@ -144,13 +148,8 @@ const MergeRequestsPage: NextPageWithLayout = () => {
         onSuccess: () => {
           toast.success('Merge request closed')
 
-          // Track merge request closed
-          sendEvent({
-            action: 'branch_close_merge_request_button_clicked',
-            groups: {
-              project: projectRef ?? 'Unknown',
-              organization: selectedOrg?.slug ?? 'Unknown',
-            },
+          track('branch_close_merge_request_button_clicked', undefined, {
+            project: projectRef,
           })
         },
       }
@@ -170,9 +169,16 @@ const MergeRequestsPage: NextPageWithLayout = () => {
       <ScaffoldSection>
         <div className="col-span-12">
           <div className="space-y-4">
-            {isPermissionsLoaded && !canReadBranches ? (
+            {branchesGrant.status === 'denied' && (
               <NoPermission resourceText="view this project's branches" />
-            ) : (
+            )}
+            {branchesGrant.status === 'error' && (
+              <AlertError
+                error={branchesGrant.error}
+                subject="Failed to check your permissions to view branches"
+              />
+            )}
+            {(branchesGrant.status === 'loading' || branchesGrant.status === 'granted') && (
               <>
                 {isErrorConnections && (
                   <AlertError
@@ -191,14 +197,15 @@ const MergeRequestsPage: NextPageWithLayout = () => {
                       <div className="rounded-sm border rounded-lg bg-background px-6 py-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2 text-sm text-foreground-light">
-                            <GitMerge strokeWidth={1.5} size={16} className="text-brand" />
+                            <GitMergeIcon strokeWidth={1.5} size={16} className="text-primary" />
                             <span className="text-foreground">{currentBranch.name}</span>
                             last viewed
                           </div>
                           <Button
-                            type="primary"
+                            variant="primary"
                             size="tiny"
                             loading={currentBranch && isUpdating}
+                            disabled={updateBranchGrant.status !== 'granted'}
                             onClick={() =>
                               currentBranch && handleMarkBranchForReview(currentBranch)
                             }
@@ -228,7 +235,7 @@ const MergeRequestsPage: NextPageWithLayout = () => {
                               label={
                                 <div className="flex items-center gap-x-4">
                                   {branch.name}
-                                  <ArrowRight
+                                  <ArrowRightIcon
                                     size={14}
                                     strokeWidth={1.5}
                                     className="text-foreground-lighter"
@@ -238,7 +245,7 @@ const MergeRequestsPage: NextPageWithLayout = () => {
                                       <p className="text-foreground-lighter">#{branch.pr_number}</p>
                                     ) : (
                                       <>
-                                        <Shield
+                                        <ShieldIcon
                                           size={14}
                                           strokeWidth={1.5}
                                           className="text-warning"
@@ -259,25 +266,35 @@ const MergeRequestsPage: NextPageWithLayout = () => {
                                 // whether the branch is linked to a GitHub PR.
                                 branch.review_requested_at && (
                                   <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button
-                                        type="text"
-                                        icon={<MoreVertical />}
-                                        className="px-1"
-                                        onClick={(e) => e.stopPropagation()}
-                                      />
-                                    </DropdownMenuTrigger>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button
+                                            aria-label="Manage merge request"
+                                            variant="text"
+                                            className="px-1"
+                                            icon={<MoreVerticalIcon />}
+                                            onClick={(e) => e.stopPropagation()}
+                                          />
+                                        </DropdownMenuTrigger>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="bottom">
+                                        Manage merge request
+                                      </TooltipContent>
+                                    </Tooltip>
                                     <DropdownMenuContent className="w-56" side="bottom" align="end">
                                       <Tooltip>
                                         <DropdownMenuItem
                                           className="gap-x-2"
-                                          disabled={isUpdating}
+                                          disabled={
+                                            isUpdating || updateBranchGrant.status !== 'granted'
+                                          }
                                           onSelect={(e) => {
                                             e.stopPropagation()
                                             handleCloseMergeRequest(branch)
                                           }}
                                         >
-                                          <X size={14} /> Close this merge request
+                                          <XIcon size={14} /> Close this merge request
                                         </DropdownMenuItem>
                                       </Tooltip>
                                     </DropdownMenuContent>
@@ -309,20 +326,28 @@ const MergeRequestsPage: NextPageWithLayout = () => {
   )
 }
 
-const MergeRequestsPageWrapper = ({ children }: PropsWithChildren<{}>) => {
+export const MergeRequestsPageWrapper = ({ children }: PropsWithChildren<{}>) => {
   const router = useRouter()
   const { ref } = useParams()
   const { data: project } = useSelectedProjectQuery()
-  const { data: selectedOrg } = useSelectedOrganizationQuery()
 
   const isBranch = project?.parent_project_ref !== undefined
   const projectRef =
     project !== undefined ? (isBranch ? project.parent_project_ref : ref) : undefined
 
-  const { data: branches } = useBranchesQuery({ projectRef })
-  const previewBranches = (branches || []).filter((b) => !b.is_default)
+  const branchesGrant = useGrant('GET /v1/projects/{ref}/branches', { projectRef })
+  const updateBranchGrant = useBranchGrant('PATCH /v1/branches/{branch_id_or_ref}', {
+    projectRef,
+    isDefault: false,
+  })
 
-  const { mutate: sendEvent } = useSendEventMutation()
+  const { data: branches } = useQuery(
+    branchesQueryOptions({ projectRef, grant: branchesGrant.grant })
+  )
+  const previewBranches = (branches || []).filter((b) => !b.is_default)
+  const canListBranches = branchesGrant.status !== 'error' && branchesGrant.status !== 'denied'
+
+  const track = useTrack()
 
   const { mutate: updateBranch, isPending: isUpdating } = useBranchUpdateMutation({
     onError: () => {
@@ -335,8 +360,10 @@ const MergeRequestsPageWrapper = ({ children }: PropsWithChildren<{}>) => {
     parent_project_ref: projectRef,
     persistent,
   }: Branch) => {
+    if (updateBranchGrant.status !== 'granted') return
     updateBranch(
       {
+        grant: updateBranchGrant.grant,
         branchRef,
         projectRef,
         requestReview: true,
@@ -345,18 +372,14 @@ const MergeRequestsPageWrapper = ({ children }: PropsWithChildren<{}>) => {
         onSuccess: () => {
           toast.success('Merge request created')
 
-          // Track merge request creation
-          sendEvent({
-            action: 'branch_create_merge_request_button_clicked',
-            properties: {
+          track(
+            'branch_create_merge_request_button_clicked',
+            {
               branchType: persistent ? 'persistent' : 'preview',
               origin: 'branch_selector',
             },
-            groups: {
-              project: projectRef ?? 'Unknown',
-              organization: selectedOrg?.slug ?? 'Unknown',
-            },
-          })
+            { project: projectRef }
+          )
 
           router.push(`/project/${branchRef}/merge`)
         },
@@ -369,31 +392,16 @@ const MergeRequestsPageWrapper = ({ children }: PropsWithChildren<{}>) => {
       title="Merge requests"
       subtitle="Review and merge changes from one branch into another"
       primaryActions={
-        <BranchSelector
-          branches={previewBranches}
-          onBranchSelected={handleMarkBranchForReview}
-          disabled={!projectRef}
-          isUpdating={isUpdating}
-        />
+        canListBranches && (
+          <BranchSelector
+            branches={previewBranches}
+            onBranchSelected={handleMarkBranchForReview}
+            disabled={!projectRef || updateBranchGrant.status !== 'granted'}
+            isUpdating={isUpdating}
+          />
+        )
       }
-      secondaryActions={
-        <div className="flex items-center gap-x-2">
-          <Button
-            asChild
-            type="text"
-            icon={<MessageCircle className="text-muted" strokeWidth={1} />}
-          >
-            <a
-              target="_blank"
-              rel="noreferrer"
-              href="https://github.com/orgs/supabase/discussions/18937"
-            >
-              Branching feedback
-            </a>
-          </Button>
-          <DocsButton href={`${DOCS_URL}/guides/platform/branching`} />
-        </div>
-      }
+      secondaryActions={<DocsButton href={`${DOCS_URL}/guides/platform/branching`} />}
     >
       {children}
     </PageLayout>

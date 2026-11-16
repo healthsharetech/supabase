@@ -12,12 +12,12 @@ import {
 import * as React from 'react'
 import {
   Button,
-  Command_Shadcn_,
-  CommandEmpty_Shadcn_,
-  CommandGroup_Shadcn_,
-  CommandInput_Shadcn_,
-  CommandItem_Shadcn_,
-  CommandList_Shadcn_,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -69,7 +69,6 @@ export default function ComboboxPopover() {
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
-            type="default"
             size="small"
             className="w-[150px] justify-start rounded-full"
             icon={
@@ -84,13 +83,13 @@ export default function ComboboxPopover() {
           </Button>
         </PopoverTrigger>
         <PopoverContent className="p-0" side="right" align="start">
-          <Command_Shadcn_>
-            <CommandInput_Shadcn_ placeholder="Change status..." />
-            <CommandList_Shadcn_>
-              <CommandEmpty_Shadcn_>No results found.</CommandEmpty_Shadcn_>
-              <CommandGroup_Shadcn_>
+          <Command>
+            <CommandInput placeholder="Change status..." />
+            <CommandList>
+              <CommandEmpty>No results found.</CommandEmpty>
+              <CommandGroup>
                 {statuses.map((status) => (
-                  <CommandItem_Shadcn_
+                  <CommandItem
                     key={status.value}
                     value={status.value}
                     onSelect={(value) => {
@@ -107,11 +106,11 @@ export default function ComboboxPopover() {
                       )}
                     />
                     <span>{status.label}</span>
-                  </CommandItem_Shadcn_>
+                  </CommandItem>
                 ))}
-              </CommandGroup_Shadcn_>
-            </CommandList_Shadcn_>
-          </Command_Shadcn_>
+              </CommandGroup>
+            </CommandList>
+          </Command>
         </PopoverContent>
       </Popover>
     </div>

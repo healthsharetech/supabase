@@ -3,8 +3,10 @@ import { useQuery } from '@tanstack/react-query'
 
 import { CronJob } from './database-cron-jobs-infinite-query'
 import { databaseCronJobsKeys } from './keys'
-import { executeSql } from '@/data/sql/execute-sql-query'
-import type { ResponseError, UseCustomQueryOptions } from '@/types'
+import { unguarded } from '@/data/fetchers'
+import { executeSql } from '@/data/sql/execute-sql-mutation'
+import type { StudioError } from '@/lib/errors/studio-errors'
+import type { UseCustomQueryOptions } from '@/types'
 
 export type DatabaseCronJobVariables = {
   projectRef?: string
@@ -24,17 +26,20 @@ export async function getDatabaseCronJob({
   const { result } = await executeSql({
     projectRef,
     connectionString,
+    sqlOrigin: 'studio',
+    queryName: 'cron-job',
     sql: !!id
       ? safeSql`SELECT * FROM cron.job where jobid = ${literal(id)};`
       : safeSql`SELECT * FROM cron.job where jobname = ${literal(name)};`,
-    queryKey: ['cron-job', id],
+    queryKey: ['cron-job', id ?? name],
+    grant: unguarded.migrating,
   })
 
-  return result[0]
+  return (result[0] ?? null) as CronJob | null
 }
 
-export type DatabaseCronJobData = CronJob
-export type DatabaseCronJobError = ResponseError
+export type DatabaseCronJobData = CronJob | null
+export type DatabaseCronJobError = StudioError
 
 export const useCronJobQuery = <TData = DatabaseCronJobData>(
   { projectRef, connectionString, id, name }: DatabaseCronJobVariables,
@@ -45,7 +50,7 @@ export const useCronJobQuery = <TData = DatabaseCronJobData>(
 ) =>
   useQuery<DatabaseCronJobData, DatabaseCronJobError, TData>({
     queryKey: databaseCronJobsKeys.job(projectRef, id ?? name),
-    queryFn: () => getDatabaseCronJob({ projectRef, connectionString, id }),
+    queryFn: () => getDatabaseCronJob({ projectRef, connectionString, id, name }),
     enabled:
       enabled &&
       typeof projectRef !== 'undefined' &&
