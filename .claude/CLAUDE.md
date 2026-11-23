@@ -76,11 +76,16 @@ The `.env` is managed in 1Password (not `.env.example`).
 - `storage`: S3 backend — `STORAGE_BACKEND: s3`,
   `GLOBAL_S3_BUCKET: ${AWS_S3_BUCKET}`, `REGION: ${AWS_REGION}`,
   `TENANT_ID: storage-single-tenant`. Credentials via EC2 instance IAM role.
-- `realtime`: `RLIMIT_NOFILE: ""` — workaround for an EC2 crash.
+- `realtime`: `RLIMIT_NOFILE: ""` — workaround for an EC2 crash. Upstream
+  now sets `RLIMIT_NOFILE: "10000"`; do not take that value.
   `DB_ENC_KEY` is `${REALTIME_DB_ENC_KEY}` with no demo fallback.
   Do not set `REGION`. Self-hosted 0.8.4 (realtime `v2.148.3`) fixed the
   missed Postgres Changes bug (realtime#2289 / realtime#2290), so the
   temporary `REGION: us-east-1` workaround is gone.
+  Take upstream's single-node hardening: `GEN_RPC_SOCKET_IP: 127.0.0.1`,
+  `CLUSTER_STRATEGIES: ""`, unset `RELEASE_COOKIE` (entrypoint mints one),
+  and the mounted `volumes/realtime/docker-entrypoint.sh`. Do not set
+  `DNS_NODES`; discovery is disabled by the empty strategy list.
 - `meta` connects as `postgres`, not `supabase_admin` (upstream 0.6.0).
 
 **`docker/volumes/api/kong.yml`:** added `admin` route (`/admin`, `/backend`,
