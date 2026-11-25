@@ -1,8 +1,13 @@
-FROM dunglas/frankenphp
+# Pin the PHP minor: bin/deploy builds with --pull, so an unpinned tag jumps to
+# whatever PHP `latest` ships. PHP 8.6 dropped mbstring from the base image and
+# Laravel 12 isn't ready for its deprecations. --pull still picks up 8.4 patches.
+FROM dunglas/frankenphp:1-php8.4
 
 RUN install-php-extensions \
     pdo_pgsql \
-    gd
+    gd \
+    # Str::studly() etc. need mb_split(); not guaranteed in the base image.
+    mbstring
 
 ARG USER=www-data
 
