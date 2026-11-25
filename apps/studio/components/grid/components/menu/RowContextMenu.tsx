@@ -1,4 +1,4 @@
-import { Copy, Edit, ListFilter, Trash } from 'lucide-react'
+import { CopyIcon, CopyPlusIcon, EditIcon, ListFilterIcon, TrashIcon } from 'lucide-react'
 import { useCallback } from 'react'
 import { toast } from 'sonner'
 import { copyToClipboard, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from 'ui'
@@ -36,6 +36,10 @@ export const RowContextMenuContent = ({
     tableEditorSnap.onEditRow(row)
   }, [row, tableEditorSnap])
 
+  const onDuplicateRowClick = useCallback(() => {
+    tableEditorSnap.onDuplicateRow(row)
+  }, [row, tableEditorSnap])
+
   const onCopyCellContent = useCallback(() => {
     if (!activeCellPosition) return
 
@@ -44,17 +48,30 @@ export const RowContextMenuContent = ({
 
     const value = row[column.key]
     const text = formatClipboardValue(value)
+    const isSensitive = snap.sensitiveDataColumns.has(column.key as string)
 
     void copyToClipboard(text, () => {
-      toast.success('Copied cell value to clipboard')
+      if (isSensitive) {
+        toast.warning('Copied sensitive data to clipboard')
+      } else {
+        toast.success('Copied cell value to clipboard')
+      }
     })
-  }, [activeCellPosition, row, snap.gridColumns])
+  }, [activeCellPosition, row, snap.gridColumns, snap.sensitiveDataColumns])
 
   const onCopyRowContent = useCallback(() => {
+    const hasSensitiveColumns = snap.gridColumns.some((col) =>
+      snap.sensitiveDataColumns.has(col.key as string)
+    )
+
     void copyToClipboard(JSON.stringify(row), () => {
-      toast.success('Copied row to clipboard')
+      if (hasSensitiveColumns) {
+        toast.warning('Copied row containing sensitive data to clipboard')
+      } else {
+        toast.success('Copied row to clipboard')
+      }
     })
-  }, [row])
+  }, [row, snap.gridColumns, snap.sensitiveDataColumns])
 
   const getRowAndColumn = useCallback(() => {
     if (!activeCellPosition) return null
@@ -87,16 +104,16 @@ export const RowContextMenuContent = ({
   return (
     <DropdownMenuContent align="start" side="right" sideOffset={0} className="w-36 min-w-36!">
       <DropdownMenuItem className="gap-x-2" onSelect={onCopyCellContent}>
-        <Copy size={12} />
+        <CopyIcon size={12} />
         <span className="text-xs">Copy cell</span>
       </DropdownMenuItem>
       <DropdownMenuItem className="gap-x-2" onSelect={onCopyRowContent}>
-        <Copy size={12} />
+        <CopyIcon size={12} />
         <span className="text-xs">Copy row</span>
       </DropdownMenuItem>
       {isFilterByValueVisible() && (
         <DropdownMenuItem className="gap-x-2" onSelect={onFilterByValue}>
-          <ListFilter size={12} />
+          <ListFilterIcon size={12} />
           <span className="text-xs">Filter by value</span>
         </DropdownMenuItem>
       )}
@@ -104,12 +121,16 @@ export const RowContextMenuContent = ({
         <>
           <DropdownMenuSeparator />
           <DropdownMenuItem className="gap-x-2" onSelect={onEditRowClick}>
-            <Edit size={12} />
+            <EditIcon size={12} />
             <span className="text-xs">Edit row</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem className="gap-x-2" onSelect={onDuplicateRowClick}>
+            <CopyPlusIcon size={12} />
+            <span className="text-xs">Duplicate row</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem className="gap-x-2" onSelect={onDeleteRow}>
-            <Trash size={12} />
+            <TrashIcon size={12} />
             <span className="text-xs">Delete row</span>
           </DropdownMenuItem>
         </>

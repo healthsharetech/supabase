@@ -1,4 +1,5 @@
 import { CubeIcon } from '@heroicons/react/outline'
+import { DASHBOARD_SIGN_UP_URL } from '@/lib/dashboard-links'
 import {
   ArrowLeftRight,
   Check,
@@ -85,7 +86,7 @@ const data: {
     ctas: [
       {
         label: 'Start your project',
-        href: 'https://supabase.com/dashboard',
+        href: DASHBOARD_SIGN_UP_URL,
         type: 'primary' as const,
       },
       {
@@ -113,7 +114,7 @@ const data: {
         ),
       },
       {
-        icon: '/images/logos/publicity/sj-innovation.svg',
+        icon: '/images/logos/publicity/sjinnovation.svg',
         avatar: '/images/avatars/shahed-islam.jpeg',
         author: 'Shahed Islam',
         authorTitle: 'CEO, SJ Innovation LLC',
@@ -270,7 +271,7 @@ const data: {
                 absolute pointer-events-none
                 w-full h-full
                 inset-0 top-auto
-                bg-[linear-gradient(to_bottom,transparent_0%,hsl(var(--background-default))_100%)]
+                bg-[linear-gradient(to_bottom,transparent_0%,var(--background-default)_100%)]
               "
             />
           </div>
@@ -335,7 +336,7 @@ const data: {
         ),
         className: 'border-l-0! sm:border-l!',
         image: (
-          <RealtimeVisual className="[&_.visual-overlay]:bg-[linear-gradient(to_top,transparent_0%,transparent_50%,hsl(var(--background-default))_75%)]" />
+          <RealtimeVisual className="[&_.visual-overlay]:bg-[linear-gradient(to_top,transparent_0%,transparent_50%,var(--background-default)_75%)]" />
         ),
       },
       {
@@ -592,7 +593,7 @@ const data: {
                 absolute pointer-events-none
                 w-full h-full
                 inset-0 top-auto
-                bg-[linear-gradient(to_top,transparent_0%,transparent_50%,hsl(var(--background-default))_75%)]
+                bg-[linear-gradient(to_top,transparent_0%,transparent_50%,var(--background-default)_75%)]
               "
             />
             <Image
@@ -623,7 +624,7 @@ const data: {
           <RealtimeLogs
             isActive={false}
             isInView={true}
-            className="h-3/5 bottom-0 top-auto [&_.visual-overlay]:bg-[linear-gradient(to_top,hsl(var(--background-default))_0%,transparent_100%)]!"
+            className="h-3/5 bottom-0 top-auto [&_.visual-overlay]:bg-[linear-gradient(to_top,var(--background-default)_0%,transparent_100%)]!"
           />
         ),
       },
@@ -720,7 +721,7 @@ const data: {
         <Sparkles size={24} className="inline text-foreground" />
       </>
     ),
-    docsUrl: 'https://supabase.com/docs/guides/getting-started/ai-prompts',
+    docsUrl: 'https://supabase.com/docs/guides/ai-tools/ai-prompts',
     leftFooter: (
       <div className="grid grid-cols-5 divide-x divide-y rounded-lg overflow-hidden border">
         {frameworks.map((framework: FrameworkLinkProps) => (
@@ -740,7 +741,7 @@ const data: {
 4. Hook up middleware to refresh auth tokens
 `,
         language: 'markdown',
-        docsUrl: 'https://supabase.com/docs/guides/getting-started/ai-prompts/nextjs-supabase-auth',
+        docsUrl: 'https://supabase.com/docs/guides/ai-tools/ai-prompts/nextjs-supabase-auth',
       },
       {
         id: 'edge-functions',
@@ -754,7 +755,7 @@ const data: {
 5. For external dependencies, importing via 'npm:' and 'jsr:' is preferred. Minimize the use of imports from @'deno.land/x' , 'esm.sh' and @'unpkg.com' . If you have a package from one of those CDNs, you can replace the CDN hostname with 'npm:' specifier.
 `,
         language: 'markdown',
-        docsUrl: 'https://supabase.com/docs/guides/getting-started/ai-prompts/edge-functions',
+        docsUrl: 'https://supabase.com/docs/guides/ai-tools/ai-prompts/edge-functions',
       },
       {
         id: 'declarative-db-schema',
@@ -765,8 +766,7 @@ const data: {
 ## 1. **Exclusive Use of Declarative Schema**
 -**All database schema modifications must be defined within '.sql' files located in the 'supabase/schemas/' directory.`,
         language: 'markdown',
-        docsUrl:
-          'https://supabase.com/docs/guides/getting-started/ai-prompts/declarative-database-schema',
+        docsUrl: 'https://supabase.com/docs/guides/ai-tools/ai-prompts/declarative-database-schema',
       },
       {
         id: 'rls-policies',
@@ -778,8 +778,7 @@ The output should use the following instructions:
 
 - The generated SQL must be valid SQL.`,
         language: 'markdown',
-        docsUrl:
-          'https://supabase.com/docs/guides/getting-started/ai-prompts/database-rls-policies',
+        docsUrl: 'https://supabase.com/docs/guides/ai-tools/ai-prompts/database-rls-policies',
       },
     ],
   },

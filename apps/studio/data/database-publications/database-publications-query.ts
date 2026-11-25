@@ -1,10 +1,12 @@
-import { DEFAULT_PLATFORM_APPLICATION_NAME } from '@supabase/pg-meta/src/constants'
+import pgMeta, { type PGPublication } from '@supabase/pg-meta'
 import { useQuery } from '@tanstack/react-query'
 
+import { executeSql } from '../sql/execute-sql-mutation'
 import { databasePublicationsKeys } from './keys'
-import { get, handleError } from '@/data/fetchers'
+import { unguarded } from '@/data/fetchers'
 import { useSelectedProjectQuery } from '@/hooks/misc/useSelectedProject'
-import type { ResponseError, UseCustomQueryOptions } from '@/types'
+import type { StudioError } from '@/lib/errors/studio-errors'
+import type { UseCustomQueryOptions } from '@/types'
 
 export type DatabasePublicationsVariables = {
   projectRef?: string
@@ -17,29 +19,25 @@ export async function getDatabasePublications(
 ) {
   if (!projectRef) throw new Error('projectRef is required')
 
-  let headers = new Headers()
-  if (connectionString) headers.set('x-connection-encrypted', connectionString)
-
-  const { data, error } = await get('/platform/pg-meta/{ref}/publications', {
-    params: {
-      header: {
-        'x-connection-encrypted': connectionString!,
-        'x-pg-application-name': DEFAULT_PLATFORM_APPLICATION_NAME,
-      },
-      path: {
-        ref: projectRef,
-      },
+  const { sql } = pgMeta.publications.list()
+  const { result } = await executeSql(
+    {
+      projectRef,
+      connectionString,
+      sqlOrigin: 'studio',
+      queryName: 'publications',
+      sql,
+      queryKey: ['publications'].filter(Boolean),
+      grant: unguarded.migrating,
     },
-    headers,
-    signal,
-  })
+    signal
+  )
 
-  if (error) handleError(error)
-  return data
+  return result as PGPublication[]
 }
 
 export type DatabasePublicationsData = Awaited<ReturnType<typeof getDatabasePublications>>
-export type DatabasePublicationsError = ResponseError
+export type DatabasePublicationsError = StudioError
 
 export const useDatabasePublicationsQuery = <TData = DatabasePublicationsData>(
   { projectRef, connectionString }: DatabasePublicationsVariables,

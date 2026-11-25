@@ -2,7 +2,7 @@ import HCaptcha from '@hcaptcha/react-hcaptcha'
 import { Elements } from '@stripe/react-stripe-js'
 import { loadStripe, PaymentMethod, StripeElementsOptions } from '@stripe/stripe-js'
 import { useParams } from 'common'
-import { Loader, Plus } from 'lucide-react'
+import { LoaderIcon, PlusIcon } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import {
   forwardRef,
@@ -14,11 +14,12 @@ import {
   useState,
 } from 'react'
 import { toast } from 'sonner'
-import { Checkbox, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'ui'
+import { Button, Checkbox, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from 'ui'
 import { FormItemLayout } from 'ui-patterns/form/FormItemLayout/FormItemLayout'
 import { ShimmeringLoader } from 'ui-patterns/ShimmeringLoader'
 
 import { getStripeElementsAppearanceOptions } from '@/components/interfaces/Billing/Payment/Payment.utils'
+import { CardBrandIcon } from '@/components/interfaces/Billing/Payment/PaymentMethods/CreditCard'
 import {
   NewPaymentMethodElement,
   type PaymentMethodElementRef,
@@ -31,7 +32,7 @@ import { useOrganizationTaxIdQuery } from '@/data/organizations/organization-tax
 import type { CustomerAddress, CustomerTaxId } from '@/data/organizations/types'
 import { SetupIntentResponse } from '@/data/stripe/setup-intent-mutation'
 import { useSelectedOrganizationQuery } from '@/hooks/misc/useSelectedOrganization'
-import { BASE_PATH, STRIPE_PUBLIC_KEY } from '@/lib/constants'
+import { STRIPE_PUBLIC_KEY } from '@/lib/constants'
 
 const stripePromise = loadStripe(STRIPE_PUBLIC_KEY)
 
@@ -44,6 +45,7 @@ export interface PaymentMethodSelectionProps {
   onTaxIdChange?: (taxId: CustomerTaxId | null) => void
   useAsDefaultBillingAddress: boolean
   onUseAsDefaultBillingAddressChange: (useAsDefault: boolean) => void
+  onClose?: () => void
 }
 
 const PaymentMethodSelection = forwardRef(function PaymentMethodSelection(
@@ -56,6 +58,7 @@ const PaymentMethodSelection = forwardRef(function PaymentMethodSelection(
     onTaxIdChange,
     useAsDefaultBillingAddress,
     onUseAsDefaultBillingAddressChange,
+    onClose,
   }: PaymentMethodSelectionProps,
   ref
 ) {
@@ -223,7 +226,29 @@ const PaymentMethodSelection = forwardRef(function PaymentMethodSelection(
         dry_run: true,
       })
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to validate billing profile')
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to validate billing profile'
+      if (errorMessage.includes('The tax ID type does not match the billing address country')) {
+        toast.error(
+          <div>
+            <p>{errorMessage} Update your billing address or tax ID before upgrading your plan.</p>
+            <Button
+              className="mt-2"
+              onClick={() => {
+                if (onClose) {
+                  onClose()
+                  const el = document.getElementById('address')
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                }
+              }}
+            >
+              Update tax ID
+            </Button>
+          </div>
+        )
+      } else {
+        toast.error(errorMessage)
+      }
       return false
     }
 
@@ -286,7 +311,7 @@ const PaymentMethodSelection = forwardRef(function PaymentMethodSelection(
       <div>
         {isLoading || isCustomerProfileLoading ? (
           <div className="flex items-center px-4 py-2 space-x-4 border rounded-md border-strong bg-surface-200">
-            <Loader className="animate-spin" size={14} />
+            <LoaderIcon className="animate-spin" size={14} />
             <p className="text-sm text-foreground-light">Retrieving payment methods</p>
           </div>
         ) : paymentMethods?.data && paymentMethods?.data.length > 0 && !setupNewPaymentMethod ? (
@@ -317,13 +342,7 @@ const PaymentMethodSelection = forwardRef(function PaymentMethodSelection(
                   return (
                     <SelectItem key={method.id} value={method.id}>
                       <div className="flex gap-2">
-                        <img
-                          alt="Credit Card Brand"
-                          src={`${BASE_PATH}/img/payment-methods/${method.card?.brand
-                            .replace(' ', '-')
-                            .toLowerCase()}.png`}
-                          width="32"
-                        />
+                        <CardBrandIcon brand={method.card?.brand} />
                         {label}
                       </div>
                     </SelectItem>
@@ -331,7 +350,7 @@ const PaymentMethodSelection = forwardRef(function PaymentMethodSelection(
                 })}
                 <SelectItem value="new">
                   <div className="flex gap-2">
-                    <Plus size={16} />
+                    <PlusIcon size={16} />
                     <p className="transition text-foreground-light group-hover:text-foreground">
                       Add new payment method
                     </p>

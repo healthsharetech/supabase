@@ -50,12 +50,8 @@ vi.mock('@/hooks/custom-content/useCustomContent', () => ({
   useCustomContent: () => ({ appTitle: 'Supabase' }),
 }))
 
-vi.mock('@/hooks/misc/useIsFeatureEnabled', () => ({
-  useIsFeatureEnabled: () => false,
-}))
-
 vi.mock('@/hooks/misc/useLocalStorage', () => ({
-  useLocalStorageQuery: () => [''],
+  useLocalStorageQuery: () => ['', vi.fn(), { isLoading: false, isSuccess: true }],
 }))
 
 vi.mock('@/hooks/misc/withAuth', () => ({

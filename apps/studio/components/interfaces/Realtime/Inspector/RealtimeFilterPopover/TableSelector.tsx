@@ -1,17 +1,17 @@
 import { debounce } from 'lodash'
-import { Check, Code, Loader } from 'lucide-react'
+import { CheckIcon, CodeIcon, LoaderIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import {
   Alert,
   AlertDescription,
   AlertTitle,
   Button,
-  Command_Shadcn_,
-  CommandEmpty_Shadcn_,
-  CommandGroup_Shadcn_,
-  CommandInput_Shadcn_,
-  CommandItem_Shadcn_,
-  CommandList_Shadcn_,
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -80,12 +80,12 @@ const TableSelector = ({
         <PopoverTrigger asChild>
           <Button
             size={size}
-            type="outline"
+            variant="outline"
             disabled={isLoading}
             className={`w-full [&>span]:w-full ${size === 'small' ? 'py-1.5' : ''}`}
-            icon={isLoading ? <Loader className="animate-spin" size={12} /> : null}
+            icon={isLoading ? <LoaderIcon className="animate-spin" size={12} /> : null}
             iconRight={
-              <Code className="text-foreground-light rotate-90" strokeWidth={2} size={12} />
+              <CodeIcon className="text-foreground-light rotate-90" strokeWidth={2} size={12} />
             }
           >
             {initiallyLoaded ? (
@@ -101,15 +101,12 @@ const TableSelector = ({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="p-0 w-64" side="bottom" align="start">
-          <Command_Shadcn_>
-            <CommandInput_Shadcn_
-              placeholder="Find table..."
-              onValueChange={(str) => searchTables(str)}
-            />
-            <CommandList_Shadcn_>
+          <Command>
+            <CommandInput placeholder="Find table..." onValueChange={(str) => searchTables(str)} />
+            <CommandList>
               {isLoading && (
                 <div className="flex items-center justify-center space-x-2 px-3 py-2">
-                  <Loader className="animate-spin" size={12} />
+                  <LoaderIcon className="animate-spin" size={12} />
                   <p className="flex text-xs text-light">Loading tables...</p>
                 </div>
               )}
@@ -120,7 +117,7 @@ const TableSelector = ({
                   <AlertDescription className="text-xs mb-2">
                     Error: {(error as any)?.message}
                   </AlertDescription>
-                  <Button type="default" size="tiny" onClick={() => refetch()}>
+                  <Button size="tiny" onClick={() => refetch()}>
                     Reload tables
                   </Button>
                 </Alert>
@@ -128,13 +125,11 @@ const TableSelector = ({
 
               {isSuccess && (
                 <>
-                  <CommandGroup_Shadcn_ forceMount>
+                  <CommandGroup forceMount>
                     <ScrollArea className={(entities || []).length > 7 ? 'h-[210px]' : ''}>
-                      {entities.length === 0 && (
-                        <CommandEmpty_Shadcn_>No tables found</CommandEmpty_Shadcn_>
-                      )}
+                      {entities.length === 0 && <CommandEmpty>No tables found</CommandEmpty>}
                       {!searchInput && (
-                        <CommandItem_Shadcn_
+                        <CommandItem
                           key="all-tables"
                           className="cursor-pointer flex items-center justify-between space-x-2 w-full"
                           onSelect={() => {
@@ -148,12 +143,12 @@ const TableSelector = ({
                         >
                           <span>All tables</span>
                           {selectedSchemaName === '*' && (
-                            <Check className="text-brand" strokeWidth={2} />
+                            <CheckIcon className="text-primary" strokeWidth={2} />
                           )}
-                        </CommandItem_Shadcn_>
+                        </CommandItem>
                       )}
                       {entities?.map((table) => (
-                        <CommandItem_Shadcn_
+                        <CommandItem
                           key={table.id}
                           className="cursor-pointer flex items-center justify-between space-x-2 w-full"
                           onSelect={() => {
@@ -167,16 +162,16 @@ const TableSelector = ({
                         >
                           <span>{table.name}</span>
                           {selectedSchemaName === table.name && (
-                            <Check className="text-brand" strokeWidth={2} />
+                            <CheckIcon className="text-primary" strokeWidth={2} />
                           )}
-                        </CommandItem_Shadcn_>
+                        </CommandItem>
                       ))}
                     </ScrollArea>
-                  </CommandGroup_Shadcn_>
+                  </CommandGroup>
                 </>
               )}
-            </CommandList_Shadcn_>
-          </Command_Shadcn_>
+            </CommandList>
+          </Command>
         </PopoverContent>
       </Popover>
     </div>

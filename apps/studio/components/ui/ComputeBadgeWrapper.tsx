@@ -5,11 +5,11 @@ import { ComputeBadge } from 'ui-patterns/ComputeBadge'
 import { ShimmeringLoader } from 'ui-patterns/ShimmeringLoader'
 
 import { getAvailableComputeOptions } from '@/components/interfaces/DiskManagement/DiskManagement.utils'
+import { getInfrastructurePath } from '@/components/interfaces/Settings/Infrastructure/Infrastructure.utils'
 import { ProjectDetail } from '@/data/projects/project-detail-query'
 import { useOrgSubscriptionQuery } from '@/data/subscriptions/org-subscription-query'
 import { useProjectAddonsQuery } from '@/data/subscriptions/project-addons-query'
-import { ResourceWarning } from '@/data/usage/resource-warnings-query'
-import { getCloudProviderArchitecture } from '@/lib/cloudprovider-utils'
+import { getComputeCpuLabel } from '@/lib/compute-labels'
 import { useTrack } from '@/lib/telemetry/track'
 
 export const ChevronsUpAnimated = () => (
@@ -50,7 +50,6 @@ interface ComputeBadgeWrapperProps {
   projectRef?: string
   cloudProvider?: string
   computeSize?: ProjectDetail['infra_compute_size']
-  resourceWarnings?: ResourceWarning
   badgeClassName?: string
 }
 
@@ -59,15 +58,11 @@ export const ComputeBadgeWrapper = ({
   projectRef,
   cloudProvider,
   computeSize,
-  resourceWarnings,
   badgeClassName,
 }: ComputeBadgeWrapperProps) => {
   // handles the state of the hover card
   // once open it will fetch the addons
   const [open, setOpenState] = useState(false)
-
-  // returns hardcoded values for infra
-  const cpuArchitecture = getCloudProviderArchitecture(cloudProvider)
 
   // fetches addons
   const { data: addons, isPending: isLoadingAddons } = useProjectAddonsQuery(
@@ -86,16 +81,11 @@ export const ComputeBadgeWrapper = ({
 
   const { data, isPending: isLoadingSubscriptions } = useOrgSubscriptionQuery(
     { orgSlug: slug },
-    { enabled: open }
+    { enabled: !!slug }
   )
 
-  const isEligibleForFreeUpgrade = data?.plan.id !== 'free' && computeSize === 'nano'
-  const isComputeNearExhaustion =
-    !!resourceWarnings?.cpu_exhaustion ||
-    !!resourceWarnings?.memory_and_swap_exhaustion ||
-    !!resourceWarnings?.disk_space_exhaustion ||
-    !!resourceWarnings?.disk_io_exhaustion
-  const showUpgradeGlow = isEligibleForFreeUpgrade && isComputeNearExhaustion
+  const isEligibleForFreeUpgrade =
+    !!data && data.plan.id !== 'free' && data.plan.id !== 'platform' && computeSize === 'nano'
 
   const track = useTrack()
 
@@ -106,23 +96,24 @@ export const ComputeBadgeWrapper = ({
   return (
     <HoverCard onOpenChange={() => setOpenState(!open)} openDelay={280}>
       <HoverCardTrigger asChild className="group" onClick={(e) => e.stopPropagation()}>
-        <div className={cn('flex items-center', showUpgradeGlow && 'animate-badge-pulse')}>
+        <div className={cn('flex items-center', isEligibleForFreeUpgrade && 'animate-badge-pulse')}>
           <div
             className={cn(
               'flex',
-              showUpgradeGlow && 'relative inline-flex overflow-hidden rounded-sm'
+              isEligibleForFreeUpgrade && 'relative inline-flex overflow-hidden rounded-sm'
             )}
           >
             <ComputeBadge
               infraComputeSize={computeSize}
-              icon={showUpgradeGlow && <ChevronsUpAnimated />}
+              icon={isEligibleForFreeUpgrade && <ChevronsUpAnimated />}
               className={cn(
-                showUpgradeGlow && 'text-brand-600 border-brand-500 bg-brand/10 gap-1',
+                isEligibleForFreeUpgrade &&
+                  'text-brand-600 border-brand-500 bg-brand-default/10 gap-1',
                 badgeClassName
               )}
             />
-            {showUpgradeGlow && (
-              <span className="animate-badge-shimmer pointer-events-none absolute inset-0 bg-linear-to-br from-transparent via-brand/20 to-transparent blur-md" />
+            {isEligibleForFreeUpgrade && (
+              <span className="animate-badge-shimmer pointer-events-none absolute inset-0 bg-linear-to-br from-transparent via-brand-default/20 to-transparent blur-md" />
             )}
           </div>
         </div>
@@ -152,14 +143,14 @@ export const ComputeBadgeWrapper = ({
                 <div className="flex flex-col gap-1">
                   {computeSize === 'nano' ? (
                     <>
-                      <Row label="CPU" stat="Shared" />
+                      <Row label="CPU" stat="Shared compute" />
                       <Row label="Memory" stat="Up to 0.5 GB" />
                     </>
                   ) : meta !== undefined ? (
                     <>
                       <Row
                         label="CPU"
-                        stat={`${meta.cpu_cores ?? '?'}-core ${cpuArchitecture} ${meta.cpu_dedicated ? '(Dedicated)' : '(Shared)'}`}
+                        stat={getComputeCpuLabel(computeSize ?? '', meta.cpu_cores)}
                       />
                       <Row label="Memory" stat={`${meta.memory_gb ?? '-'} GB`} />
                     </>
@@ -182,15 +173,12 @@ export const ComputeBadgeWrapper = ({
                 <p className="text-foreground-light">
                   {isEligibleForFreeUpgrade
                     ? 'Paid plans include a free upgrade to Micro compute.'
-                    : 'Scale your project up to 64 cores and 256 GB RAM.'}
+                    : 'Scale your project up to 64 vCPUs and 256 GB RAM.'}
                 </p>
               </div>
               <div>
                 <Button
                   asChild
-                  type="default"
-                  htmlType="button"
-                  role="button"
                   onClick={() => {
                     track('compute_badge_upgrade_clicked', {
                       computeSize: computeSize ?? 'unknown',
@@ -201,9 +189,7 @@ export const ComputeBadgeWrapper = ({
                     })
                   }}
                 >
-                  <Link href={`/project/${projectRef}/settings/compute-and-disk`}>
-                    Upgrade compute
-                  </Link>
+                  <Link href={getInfrastructurePath(projectRef)}>Upgrade compute</Link>
                 </Button>
               </div>
             </div>

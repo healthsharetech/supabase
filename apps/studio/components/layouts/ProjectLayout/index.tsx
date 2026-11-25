@@ -1,13 +1,15 @@
-import { LOCAL_STORAGE_KEYS, mergeRefs, useParams } from 'common'
-import { AnimatePresence, motion } from 'framer-motion'
+import { LOCAL_STORAGE_KEYS, mergeRefs, useFlag, useParams } from 'common'
 import { XIcon } from 'lucide-react'
+import { AnimatePresence, motion } from 'motion/react'
 import Head from 'next/head'
 import { useRouter } from 'next/router'
 import {
   forwardRef,
   Fragment,
+  isValidElement,
   useEffect,
   useLayoutEffect,
+  useRef,
   type PropsWithChildren,
   type ReactNode,
 } from 'react'
@@ -25,13 +27,12 @@ import {
 } from 'ui'
 
 import { useEditorType } from '../editors/EditorsLayout.hooks'
-import { useSetMainScrollContainer } from '../MainScrollContainerContext'
+import { useMainScrollContainer, useSetMainScrollContainer } from '../MainScrollContainerContext'
 import { useMobileSheet } from '../Navigation/NavigationBar/MobileSheetContext'
-import ProductMenuBar from '../Navigation/ProductMenuBar'
+import { ProductMenuBar } from '../Navigation/ProductMenuBar'
 import BuildingState from './BuildingState'
 import ConnectingState from './ConnectingState'
 import { getSectionKeyFromPathname, MobileMenuContent } from './LayoutHeader/MobileMenuContent'
-import { LoadingState } from './LoadingState'
 import { ProjectPausedState } from './PausedState/ProjectPausedState'
 import { PauseFailedState } from './PauseFailedState'
 import { PausingState } from './PausingState'
@@ -43,12 +44,13 @@ import { UnhealthyState } from './UnhealthyState'
 import { UpgradingState } from './UpgradingState'
 import { CreateBranchModal } from '@/components/interfaces/BranchManagement/CreateBranchModal'
 import { ProjectAPIDocs } from '@/components/interfaces/ProjectAPIDocs/ProjectAPIDocs'
+import { BannerExplorer } from '@/components/ui/BannerStack/Banners/BannerExplorer'
 import { BannerFreeMicroUpgrade } from '@/components/ui/BannerStack/Banners/BannerFreeMicroUpgrade'
+import { isFreeMicroUpgradeBannerSnoozed } from '@/components/ui/BannerStack/Banners/BannerFreeMicroUpgrade.utils'
 import { BANNER_ID, useBannerStack } from '@/components/ui/BannerStack/BannerStackProvider'
 import { ButtonTooltip } from '@/components/ui/ButtonTooltip'
 import PartnerIcon from '@/components/ui/PartnerIcon'
 import { ResourceExhaustionWarningBanner } from '@/components/ui/ResourceExhaustionWarningBanner/ResourceExhaustionWarningBanner'
-import { useResourceWarningsQuery } from '@/data/usage/resource-warnings-query'
 import { useCustomContent } from '@/hooks/custom-content/useCustomContent'
 import { useLocalStorageQuery } from '@/hooks/misc/useLocalStorage'
 import { useSelectedOrganizationQuery } from '@/hooks/misc/useSelectedOrganization'
@@ -106,6 +108,8 @@ export interface ProjectLayoutProps {
   isLoading?: boolean
   isBlocking?: boolean
   product?: string
+  productMenuBadge?: ReactNode
+  productMenuHeader?: ReactNode
   productMenu?: ReactNode
   browserTitle?: {
     entity?: string
@@ -115,6 +119,8 @@ export interface ProjectLayoutProps {
   // Deprecated: use browserTitle.entity instead. Kept for backwards compatibility.
   selectedTable?: string
   resizableSidebar?: boolean
+  /** Starting width of the product menu in pixels, for menus that list more than links */
+  productMenuDefaultSize?: number
   productMenuClassName?: string
 }
 
@@ -124,12 +130,14 @@ export const ProjectLayout = forwardRef<HTMLDivElement, PropsWithChildren<Projec
       isLoading = false,
       isBlocking = true,
       product = '',
+      productMenuBadge,
+      productMenuHeader,
       productMenu,
       browserTitle,
       children,
       selectedTable,
       resizableSidebar = false,
-
+      productMenuDefaultSize = 256,
       productMenuClassName,
     },
     ref
@@ -138,22 +146,20 @@ export const ProjectLayout = forwardRef<HTMLDivElement, PropsWithChildren<Projec
     const { data: selectedOrganization } = useSelectedOrganizationQuery()
     const { data: selectedProject } = useSelectedProjectQuery()
     const { addBanner, dismissBanner } = useBannerStack()
-    const { data: resourceWarnings } = useResourceWarningsQuery({
-      slug: selectedOrganization?.slug,
-    })
-    const projectResourceWarnings = resourceWarnings?.find(
-      (w) => w.project === selectedProject?.ref
-    )
-    const isComputeNearExhaustion =
-      !!projectResourceWarnings?.cpu_exhaustion ||
-      !!projectResourceWarnings?.memory_and_swap_exhaustion ||
-      !!projectResourceWarnings?.disk_space_exhaustion ||
-      !!projectResourceWarnings?.disk_io_exhaustion
+
     const isNanoCompute = selectedProject?.infra_compute_size === 'nano'
-    const showUpgradeBanner = isNanoCompute && isComputeNearExhaustion
-    const [isFreeMicroUpgradeBannerDismissed] = useLocalStorageQuery(
-      LOCAL_STORAGE_KEYS.FREE_MICRO_UPGRADE_BANNER_DISMISSED(selectedProject?.ref ?? ''),
-      false
+    // The free Micro upgrade is only included on paid plans
+    const isPaidPlan = !!selectedOrganization?.plan?.id && selectedOrganization.plan.id !== 'free'
+    const showUpgradeBanner = isPaidPlan && isNanoCompute
+
+    const isExplorerEnabled = useFlag('explorer')
+
+    const [freeMicroUpgradeBannerDismissedAt] = useLocalStorageQuery<string | null>(
+      LOCAL_STORAGE_KEYS.FREE_MICRO_UPGRADE_BANNER_DISMISSED_AT(selectedProject?.ref ?? ''),
+      null
+    )
+    const isFreeMicroUpgradeBannerDismissed = isFreeMicroUpgradeBannerSnoozed(
+      freeMicroUpgradeBannerDismissedAt
     )
     const [isProjectIntegrationBannerDismissed, setIsProjectIntegrationBannerDismissed] =
       useLocalStorageQuery(
@@ -163,12 +169,25 @@ export const ProjectLayout = forwardRef<HTMLDivElement, PropsWithChildren<Projec
         }),
         false
       )
+    const [isExplorerBannerDismissed, , { isSuccess: isLocalStorageReady }] = useLocalStorageQuery(
+      LOCAL_STORAGE_KEYS.EXPLORER_BANNER_DISMISSED,
+      false
+    )
+
     const { showSidebar } = useAppStateSnapshot()
-    const { setContent: setMobileSheetContent, registerOpenMenu } = useMobileSheet()
+    const {
+      content: mobileSheetContent,
+      setContent: setMobileSheetContent,
+      registerOpenMenu,
+    } = useMobileSheet()
 
     const pathname = getPathnameWithoutQuery(router.asPath, router.pathname)
-    const currentSectionKey = getSectionKeyFromPathname(pathname)
+    const isIssuesInboxEnabled = useFlag('issuesInbox')
+    const sectionKey = getSectionKeyFromPathname(pathname)
+    const currentSectionKey =
+      sectionKey === 'advisors' && isIssuesInboxEnabled ? 'issues' : sectionKey
 
+    const mainScrollContainer = useMainScrollContainer()
     const setMainScrollContainer = useSetMainScrollContainer()
     const combinedRef = mergeRefs(ref, setMainScrollContainer)
 
@@ -201,6 +220,7 @@ export const ProjectLayout = forwardRef<HTMLDivElement, PropsWithChildren<Projec
 
     const ignorePausedState =
       router.pathname === '/project/[ref]' ||
+      router.pathname.includes('/project/[ref]/branches') ||
       router.pathname.includes('/project/[ref]/settings') ||
       router.pathname.includes('/project/[ref]/functions') ||
       router.pathname.includes('/project/[ref]/logs')
@@ -231,19 +251,51 @@ export const ProjectLayout = forwardRef<HTMLDivElement, PropsWithChildren<Projec
       dismissBanner,
     ])
 
-    useLayoutEffect(() => {
-      const unregister = registerOpenMenu(() => {
-        setMobileSheetContent(
-          <MobileMenuContent
-            currentProductMenu={productMenu ?? null}
-            currentProduct={product}
-            currentSectionKey={currentSectionKey}
-            onCloseSheet={() => setMobileSheetContent(null)}
-          />
-        )
+    useEffect(() => {
+      if (!isExplorerEnabled || !isLocalStorageReady || isExplorerBannerDismissed) return
+
+      addBanner({
+        id: 'explorer-banner',
+        priority: 2,
+        isDismissed: false,
+        content: <BannerExplorer />,
       })
+    }, [addBanner, isExplorerEnabled, isExplorerBannerDismissed, isLocalStorageReady])
+
+    const mobileSheetContentRef = useRef(mobileSheetContent)
+    useLayoutEffect(() => {
+      mobileSheetContentRef.current = mobileSheetContent
+    }, [mobileSheetContent])
+
+    useLayoutEffect(() => {
+      const menu = (
+        <MobileMenuContent
+          currentProductMenu={productMenu ?? null}
+          currentProductMenuHeader={productMenuHeader}
+          currentProduct={product}
+          currentSectionKey={currentSectionKey}
+          onCloseSheet={() => setMobileSheetContent(null)}
+        />
+      )
+      const unregister = registerOpenMenu(() => setMobileSheetContent(menu))
+      // Keep resource navigation in an already open sheet in sync with the layout.
+      const currentContent = mobileSheetContentRef.current
+      if (isValidElement(currentContent) && currentContent.type === MobileMenuContent) {
+        setMobileSheetContent(menu)
+      }
       return unregister
-    }, [registerOpenMenu, productMenu, product, currentSectionKey, setMobileSheetContent])
+    }, [
+      registerOpenMenu,
+      productMenu,
+      productMenuHeader,
+      product,
+      currentSectionKey,
+      setMobileSheetContent,
+    ])
+
+    useLayoutEffect(() => {
+      mainScrollContainer?.scrollTo({ top: 0, left: 0 })
+    }, [pathname, mainScrollContainer])
 
     return (
       <>
@@ -256,11 +308,11 @@ export const ProjectLayout = forwardRef<HTMLDivElement, PropsWithChildren<Projec
             {productMenu && sideBarIsOpen && (
               <ResizablePanel
                 panelRef={panelRef}
-                minSize={256}
-                maxSize={resizableSidebar ? 512 : 256}
-                defaultSize={256}
+                minSize="256px"
+                maxSize={resizableSidebar ? '512px' : '256px'}
+                defaultSize={`${productMenuDefaultSize}px`}
+                groupResizeBehavior="preserve-pixel-size"
                 id="panel-left"
-                disabled={!resizableSidebar}
               >
                 <AnimatePresence initial={false}>
                   <motion.div
@@ -275,7 +327,12 @@ export const ProjectLayout = forwardRef<HTMLDivElement, PropsWithChildren<Projec
                       isBlocking={isBlocking}
                       productMenu={productMenu}
                     >
-                      <ProductMenuBar title={product} className={productMenuClassName}>
+                      <ProductMenuBar
+                        title={product}
+                        titleBadge={productMenuBadge}
+                        header={productMenuHeader}
+                        className={productMenuClassName}
+                      >
                         {productMenu}
                       </ProductMenuBar>
                     </MenuBarWrapper>
@@ -315,7 +372,7 @@ export const ProjectLayout = forwardRef<HTMLDivElement, PropsWithChildren<Projec
                       </AlertDescription>
                     </div>
                     <ButtonTooltip
-                      type="text"
+                      variant="text"
                       icon={<XIcon size={14} />}
                       className="h-7 w-7 p-0"
                       onClick={() => setIsProjectIntegrationBannerDismissed(true)}
@@ -331,7 +388,7 @@ export const ProjectLayout = forwardRef<HTMLDivElement, PropsWithChildren<Projec
                     </div>
                   </div>
                 ) : (
-                  <ContentWrapper isLoading={isLoading} isBlocking={isBlocking}>
+                  <ContentWrapper>
                     <ResourceExhaustionWarningBanner />
                     {children}
                   </ContentWrapper>
@@ -379,8 +436,6 @@ const MenuBarWrapper = ({
 }
 
 interface ContentWrapperProps {
-  isLoading: boolean
-  isBlocking?: boolean
   children: ReactNode
 }
 
@@ -396,7 +451,7 @@ interface ContentWrapperProps {
  *
  * [TODO] Next iteration should scrape long polling and just listen to the project's status
  */
-const ContentWrapper = ({ isLoading, isBlocking = true, children }: ContentWrapperProps) => {
+const ContentWrapper = ({ children }: ContentWrapperProps) => {
   const router = useRouter()
   const { ref } = useParams()
   const state = useDatabaseSelectorStateSnapshot()
@@ -406,7 +461,6 @@ const ContentWrapper = ({ isLoading, isBlocking = true, children }: ContentWrapp
 
   const requiresDbConnection = !routesToIgnoreDBConnection.some((x) => router.pathname.includes(x))
   const requiresPostgrestConnection = !routesToIgnorePostgrestConnection.includes(router.pathname)
-  const requiresProjectDetails = !routesToIgnoreProjectDetailsRequest.includes(router.pathname)
 
   const isRestarting = selectedProject?.status === PROJECT_STATUS.RESTARTING
   const isResizing = selectedProject?.status === PROJECT_STATUS.RESIZING
@@ -440,10 +494,6 @@ const ContentWrapper = ({ isLoading, isBlocking = true, children }: ContentWrapp
   useEffect(() => {
     if (ref) state.setSelectedDatabaseId(ref)
   }, [ref])
-
-  if (isBlocking && (isLoading || (requiresProjectDetails && selectedProject === undefined))) {
-    return router.pathname.endsWith('[ref]') ? <LoadingState /> : <LogoLoader />
-  }
 
   if (isRestarting && !isBackupsPage) {
     return <RestartingState />

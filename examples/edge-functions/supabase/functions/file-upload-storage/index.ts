@@ -2,7 +2,7 @@
 // and write files to Supabase Storage and other fields to a database table.
 
 import { Application } from 'https://deno.land/x/oak@v11.1.0/mod.ts'
-import { createClient } from 'npm:supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const MB = 1024 * 1024
 
@@ -29,7 +29,7 @@ app.use(async (ctx) => {
     // Supabase API URL - env var exported by default.
     Deno.env.get('SUPABASE_URL')!,
     // Supabase publishable key - env var exported by default.
-    Deno.env.get(SUPABASE_PUBLISHABLE_KEYS['default'])!
+    SUPABASE_PUBLISHABLE_KEYS['default']!
   )
 
   //upload image to Storage

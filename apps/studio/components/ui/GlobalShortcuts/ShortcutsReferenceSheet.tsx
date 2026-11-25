@@ -1,5 +1,7 @@
 import { useHotkeyRegistrations, type SequenceRegistrationView } from '@tanstack/react-hotkeys'
-import { CircleX } from 'lucide-react'
+import { useFlag } from 'common'
+import { CircleXIcon } from 'lucide-react'
+import { useRouter } from 'next/router'
 import { Fragment, useMemo, useState } from 'react'
 import {
   Button,
@@ -19,7 +21,7 @@ import {
   SHORTCUT_REFERENCE_GROUP_ORDER,
   SHORTCUT_REFERENCE_GROUPS,
 } from '@/state/shortcuts/referenceGroups'
-import type { ShortcutHotkeyMeta } from '@/state/shortcuts/useShortcut'
+import type { ShortcutHotkeyMeta } from '@/state/shortcuts/types'
 
 interface ShortcutsReferenceSheetProps {
   open: boolean
@@ -42,7 +44,9 @@ interface ShortcutGroup {
 const GROUP_LABELS: Record<string, string> = {
   ...SHORTCUT_REFERENCE_GROUP_LABELS,
   'action-bar': 'Actions',
+  'advisors-page': 'Issues',
   'ai-assistant': 'AI Assistant',
+  'api-keys': 'API Keys',
   'auth-users': 'Auth Users',
   'command-menu': 'Command Menu',
   'data-table': 'Data Tables',
@@ -51,9 +55,14 @@ const GROUP_LABELS: Record<string, string> = {
   'functions-overview': 'Edge Function Overview',
   'inline-editor': 'Inline Editor',
   'list-page': 'List pages',
+  'platform-webhooks': 'Platform Webhooks',
+  'logs-preview': 'Logs Explorer',
+  'jwt-keys': 'JWT Keys',
+  'log-drains': 'Log Drains',
   nav: 'Navigation',
   'operation-queue': 'Operation Queue',
   results: 'Results',
+  'realtime-inspector': 'Realtime Inspector',
   'schema-visualizer': 'Schema Visualizer',
   shortcuts: 'Shortcuts',
   'sql-editor': 'SQL Editor',
@@ -172,9 +181,20 @@ const ShortcutSequence = ({ sequence }: Pick<ActiveShortcutDefinition, 'sequence
 )
 
 function ShortcutsReferenceSheetContent() {
+  const isIssuesInboxEnabled = useFlag('issuesInbox')
+  const router = useRouter()
+  const isLegacyAdvisors = !isIssuesInboxEnabled && router.pathname.includes('/advisors')
   const [search, setSearch] = useState('')
   const activeShortcuts = useActiveShortcuts()
-  const groups = filterGroups(groupDefinitions(activeShortcuts), search)
+  const shortcutGroups = groupDefinitions(activeShortcuts).map((group) => {
+    const isAdvisorGroup =
+      group.group === SHORTCUT_REFERENCE_GROUPS.NAVIGATION_ADVISORS ||
+      group.group === 'advisors-page'
+    return isLegacyAdvisors && isAdvisorGroup
+      ? { ...group, label: group.label.replace('Issues', 'Advisors') }
+      : group
+  })
+  const groups = filterGroups(shortcutGroups, search)
 
   return (
     <>
@@ -197,8 +217,8 @@ function ShortcutsReferenceSheetContent() {
               <Button
                 aria-label="Clear search"
                 size="tiny"
-                type="text"
-                icon={<CircleX size={14} />}
+                variant="text"
+                icon={<CircleXIcon size={14} />}
                 onClick={() => setSearch('')}
                 className="h-5 w-5 p-0"
               />

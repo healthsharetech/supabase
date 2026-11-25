@@ -3,20 +3,21 @@ import { describe, expect, it } from 'vitest'
 import { getReplicationDestinationType } from './Nodes.utils'
 
 describe('getReplicationDestinationType', () => {
-  it('returns BigQuery for big_query configs', () => {
-    expect(getReplicationDestinationType({ big_query: {} })).toBe('BigQuery')
+  it.each([
+    ['big_query', 'BigQuery'],
+    ['ducklake', 'DuckLake'],
+    ['snowflake', 'Snowflake'],
+    ['clickhouse', 'ClickHouse'],
+  ])('maps %s configs to %s', (key, expected) => {
+    expect(getReplicationDestinationType({ [key]: {} })).toBe(expected)
   })
 
-  it('returns Analytics Bucket for iceberg configs', () => {
-    expect(getReplicationDestinationType({ iceberg: {} })).toBe('Analytics Bucket')
+  it('renders unrecognized configurations anonymously', () => {
+    expect(getReplicationDestinationType({ iceberg: {} })).toBe('Unknown')
+    expect(getReplicationDestinationType({})).toBe('Unknown')
   })
 
-  it('returns DuckLake for ducklake configs', () => {
-    expect(getReplicationDestinationType({ ducklake: {} })).toBe('DuckLake')
-  })
-
-  it('returns undefined for unknown or missing configs', () => {
-    expect(getReplicationDestinationType({})).toBeUndefined()
+  it('returns undefined while the configuration is missing', () => {
     expect(getReplicationDestinationType(undefined)).toBeUndefined()
   })
 })

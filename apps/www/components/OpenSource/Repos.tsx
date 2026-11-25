@@ -1,5 +1,5 @@
-import { AnimatePresence } from 'framer-motion'
 import { Pencil, Users, Users2 } from 'lucide-react'
+import { AnimatePresence } from 'motion/react'
 import Link from 'next/link'
 import React, { useEffect, useState } from 'react'
 import { Swiper, SwiperSlide } from 'swiper/react'
@@ -16,6 +16,7 @@ interface TabProps {
 
 const Tab = ({ isActive, label, icon, onClick }: TabProps) => (
   <button
+    tabIndex={0}
     onClick={onClick}
     className={`rounded-full px-4 md:px-3 py-2 md:py-1 nowrap flex group gap-1 transition-all ${
       isActive ? 'bg-surface-300' : 'text-foreground-lighter bg-surface-200 hover:bg-overlay-hover'
@@ -31,7 +32,7 @@ const Tab = ({ isActive, label, icon, onClick }: TabProps) => (
           viewBox="0 0 16 16"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className={cn('text-foreground-light shrink-0', isActive && 'text-brand')}
+          className={cn('text-foreground-light shrink-0', isActive && 'text-primary')}
         >
           <path
             d={icon}
@@ -47,6 +48,15 @@ const Tab = ({ isActive, label, icon, onClick }: TabProps) => (
   </button>
 )
 
+export type GitHubRepo = {
+  name: string
+  description: string | null
+  html_url: string
+  full_name: string
+  forks: number
+  stargazers_count: number
+}
+
 export interface RepoTab {
   label: string
   icon?: string
@@ -55,6 +65,7 @@ export interface RepoTab {
 
 interface Props {
   tabs: RepoTab[]
+  initialRepos: GitHubRepo[] | null
 }
 
 enum SWIPER_STATE {
@@ -63,13 +74,15 @@ enum SWIPER_STATE {
   END = 'END',
 }
 
-const Repos = ({ tabs }: Props) => {
-  const [repos, setRepos] = useState<any[] | null>(null)
+const Repos = ({ tabs, initialRepos }: Props) => {
+  const [repos, setRepos] = useState<any[] | null>(initialRepos)
   const [activeTab, setActiveTab] = useState(0)
   const [apiSwiper, setApiSwiper] = useState(undefined)
   const [swiperState, setSwiperState] = useState<SWIPER_STATE>(SWIPER_STATE.START)
 
   useEffect(() => {
+    if (initialRepos) return
+
     async function fetchOctoData() {
       const { Octokit } = await import('@octokit/core')
       const octokit = new Octokit()
@@ -83,7 +96,7 @@ const Repos = ({ tabs }: Props) => {
       setRepos(res.data)
     }
     fetchOctoData()
-  }, [])
+  }, [initialRepos])
 
   useEffect(() => {
     if (!apiSwiper) return
@@ -98,7 +111,7 @@ const Repos = ({ tabs }: Props) => {
   const activeTabRepos = repos
     ? repos
         ?.filter((repo) => tabs[activeTab].repos?.includes(repo.name))
-        ?.sort((a, b) => (a.stargazers_count < b.stargazers_count ? 1 : -1))
+        ?.sort((a, b) => b.stargazers_count - a.stargazers_count)
     : []
 
   return (

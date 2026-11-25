@@ -1,3 +1,4 @@
+import { safeLocalStorage } from 'common'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import {
@@ -10,13 +11,12 @@ import {
   DropdownMenuTrigger,
   Separator,
 } from 'ui'
-import { TimestampInfo } from 'ui-patterns'
+import { TimestampInfo } from 'ui-patterns/TimestampInfo'
 
 import { ErrorCodeDialog } from '../ErrorCodeDialog'
 import type { LogSearchCallback, PreviewLogData } from '../Logs.types'
 import { ResponseCodeFormatter } from '../LogsFormatters'
 import { ErrorCodeTooltip } from '@/components/ui/ErrorCodeTooltip/ErrorCodeTooltip'
-import { Service } from '@/data/graphql/graphql'
 import { useLogsUrlState } from '@/hooks/analytics/useLogsUrlState'
 
 const LogRowCodeBlock = ({ value, className }: { value: string; className?: string }) => (
@@ -46,7 +46,7 @@ const PropertyRow = ({
   const { setSearch } = useLogsUrlState()
   const [showErrorInfo, setShowErrorInfo] = useState(false)
 
-  const service = path?.startsWith('/auth/') ? Service.Auth : undefined
+  const service = path?.startsWith('/auth/') ? 'AUTH' : undefined
 
   const handleSearch: LogSearchCallback = async (_event: string, { query }: { query?: string }) => {
     setSearch(query || '')
@@ -75,7 +75,7 @@ const PropertyRow = ({
   const [isExpanded, setIsExpanded] = useState(() => {
     try {
       // Storing in local storage so users dont have to click expand every time they change selected log
-      return JSON.parse(localStorage.getItem(storageKey) ?? 'false')
+      return JSON.parse(safeLocalStorage.getItem(storageKey) ?? 'false')
     } catch (_) {
       return false
     }
@@ -83,7 +83,7 @@ const PropertyRow = ({
   const [isCopied, setIsCopied] = useState(false)
 
   useEffect(() => {
-    localStorage.setItem(storageKey, JSON.stringify(isExpanded))
+    safeLocalStorage.setItem(storageKey, JSON.stringify(isExpanded))
   }, [isExpanded, storageKey])
 
   const handleCopy = () => {
@@ -115,7 +115,7 @@ const PropertyRow = ({
               <Button
                 className="mt-1 w-full"
                 size="tiny"
-                type="outline"
+                variant="outline"
                 onClick={() => setIsExpanded(!isExpanded)}
               >
                 {isExpanded ? 'Collapse' : 'Expand'}
@@ -193,7 +193,7 @@ const PropertyRow = ({
                 setIsExpanded(!isExpanded)
               }}
             >
-              {isExpanded ? 'Collapse' : 'Expand'} value
+              {isExpanded ? <span>Collapse</span> : <span>Expand</span>} <span>value</span>
             </DropdownMenuItem>
           )}
           {(isMethod || isUserAgent || isStatus || isPath) && (

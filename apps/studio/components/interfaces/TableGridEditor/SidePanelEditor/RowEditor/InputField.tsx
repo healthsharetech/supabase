@@ -1,5 +1,5 @@
 import { includes, noop } from 'lodash'
-import { Edit, Eye } from 'lucide-react'
+import { EditIcon, ExpandIcon, EyeIcon } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,14 +24,23 @@ import { FormItemLayout } from 'ui-patterns/form/FormItemLayout/FormItemLayout'
 
 import { DATETIME_TYPES, JSON_TYPES, TEXT_TYPES } from '../SidePanelEditor.constants'
 import { DateTimeInput } from './DateTimeInput'
-import type { EditValue, RowField } from './RowEditor.types'
+import type { EditValue, LargeValueStatus, RowField } from './RowEditor.types'
 import { isValueTruncated } from './RowEditor.utils'
 
 const TRUNCATE_DESCRIPTION =
   'Note: Value is too large to be rendered in the dashboard. Please expand the editor to edit the value'
 
+const LARGE_VALUE_NOTICES: Record<LargeValueStatus, string> = {
+  loading: 'Loading full value...',
+  'too-large': 'Value is too large to copy.',
+  'no-primary-key': 'Unable to copy value: table has no primary key.',
+  failed: 'Unable to load value.',
+}
+
 export interface InputFieldProps {
   field: RowField
+  /** Set while a value copied from another row is loading, or when it couldn't be copied */
+  status?: LargeValueStatus
   errors: any
   isNewRow?: boolean
   isEditable?: boolean
@@ -43,6 +52,7 @@ export interface InputFieldProps {
 
 export const InputField = ({
   field,
+  status,
   errors,
   isNewRow = false,
   isEditable = true,
@@ -51,6 +61,10 @@ export const InputField = ({
   onEditText = noop,
   onSelectForeignKey = noop,
 }: InputFieldProps) => {
+  const notice = status !== undefined ? LARGE_VALUE_NOTICES[status] : undefined
+  // The expanded editors can save an edit that the fetched value would then replace
+  const isLoadingValue = status === 'loading'
+
   if (field.enums.length > 0) {
     const isArray = field.format[0] === '_'
     if (isArray) {
@@ -129,7 +143,8 @@ export const InputField = ({
                 <span className="text-sm text-foreground-lighter">{field.comment} </span>
               )}
               <span className="text-sm text-foreground-lighter">
-                {field.comment && '('}Has a foreign key relation to
+                {field.comment && <span>(</span>}
+                <span>Has a foreign key relation to</span>
               </span>
               <span className="text-code font-mono text-xs text-foreground-lighter">
                 {field.foreignKey.target_table_schema}.{field.foreignKey.target_table_name}.
@@ -154,7 +169,7 @@ export const InputField = ({
             {isEditable && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <InputGroupButton type="default" icon={<Edit />} className="px-1.5" />
+                  <InputGroupButton variant="default" icon={<EditIcon />} className="px-1.5" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-28">
                   {field.isNullable && (
@@ -173,7 +188,7 @@ export const InputField = ({
   }
 
   if (includes(TEXT_TYPES, field.format)) {
-    const isTruncated = isValueTruncated(field.value)
+    const isTruncated = isValueTruncated(field.value, field.format)
 
     /**
      * Handle `undefined` as the default value of the input field
@@ -190,6 +205,7 @@ export const InputField = ({
           <>
             {field.comment && <p>{field.comment}</p>}
             {isTruncated && <p>{TRUNCATE_DESCRIPTION}</p>}
+            {notice && <p>{notice}</p>}
           </>
         }
         error={errors[field.name]}
@@ -216,9 +232,10 @@ export const InputField = ({
               <DropdownMenuTrigger asChild>
                 <InputGroupButton
                   data-testid={`${field.name}-field-actions`}
-                  type="default"
-                  icon={<Edit />}
+                  variant="default"
+                  icon={<EditIcon />}
                   className="ml-auto px-1.5"
+                  disabled={isLoadingValue}
                 />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-28">
@@ -250,7 +267,7 @@ export const InputField = ({
   }
 
   if (includes(JSON_TYPES, field.format)) {
-    const isTruncated = isValueTruncated(field.value)
+    const isTruncated = isValueTruncated(field.value, field.format)
 
     return (
       <FormItemLayout
@@ -262,6 +279,7 @@ export const InputField = ({
           <>
             {field.comment && <p>{field.comment}</p>}
             {isTruncated && <p>{TRUNCATE_DESCRIPTION}</p>}
+            {notice && <p>{notice}</p>}
           </>
         }
         error={errors[field.name]}
@@ -276,13 +294,13 @@ export const InputField = ({
           />
           <InputGroupAddon align="inline-end">
             <InputGroupButton
-              type="default"
-              htmlType="button"
+              variant="default"
+              type="button"
+              icon={isEditable ? <EditIcon /> : <ExpandIcon />}
+              className="px-1.5"
+              disabled={isLoadingValue}
               onClick={() => onEditJson({ column: field.name, value: field.value })}
-              icon={isEditable ? <Edit /> : <Eye />}
-            >
-              {isEditable ? 'Edit' : 'View JSON'}
-            </InputGroupButton>
+            />
           </InputGroupAddon>
         </InputGroup>
       </FormItemLayout>
@@ -358,6 +376,7 @@ export const InputField = ({
           <>
             {field.comment && <p>{field.comment}</p>}
             <p>Bytea columns are edited and displayed as hex in the dashboard</p>
+            {notice && <p>{notice}</p>}
           </>
         }
         error={errors[field.name]}
@@ -373,7 +392,7 @@ export const InputField = ({
     )
   }
 
-  const isTruncated = isValueTruncated(field.value)
+  const isTruncated = isValueTruncated(field.value, field.format)
 
   return (
     <FormItemLayout
@@ -385,6 +404,7 @@ export const InputField = ({
         <>
           {field.comment && <p>{field.comment}</p>}
           {isTruncated && <p>{TRUNCATE_DESCRIPTION}</p>}
+          {notice && <p>{notice}</p>}
         </>
       }
       error={errors[field.name]}
@@ -406,10 +426,10 @@ export const InputField = ({
         <InputGroupAddon align="inline-end">
           {isTruncated ? (
             <InputGroupButton
-              type="default"
-              htmlType="button"
+              variant="default"
+              type="button"
               onClick={() => onEditJson({ column: field.name, value: field.value })}
-              icon={isEditable ? <Edit /> : <Eye />}
+              icon={isEditable ? <EditIcon /> : <EyeIcon />}
             >
               {isEditable ? 'Edit' : 'View'}
             </InputGroupButton>

@@ -1,5 +1,5 @@
 import { useParams } from 'common'
-import { X } from 'lucide-react'
+import { XIcon } from 'lucide-react'
 import { useRouter } from 'next/router'
 import { useRef } from 'react'
 import DataGrid, { Column, DataGridHandle, Row } from 'react-data-grid'
@@ -16,8 +16,10 @@ import {
   lintInfoMap,
   NoIssuesFound,
 } from '@/components/interfaces/Linter/Linter.utils'
+import { ShortcutTooltip } from '@/components/ui/ShortcutTooltip'
 import { Lint } from '@/data/lint/lint-query'
 import { useTrack } from '@/lib/telemetry/track'
+import { SHORTCUT_IDS } from '@/state/shortcuts/registry'
 
 interface LinterDataGridProps {
   isLoading: boolean
@@ -25,6 +27,46 @@ interface LinterDataGridProps {
   selectedLint: Lint | null
   currentTab: LINTER_LEVELS
 }
+
+const lintCols = [
+  {
+    id: 'name',
+    name: 'Issue type',
+    description: undefined,
+    minWidth: 240,
+    value: (row: Lint) => (
+      <div className="flex items-center gap-1.5">
+        <span className="shrink-0">{lintInfoMap.find((item) => row.name === item.name)?.icon}</span>
+        {<h3 className="text-xs">{lintInfoMap.find((item) => row.name === item.name)?.title}</h3>}
+      </div>
+    ),
+  },
+  {
+    id: 'metadata.name',
+    name: 'Entity/item',
+    description: undefined,
+    minWidth: 230,
+    value: (row: Lint) => (
+      <div className="flex items-center gap-1 text-xs">
+        <span className="shrink-0">
+          <EntityTypeIcon type={row.metadata?.type} />
+        </span>
+        <LintEntity metadata={row.metadata} />
+      </div>
+    ),
+  },
+  {
+    id: 'description',
+    name: 'Description',
+    description: undefined,
+    minWidth: 400,
+    value: (row: Lint) => (
+      <div className="text-xs">
+        <ReactMarkdown>{row.description}</ReactMarkdown>
+      </div>
+    ),
+  },
+]
 
 export const LinterDataGrid = ({
   isLoading,
@@ -37,50 +79,8 @@ export const LinterDataGrid = ({
   const router = useRouter()
   const track = useTrack()
 
-  const lintCols = [
-    {
-      id: 'name',
-      name: 'Issue type',
-      description: undefined,
-      minWidth: 240,
-      value: (row: any) => (
-        <div className="flex items-center gap-1.5">
-          <span className="shrink-0">
-            {lintInfoMap.find((item) => row.name === item.name)?.icon}
-          </span>
-          {<h3 className="text-xs">{lintInfoMap.find((item) => row.name === item.name)?.title}</h3>}
-        </div>
-      ),
-    },
-    {
-      id: 'metadata.name',
-      name: 'Entity/item',
-      description: undefined,
-      minWidth: 230,
-      value: (row: any) => (
-        <div className="flex items-center gap-1 text-xs">
-          <span className="shrink-0">
-            <EntityTypeIcon type={row.metadata?.type} />
-          </span>
-          <LintEntity metadata={row.metadata} />
-        </div>
-      ),
-    },
-    {
-      id: 'description',
-      name: 'Description',
-      description: undefined,
-      minWidth: 400,
-      value: (row: any) => (
-        <div className="text-xs">
-          <ReactMarkdown>{row.description}</ReactMarkdown>
-        </div>
-      ),
-    },
-  ]
-
   const columns = lintCols.map((col) => {
-    const result: Column<any> = {
+    const result: Column<Lint> = {
       key: col.id,
       name: col.name,
       resizable: true,
@@ -129,7 +129,7 @@ export const LinterDataGrid = ({
         <DataGrid
           ref={gridRef}
           style={{ height: '100%' }}
-          className={cn('flex-1 grow h-full')}
+          className={cn('flex-1 grow h-full border-t-0! border-b-0!')}
           rowHeight={44}
           headerRowHeight={36}
           columns={columns}
@@ -177,7 +177,7 @@ export const LinterDataGrid = ({
           }}
         />
       </ResizablePanel>
-      {selectedLint !== null && (
+      {selectedLint !== null && ref !== undefined && (
         <>
           <ResizableHandle withHandle />
           <ResizablePanel
@@ -193,12 +193,19 @@ export const LinterDataGrid = ({
                 </h3>
                 <LintCategoryBadge category={selectedLint.categories[0]} />
               </div>
-              <Button type="text" icon={<X />} onClick={handleSidepanelClose} />
+              <ShortcutTooltip shortcutId={SHORTCUT_IDS.ADVISORS_CLOSE_DETAIL} side="left">
+                <Button
+                  variant="text"
+                  icon={<XIcon />}
+                  onClick={handleSidepanelClose}
+                  aria-label="Close lint details panel"
+                />
+              </ShortcutTooltip>
             </div>
             <div className="p-6 flex-grow min-h-0 overflow-y-auto">
               <LintDetail
                 lint={selectedLint}
-                projectRef={ref!}
+                projectRef={ref}
                 onAfterAction={handleSidepanelClose}
               />
             </div>

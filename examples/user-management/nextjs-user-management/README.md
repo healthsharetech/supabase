@@ -7,7 +7,7 @@ This demonstrates how to use:
 - User signups using Supabase [Auth](https://supabase.com/auth).
   - Supabase [SSR Auth for Next.js](https://supabase.com/docs/guides/auth/server-side/nextjs) with the Next.js App Router and Server Actions.
 - User avatar images using Supabase [Storage](https://supabase.com/storage).
-- Public profiles restricted with [Row Level Security policies](https://supabase.com/docs/guides/auth/row-level-security).
+- Public profiles restricted with [Row Level Security policies](https://supabase.com/docs/guides/database/postgres/row-level-security).
 - Frontend using [Next.js](https://nextjs.org/) (App Router) with React 19 and Tailwind CSS v4.
 
 ## Technologies used
@@ -19,7 +19,7 @@ This demonstrates how to use:
   - [Tailwind CSS v4](https://tailwindcss.com/) for styling.
 - Backend:
   - [supabase.com/dashboard](https://supabase.com/dashboard/) — hosted Postgres database with a REST API, Auth, and Storage.
-  - Local development via the [Supabase CLI](https://supabase.com/docs/guides/cli).
+  - Local development via the [Supabase CLI](https://supabase.com/docs/guides/local-development).
 
 ## Project structure
 
@@ -155,7 +155,7 @@ create table profiles (
   constraint username_length check (char_length(username) >= 3)
 );
 -- Set up Row Level Security (RLS)
--- See https://supabase.com/docs/guides/auth/row-level-security for more details.
+-- See https://supabase.com/docs/guides/database/postgres/row-level-security for more details.
 alter table profiles
   enable row level security;
 
@@ -186,10 +186,10 @@ create trigger on_auth_user_created
 insert into storage.buckets (id, name)
   values ('avatars', 'avatars');
 
--- Set up access controls for storage.
--- See https://supabase.com/docs/guides/storage#policy-examples for more details.
+-- Set up access controls for storage. Allows downloading object with public key
+-- See https://supabase.com/docs/guides/storage/security/access-control#policy-examples for more details.
 create policy "Avatar images are publicly accessible." on storage.objects
-  for select using (bucket_id = 'avatars');
+  for select using (bucket_id = 'avatars' and storage.allow_any_operation(array['object.get_authenticated_info', 'object.get_authenticated']));
 
 create policy "Anyone can upload an avatar." on storage.objects
   for insert with check (bucket_id = 'avatars');

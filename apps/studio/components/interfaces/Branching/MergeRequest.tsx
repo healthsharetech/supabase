@@ -1,6 +1,7 @@
+import { useQuery } from '@tanstack/react-query'
 import { LOCAL_STORAGE_KEYS, useParams } from 'common'
 import dayjs from 'dayjs'
-import { GitBranchIcon, GitMerge, MoreVertical, Shield } from 'lucide-react'
+import { GitBranchIcon, GitMergeIcon, MoreVerticalIcon, ShieldIcon } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useMemo } from 'react'
@@ -12,20 +13,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from 'ui'
-import { TimestampInfo } from 'ui-patterns'
+import { TimestampInfo } from 'ui-patterns/TimestampInfo'
 
 import { useIsPgDeltaDiffEnabled } from '../App/FeaturePreview/FeaturePreviewContext'
 import { ReviewWithAI } from '../BranchManagement/ReviewWithAI'
 import { ButtonTooltip } from '@/components/ui/ButtonTooltip'
 import { FeaturePreviewBadge } from '@/components/ui/FeaturePreviewBadge'
 import { useBranchUpdateMutation } from '@/data/branches/branch-update-mutation'
-import { useBranchesQuery } from '@/data/branches/branches-query'
+import { branchesQueryOptions } from '@/data/branches/branches-query'
 import { useProjectGitHubConnectionQuery } from '@/data/integrations/github-connections-query'
 import { useProjectDetailQuery } from '@/data/projects/project-detail-query'
-import { useSendEventMutation } from '@/data/telemetry/send-event-mutation'
+import { useBranchGrant } from '@/hooks/branches/useBranchGrant'
 import { useBranchMergeDiff } from '@/hooks/branches/useBranchMergeDiff'
-import { useSelectedOrganizationQuery } from '@/hooks/misc/useSelectedOrganization'
 import { useSelectedProjectQuery } from '@/hooks/misc/useSelectedProject'
+import { useGrant } from '@/lib/grants'
+import { useTrack } from '@/lib/telemetry/track'
 
 export const MergeTitle = () => {
   const { ref } = useParams()
@@ -34,13 +36,14 @@ export const MergeTitle = () => {
 
   const parentProjectRef = project?.parent_project_ref
 
-  const { data: branches } = useBranchesQuery(
-    { projectRef: parentProjectRef },
-    {
-      refetchOnMount: 'always',
-      refetchOnWindowFocus: true,
-      staleTime: 0,
-    }
+  const branchesGrant = useGrant('GET /v1/projects/{ref}/branches', {
+    projectRef: parentProjectRef,
+  })
+  const { data: branches } = useQuery(
+    branchesQueryOptions(
+      { projectRef: parentProjectRef, grant: branchesGrant.grant },
+      { refetchOnMount: 'always', refetchOnWindowFocus: true, staleTime: 0 }
+    )
   )
   const currentBranch = branches?.find((branch) => branch.project_ref === ref)
   const mainBranch = branches?.find((branch) => branch.is_default)
@@ -50,7 +53,7 @@ export const MergeTitle = () => {
       <div className="flex items-center gap-x-2">
         <span>Merge</span>
 
-        <code className="flex items-center text-code-inline gap-x-1.5 px-2 py-1 border border-border">
+        <code className="flex items-center gap-x-1.5 px-2 py-1 border border-border">
           <GitBranchIcon strokeWidth={1.5} size={14} className="text-foreground-lighter" />
           {currentBranch?.name}
         </code>
@@ -58,9 +61,9 @@ export const MergeTitle = () => {
         <span>into</span>
 
         <Link href={`/project/${mainBranch?.project_ref}`} className="font-mono inline-flex gap-4">
-          <code className="flex items-center text-code-inline font-mono gap-x-1.5 px-2 py-1 border border-border">
-            <Shield strokeWidth={1.5} size={14} className="text-warning" />
-            {mainBranch?.name || 'main'}
+          <code className="flex items-center font-mono gap-x-1.5 px-2 py-1 border border-border">
+            <ShieldIcon strokeWidth={1.5} size={14} className="text-warning" />
+            {mainBranch?.name || <span>main</span>}
           </code>
         </Link>
       </div>
@@ -77,13 +80,14 @@ export const MergeSubtitle = () => {
   const { data: project } = useSelectedProjectQuery()
   const parentProjectRef = project?.parent_project_ref
 
-  const { data: branches } = useBranchesQuery(
-    { projectRef: parentProjectRef },
-    {
-      refetchOnMount: 'always',
-      refetchOnWindowFocus: true,
-      staleTime: 0,
-    }
+  const branchesGrant = useGrant('GET /v1/projects/{ref}/branches', {
+    projectRef: parentProjectRef,
+  })
+  const { data: branches } = useQuery(
+    branchesQueryOptions(
+      { projectRef: parentProjectRef, grant: branchesGrant.grant },
+      { refetchOnMount: 'always', refetchOnWindowFocus: true, staleTime: 0 }
+    )
   )
   const currentBranch = branches?.find((branch) => branch.project_ref === ref)
 
@@ -113,18 +117,19 @@ export const MergeSubtitle = () => {
 export const MergeActions = ({
   isWorkflowRunning,
   isSubmitting,
+  canMerge,
   onSelectMerge,
 }: {
   isWorkflowRunning: boolean
   isSubmitting: boolean
+  canMerge: boolean
   onSelectMerge: () => void
 }) => {
   const router = useRouter()
   const { ref } = useParams()
   const { data: project } = useSelectedProjectQuery()
-  const { data: selectedOrg } = useSelectedOrganizationQuery()
+  const track = useTrack()
 
-  const { mutate: sendEvent } = useSendEventMutation()
   const { mutate: updateBranch, isPending: isUpdating } = useBranchUpdateMutation({
     onError: (error) => {
       toast.error(`Failed to update branch: ${error.message}`)
@@ -132,19 +137,28 @@ export const MergeActions = ({
   })
 
   const parentProjectRef = project?.parent_project_ref
-  const { data: parentProject } = useProjectDetailQuery({ ref: parentProjectRef })
-  const { data: ghConnection } = useProjectGitHubConnectionQuery({ ref: parentProjectRef })
+  const { data: parentProject } = useProjectDetailQuery({
+    ref: parentProjectRef,
+  })
+  const { data: ghConnection } = useProjectGitHubConnectionQuery({
+    ref: parentProjectRef,
+  })
 
-  const { data: branches } = useBranchesQuery(
-    { projectRef: parentProjectRef },
-    {
-      refetchOnMount: 'always',
-      refetchOnWindowFocus: true,
-      staleTime: 0,
-    }
+  const branchesGrant = useGrant('GET /v1/projects/{ref}/branches', {
+    projectRef: parentProjectRef,
+  })
+  const { data: branches } = useQuery(
+    branchesQueryOptions(
+      { projectRef: parentProjectRef, grant: branchesGrant.grant },
+      { refetchOnMount: 'always', refetchOnWindowFocus: true, staleTime: 0 }
+    )
   )
   const currentBranch = branches?.find((branch) => branch.project_ref === ref)
   const mainBranch = branches?.find((branch) => branch.is_default)
+  const updateBranchGrant = useBranchGrant('PATCH /v1/branches/{branch_id_or_ref}', {
+    projectRef: parentProjectRef,
+    isDefault: currentBranch?.is_default,
+  })
 
   const {
     diffContent,
@@ -153,6 +167,7 @@ export const MergeActions = ({
     hasChanges: combinedHasChanges,
   } = useBranchMergeDiff({
     currentBranchRef: ref,
+    isCurrentBranchDefault: currentBranch?.is_default,
     parentProjectRef,
     currentBranchConnectionString: project?.connectionString || undefined,
     parentBranchConnectionString: parentProject?.connectionString || undefined,
@@ -160,6 +175,7 @@ export const MergeActions = ({
   })
 
   const isMergeDisabled =
+    !canMerge ||
     !combinedHasChanges ||
     isCombinedDiffLoading ||
     isBranchOutOfDateOverall ||
@@ -180,29 +196,31 @@ export const MergeActions = ({
           tooltip={{
             content: {
               side: 'bottom',
-              text: !combinedHasChanges
-                ? 'No changes to merge'
-                : isWorkflowRunning
-                  ? 'Workflow is currently running'
-                  : !!ghConnection && Boolean(mainBranch?.git_branch)
-                    ? 'Deploy to production from GitHub is enabled'
-                    : 'Unable to merge at this time',
+              text: !canMerge
+                ? 'You need additional permissions to merge branches'
+                : !combinedHasChanges
+                  ? 'No changes to merge'
+                  : isWorkflowRunning
+                    ? 'Workflow is currently running'
+                    : !!ghConnection && Boolean(mainBranch?.git_branch)
+                      ? 'Deploy to production from GitHub is enabled'
+                      : 'Unable to merge at this time',
             },
           }}
-          type="primary"
+          variant="primary"
           loading={isSubmitting}
           disabled={isMergeDisabled}
           onClick={onSelectMerge}
-          icon={<GitMerge size={16} strokeWidth={1.5} className="text-brand" />}
+          icon={<GitMergeIcon size={16} strokeWidth={1.5} className="text-primary" />}
         >
           Merge branch
         </ButtonTooltip>
       ) : (
         <Button
-          type="primary"
+          variant="primary"
           loading={isSubmitting}
           onClick={onSelectMerge}
-          icon={<GitMerge size={16} strokeWidth={1.5} className="text-brand" />}
+          icon={<GitMergeIcon size={16} strokeWidth={1.5} className="text-primary" />}
         >
           Merge branch
         </Button>
@@ -210,15 +228,17 @@ export const MergeActions = ({
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button type="default" loading={isUpdating} className="px-1.5" icon={<MoreVertical />} />
+          <Button loading={isUpdating} className="px-1.5" icon={<MoreVerticalIcon />} />
         </DropdownMenuTrigger>
         <DropdownMenuContent side="bottom" align="end" className="w-52">
           <DropdownMenuItem
             className="gap-x-2"
+            disabled={updateBranchGrant.status !== 'granted'}
             onClick={() => {
-              if (!ref || !parentProjectRef) return
+              if (!ref || !parentProjectRef || updateBranchGrant.status !== 'granted') return
               updateBranch(
                 {
+                  grant: updateBranchGrant.grant,
                   branchRef: ref,
                   projectRef: parentProjectRef,
                   requestReview: false,
@@ -227,12 +247,8 @@ export const MergeActions = ({
                   onSuccess: () => {
                     toast.success('Successfully closed merge request')
                     router.push(`/project/${project?.ref}/branches?tab=prs`)
-                    sendEvent({
-                      action: 'branch_close_merge_request_button_clicked',
-                      groups: {
-                        project: parentProjectRef ?? 'Unknown',
-                        organization: selectedOrg?.slug ?? 'Unknown',
-                      },
+                    track('branch_close_merge_request_button_clicked', undefined, {
+                      project: parentProjectRef,
                     })
                   },
                 }
